@@ -282,6 +282,7 @@
     <div class="set-group">
       <div class="set-row"><span class="lab">夜间模式</span><div class="switch" id="swDark"></div></div>
       <div class="set-row"><span class="lab">无图模式</span><div class="switch" id="swNoImg"></div></div>
+      <div class="set-row"><span class="lab">前进按钮</span><div class="switch" id="swFwd"></div></div>
       <div class="set-row" id="rowSite"><span class="lab">网站设定</span><span class="val">内容 · 权限 · 高级</span></div>
       <div class="set-row" id="rowAbout"><span class="lab">关于 Sii</span><span class="val">v1.0</span></div>
     </div>
@@ -320,7 +321,8 @@
   <!-- 底部工具栏 -->
   <div class="toolbar">
     <button id="tbTabs"><span class="tb-wrap"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M4 9.5h16"/><text id="tabCount" x="12" y="16.6" text-anchor="middle" font-size="8.6" font-weight="600" fill="currentColor" stroke="none" font-family="inherit">1</text></svg>标签</span></button>
-    <button id="tbBack"><span class="tb-wrap"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>返回</span></button>
+    <button id="tbBack"><span class="tb-wrap"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span></button>
+    <button id="tbForward" style="display:none"><span class="tb-wrap"><svg viewBox="0 0 24 24" style="transform:scaleX(-1)"><path d="M15 5l-7 7 7 7"/></svg></span></button>
     <button id="tbHome"><span class="tb-wrap"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>主页</span></button>
     <button id="tbMenu"><span class="tb-wrap"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></svg>菜单</span></button>
   </div>
@@ -365,6 +367,15 @@
       <button class="c" id="cdlgClear">清空并关闭</button>
       <span><button class="c" id="cdlgCancel">取消</button><button class="o" id="cdlgOk">保存并应用</button></span>
     </div>
+  </dialog>
+
+  <dialog id="idlg">
+    <h3>安装油猴脚本</h3>
+    <div id="idlgSrc" style="font-size:11px;color:#8a8f99;word-break:break-all;margin-bottom:8px"></div>
+    <input id="idlgName" placeholder="脚本名称">
+    <input id="idlgMatch" placeholder="匹配规则（如 *://*/*）">
+    <textarea id="idlgCode" placeholder="// 脚本代码"></textarea>
+    <div class="btns"><button class="c" id="idlgCancel">取消</button><button class="o" id="idlgOk">确认安装</button></div>
   </dialog>
 
   <dialog id="dlg">
@@ -436,6 +447,7 @@ function load(){
     if(s&&s.tabs&&s.tabs.length){
       s.site=Object.assign({},DEFAULT_SITE,s.site||{});
       s.scripts=s.scripts||JSON.parse(JSON.stringify(DEFAULT_SCRIPTS));
+      if(s.fwd===undefined)s.fwd=true; /* 老数据默认开启前进按钮 */
       s.userCss=s.userCss||"";
       s.uiZoom=s.uiZoom||100;
       s.uiCols=s.uiCols||4;
@@ -444,7 +456,7 @@ function load(){
   }catch(e){}
   return {
     engine:"baidu",
-    dark:false,noimg:false,ua:false,pull:true,
+    dark:false,noimg:false,ua:false,pull:true,fwd:true,
     site:JSON.parse(JSON.stringify(DEFAULT_SITE)),
     sites:DEFAULT_SITES.slice(),
     bookmarks:[],
@@ -925,7 +937,12 @@ function syncSwitches(){
   $("swNoImg2").classList.toggle("on",state.noimg);
   $("swUa").classList.toggle("on",state.ua);
   $("swPull").classList.toggle("on",state.pull);
+  $("swFwd").classList.toggle("on",state.fwd);
   document.documentElement.classList.toggle("dark",state.dark);
+  renderToolbar();
+}
+function renderToolbar(){
+  $("tbForward").style.display=state.fwd?"":"none";
 }
 bindSwitch("swDark","dark");
 bindSwitch("swDark2","dark");
@@ -933,6 +950,7 @@ bindSwitch("swNoImg","noimg",function(){toast(state.noimg?"无图模式：已开
 bindSwitch("swNoImg2","noimg",function(){toast(state.noimg?"无图模式：已开启":"无图模式：已关闭");});
 bindSwitch("swUa","ua",function(){toast(state.ua?"已切换为桌面版 UA":"已切换为手机版 UA");});
 bindSwitch("swPull","pull",function(){toast(state.pull?"下拉刷新已开启":"下拉刷新已关闭");});
+bindSwitch("swFwd","fwd",function(){toast(state.fwd?"已在工具栏显示前进按钮":"已隐藏前进按钮");});
 
 /* ---------- 搜索引擎选择 ---------- */
 function renderEngineGroup(){
@@ -1012,6 +1030,14 @@ $("rowAbout").onclick=function(){toast("Sii v1.0");};
 /* ---------- 工具栏 ---------- */
 $("tbTabs").onclick=function(){show("tabsView");};
 $("tbHome").onclick=function(){show("homeView");};
+$("tbForward").onclick=function(){
+  if(curView!=="pageView")return;
+  var t=tab();
+  if(t.idx<t.entries.length-1){
+    t.idx++;var e=t.entries[t.idx];t.url=e.u;t.title=e.t;save();
+    showPage(e.u,e.t);
+  }else{toast("没有可前进的页面");}
+};
 $("tbBack").onclick=function(){
   if(curView!=="pageView"){show("homeView");return;}
   var t=tab();
@@ -1023,6 +1049,36 @@ $("tbBack").onclick=function(){
 document.querySelectorAll("[data-back]").forEach(function(b){
   b.onclick=function(){show("homeView");};
 });
+
+/* ---------- 安卓端调用接口 ---------- */
+/* 返回键映射：MainActivity.onBackPressed 里先查 SiiCanBack()，为 true 时调 SiiBack() */
+window.SiiBack=function(){$("tbBack").click();};
+window.SiiForward=function(){$("tbForward").click();};
+window.SiiCanBack=function(){return curView!=="homeView"||tab().idx>0;};
+
+/* 脚本自动安装：安卓端拦截到 .user.js 下载后调用 SiiInstallScript(来源网址, 脚本代码)，弹窗确认后入库 */
+function parseUserJs(code){
+  var n=(code.match(/@name\s+([^\n\r]+)/)||[])[1];
+  var m=(code.match(/@match\s+([^\n\r]+)/)||[])[1]||(code.match(/@include\s+([^\n\r]+)/)||[])[1];
+  return {n:(n||"").trim(),m:(m||"").trim()};
+}
+window.SiiInstallScript=function(src,code){
+  code=String(code||"");
+  var meta=parseUserJs(code);
+  $("idlgSrc").textContent="来源："+(src||"未知");
+  $("idlgName").value=meta.n||"未命名脚本";
+  $("idlgMatch").value=meta.m||"*://"+host(src)+"/*";
+  $("idlgCode").value=code;
+  $("idlg").showModal();
+};
+$("idlgCancel").onclick=function(){$("idlg").close();toast("已取消安装");};
+$("idlgOk").onclick=function(){
+  state.scripts.push({id:Date.now(),n:$("idlgName").value.trim()||"未命名脚本",
+    m:$("idlgMatch").value.trim()||"*://*/*",on:true,c:$("idlgCode").value});
+  save();renderScripts();
+  $("idlg").close();show("scriptView");
+  toast("脚本已安装");
+};
 
 /* ---------- 初始化 ---------- */
 $("engineBtn").textContent=engine().n;
