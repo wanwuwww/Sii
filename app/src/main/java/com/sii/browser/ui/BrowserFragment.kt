@@ -511,29 +511,79 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateAddressBarForCurrent()
     }
 
-    /** 上次非正常退出：询问是否恢复全部标签。 */
+    /** 上次非正常退出：底部低调提示，5 秒自动消失。 */
     private fun promptRestoreAfterAbnormalExit(
         saved: List<com.sii.browser.data.db.TabEntity>,
         startupBehavior: Int
     ) {
-        if (!isAdded) {
+        val root = view as? android.widget.FrameLayout
+        if (root == null) {
             restoreSavedTabs(saved)
             return
         }
-        android.app.AlertDialog.Builder(requireContext())
-            .setTitle(R.string.restore_tabs_title)
-            .setMessage(R.string.restore_tabs_message)
-            .setPositiveButton(R.string.restore_tabs_confirm) { _, _ -> restoreSavedTabs(saved) }
-            .setNegativeButton(R.string.restore_tabs_skip) { _, _ ->
-                lifecycleScope.launch {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        AppServices.tabRepository.clear()
-                    }
+        val context = requireContext()
+        val dark = AppServices.settings.isNightMode()
+        val bar = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(10), dp(6), dp(10))
+            background = GlassStyle.background(
+                context, dark, dp(22).toFloat(),
+                AppServices.settings.glassStrength(), minAlpha = 220
+            )
+            elevation = dp(8).toFloat()
+            alpha = 0f
+            translationY = dp(14).toFloat()
+        }
+        bar.addView(android.widget.TextView(context).apply {
+            text = getString(R.string.restore_tabs_message)
+            setTextSize(13f)
+            setTextColor(
+                if (dark) android.graphics.Color.WHITE
+                else context.getColor(R.color.text_primary)
+            )
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+            )
+        })
+        bar.addView(android.widget.TextView(context).apply {
+            text = getString(R.string.restore_tabs_confirm)
+            setTextSize(13f)
+            setTextColor(ThemeAccent.color(context))
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            setOnClickListener {
+                root.removeView(bar)
+                restoreSavedTabs(saved)
+            }
+        })
+        root.addView(
+            bar,
+            android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.BOTTOM
+            ).apply {
+                marginStart = dp(12)
+                marginEnd = dp(12)
+                bottomMargin = dp(96)
+            }
+        )
+        bar.animate().alpha(1f).translationY(0f).setDuration(180).start()
+        bar.postDelayed({
+            if (bar.parent == null) return@postDelayed
+            bar.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(180)
+                .withEndAction { root.removeView(bar) }
+                .start()
+            // 自动忽略：清空快照并进入主页，避免下次启动重复提示。
+            lifecycleScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    AppServices.tabRepository.clear()
                 }
+            }
+            if (tabManager.size == 0) {
                 openNewTab(if (startupBehavior == 2) ABOUT_BLANK else ABOUT_HOME)
             }
-            .setCancelable(false)
-            .show()
+        }, 5000)
     }
 
 
@@ -9113,8 +9163,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyDockGlass()
     }
 
-    private fun handleToolbarAutoHide(dy: Int) {
+    private var scrollAccum = 0
+
+    private fun handleToolbarAutoHide(rawDy: Int) {
         refreshGlassBlurThrottled()
+        if (rawDy == 0) return
+        // 滚动惯性下 dy 会频繁变号，累计到一定距离再切换，避免底栏/快捷引擎反复收展造成闪烁。
+        if ((rawDy > 0) != (scrollAccum > 0)) scrollAccum = 0
+        scrollAccum += rawDy
+        if (kotlin.math.abs(scrollAccum) < 48) return
+        val dy = if (scrollAccum > 0) 10 else -10
+        scrollAccum = 0
         handleQuickEngineAutoHide(dy)
         if (!AppServices.settings.toolbarAutoHide()) return
         if (AppServices.settings.uiStyle() == 1) {
