@@ -3851,11 +3851,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val alpha = 255 - transparency * 255 / 100
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
-        val color = when {
-            dark -> 0xFF1B1E23.toInt()
-            modern -> 0xFFFFFFFF.toInt()
-            else -> requireContext().getColor(R.color.bg)
-        }
+        val strength = AppServices.settings.glassStrength()
+        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength)
+        else requireContext().getColor(R.color.bg)
+        val mergedAlpha = ((((fill ushr 24) and 0xFF) * alpha) / 255).coerceIn(0, 255)
         val radius = dp(28).toFloat()
         panel.background = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
@@ -3865,8 +3864,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             } else {
                 floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
             }
-            setColor((color and 0x00FFFFFF) or (alpha shl 24))
-            if (modern) setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
+            setColor((fill and 0x00FFFFFF) or (mergedAlpha shl 24))
+            if (modern) setStroke(dp(1), GlassStyle.stroke(dark, strength))
         }
         val actionText = if (dark) android.graphics.Color.WHITE
         else if (modern) 0xFF1A1A1A.toInt()
@@ -3876,8 +3875,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (modern) {
                     background = android.graphics.drawable.GradientDrawable().apply {
                         cornerRadius = dp(22).toFloat()
-                        setColor(if (dark) 0xFF2A2E33.toInt() else 0xFFF4F5F7.toInt())
-                        setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x12000000)
+                        setColor(GlassStyle.fill(requireContext(), dark, strength))
+                        setStroke(dp(1), GlassStyle.stroke(dark, strength))
                     }
                 } else {
                     setBackgroundResource(R.drawable.bg_card)
@@ -4583,14 +4582,18 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         view?.findViewById<View>(R.id.menu_panel)?.apply {
-            setBackgroundResource(
-                if (dark) R.drawable.bg_modern_sheet_dark else R.drawable.bg_modern_sheet
-            )
-            backgroundTintList =
-                if (modern) null
-                else android.content.res.ColorStateList.valueOf(
+            if (modern) {
+                background = GlassStyle.background(
+                    requireContext(), dark, dp(28).toFloat(),
+                    AppServices.settings.glassStrength(), topOnly = true
+                )
+                backgroundTintList = null
+            } else {
+                setBackgroundResource(R.drawable.bg_modern_sheet)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
                     menuBg ?: requireContext().getColor(R.color.card)
                 )
+            }
         }
         view?.findViewById<TextView>(R.id.menu_title)?.setTextColor(
             if (dark) android.graphics.Color.WHITE
@@ -6150,7 +6153,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun markPageFinished(webView: SiiWebView?) {
         val wv = webView ?: return
         pageLoadFinished[wv] = true
-        if (wv === tabManager.currentWebView) setRefreshLoading(false)
+        if (wv === tabManager.currentWebView) {
+            setRefreshLoading(false)
+            refreshGlassBlurThrottled()
+        }
     }
 
     /** 进度平滑追到目标值；WebView 只报少量进度时也会缓慢向 80% 靠近。 */
@@ -8634,13 +8640,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             dock.layoutParams = params
         }
         tabBar?.visibility = View.GONE
-        dock.background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = dp(28).toFloat()
-            setColor(if (night) 0xFA1B1E23.toInt() else 0xFAFFFFFF.toInt())
-            setStroke(dp(1), if (night) 0x24FFFFFF else 0x1A000000)
-        }
+        val glassStrength = AppServices.settings.glassStrength()
+        dock.background = GlassStyle.background(
+            requireContext(), night, dp(28).toFloat(), glassStrength
+        )
         dock.clipToOutline = true
+        applyDockGlass()
         dock.elevation = dp(12).toFloat()
         addressHost.layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f)
         address.layoutParams = FrameLayout.LayoutParams(
@@ -9047,7 +9052,39 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         quickEngineAnimator = animator
         animator.start()
     }
+    private var glassBlurLast = 0L
+
+    /** 底栏玻璃：模糊底图 + 玻璃填充，滚动时刷新。 */
+    private fun applyDockGlass() {
+        val dock = view?.findViewById<LinearLayout>(R.id.modern_chrome) ?: return
+        val night = AppServices.settings.isNightMode()
+        val strength = AppServices.settings.glassStrength()
+        val radius = dp(28).toFloat()
+        val width = dock.width.takeIf { it > 0 } ?: dp(320)
+        val height = dock.height.takeIf { it > 0 } ?: dp(96)
+        val glass = GlassStyle.background(requireContext(), night, radius, strength)
+        val blurred = GlassBlur.layer(
+            requireContext(), tabManager.currentWebView, width, height, radius
+        )
+        dock.background = if (blurred != null) {
+            android.graphics.drawable.LayerDrawable(arrayOf(blurred, glass))
+        } else {
+            glass
+        }
+    }
+
+    /** 滚动时节流刷新底栏模糊背景，避免每帧截图。 */
+    private fun refreshGlassBlurThrottled() {
+        if (AppServices.settings.uiStyle() != 1) return
+        if (!AppServices.settings.glassBlur()) return
+        val now = System.currentTimeMillis()
+        if (now - glassBlurLast < 250L) return
+        glassBlurLast = now
+        applyDockGlass()
+    }
+
     private fun handleToolbarAutoHide(dy: Int) {
+        refreshGlassBlurThrottled()
         handleQuickEngineAutoHide(dy)
         if (!AppServices.settings.toolbarAutoHide()) return
         if (AppServices.settings.uiStyle() == 1) {

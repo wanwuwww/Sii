@@ -505,6 +505,15 @@ class HomeCustomizeFragment : Fragment() {
 
     private fun searchRows(): List<View> = listOf(
         choiceRow(
+            "主页风格",
+            arrayOf("玻璃", "极简", "杂志"),
+            settings.homeStyle().coerceIn(0, 2)
+        ) { index ->
+            settings.setHomeStyle(index)
+            refreshPreview()
+            view?.post { buildControls() }
+        },
+        choiceRow(
             getString(R.string.settings_home_layout),
             arrayOf("顶部", "居中", "底部"),
             settings.homeLayoutPos().coerceIn(0, 2)
@@ -1252,6 +1261,14 @@ class HomeCustomizeFragment : Fragment() {
         },
         sliderRow("夜间滤镜", settings.nightFilter(), 0, 255) {
             settings.setNightFilter(it)
+            refreshPreview()
+        },
+        sliderRow("玻璃强度", settings.glassStrength(), 0, 100) {
+            settings.setGlassStrength(it)
+            view?.post { refreshPreview() }
+        },
+        switchRow("实时模糊背景", settings.glassBlur()) {
+            settings.setGlassBlur(it)
             refreshPreview()
         },
         choiceRow(

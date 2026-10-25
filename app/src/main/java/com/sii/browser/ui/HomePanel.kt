@@ -243,7 +243,7 @@ class HomePanel(
         val s = AppServices.settings
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
-        val mode = s.homeLogoMode()
+        val mode = if (s.homeStyle() == 2) 2 else s.homeLogoMode()
         logo?.visibility = if (mode == 0) View.VISIBLE else View.GONE
         logoIcon?.visibility = if (mode == 1) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.home_clock)?.visibility =
@@ -274,7 +274,11 @@ class HomePanel(
             else -> logo?.setTextColor(context.getColor(R.color.text_primary))
         }
         grid.removeAllViews()
-        grid.columnCount = s.homeGridColumns().coerceIn(4, 6)
+        grid.columnCount = when (s.homeStyle()) {
+            1 -> 4
+            2 -> 2
+            else -> s.homeGridColumns().coerceIn(4, 6)
+        }
         applySearchStyle()
         applyBackground()
         applySitesVisibility()
@@ -300,8 +304,18 @@ class HomePanel(
     private fun applySitesCardBg(card: View?) {
         card ?: return
         val on = AppServices.settings.homeSitesCardBg()
-        card.background = if (on) context.getDrawable(R.drawable.bg_home_card) else null
-        card.elevation = if (on) dp(2).toFloat() else 0f
+        val modern = AppServices.settings.uiStyle() == 1
+        val dark = AppServices.settings.isNightMode()
+        val style = AppServices.settings.homeStyle()
+        card.background = when {
+            style != 0 -> null
+            !on -> null
+            modern -> GlassStyle.background(
+                context, dark, dp(24).toFloat(), AppServices.settings.glassStrength()
+            )
+            else -> context.getDrawable(R.drawable.bg_home_card)
+        }
+        card.elevation = if (on && style == 0) dp(2).toFloat() else 0f
     }
 
     /** 搜索框圆角与高度（高度用上下内边距实现，不挤压内部按钮）。 */
@@ -358,6 +372,15 @@ class HomePanel(
         } else {
             searchInput.setTextColor(context.getColor(R.color.text_primary))
             searchInput.setHintTextColor(context.getColor(R.color.text_secondary))
+        }
+        // 极简 / 杂志：改为细边框，去掉胶囊与阴影。
+        if (AppServices.settings.homeStyle() != 0) {
+            box.background = GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(0x00000000)
+                setStroke(dp(1), if (dark) 0x33FFFFFF else 0x26000000)
+            }
+            box.elevation = 0f
         }
     }
 

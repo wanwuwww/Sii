@@ -99,6 +99,21 @@ interface Settings :
 
     fun setSettingsCardAlpha(value: Int)
 
+    /** 玻璃质感强度：0 不透明 → 100 最通透。 */
+    fun glassStrength(): Int
+
+    fun setGlassStrength(value: Int)
+
+    /** 实时模糊（Android 12+）。 */
+    fun glassBlur(): Boolean
+
+    fun setGlassBlur(value: Boolean)
+
+    /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
+    fun homeStyle(): Int
+
+    fun setHomeStyle(value: Int)
+
     /** 标签页背景透明度，0 = 不透明，100 = 全透明。 */
     fun tabsPanelTransparency(): Int
 

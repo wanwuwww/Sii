@@ -184,5 +184,14 @@ object SettingsDefaults {
 
     /** 设置页卡片背景透明度，100 = 不透明。 */
     const val SETTINGS_CARD_ALPHA = 100
+
+    /** 玻璃质感强度：0 不透明 → 100 最通透。 */
+    const val GLASS_STRENGTH = 60
+
+    /** 实时模糊（Android 12+）。 */
+    const val GLASS_BLUR = true
+
+    /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
+    const val HOME_STYLE = 0
     const val CARD_BORDER = true
 }
