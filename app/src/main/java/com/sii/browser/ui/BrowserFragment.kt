@@ -357,7 +357,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     openNewTab(home)
                 }
             } else if (abnormalExit && !AppServices.privacyManager.isIncognito) {
-                promptRestoreAfterAbnormalExit(saved, startupBehavior)
+                promptRestoreAfterAbnormalExit(saved)
             } else {
                 restoreSavedTabs(saved)
             }
@@ -513,14 +513,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     /** 上次非正常退出：底部低调提示，5 秒自动消失。 */
     private fun promptRestoreAfterAbnormalExit(
-        saved: List<com.sii.browser.data.db.TabEntity>,
-        startupBehavior: Int
+        saved: List<com.sii.browser.data.db.TabEntity>
     ) {
         val root = view as? android.widget.FrameLayout
         if (root == null) {
             restoreSavedTabs(saved)
             return
         }
+        // 先在主页上展示提示，用户可直接使用主页上的其他功能。
+        if (tabManager.size == 0) showHome(createTab = false)
         val context = requireContext()
         val dark = AppServices.settings.isNightMode()
         val bar = android.widget.LinearLayout(context).apply {
@@ -574,14 +575,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             bar.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(180)
                 .withEndAction { root.removeView(bar) }
                 .start()
-            // 自动忽略：清空快照并进入主页，避免下次启动重复提示。
+            // 自动忽略：清空快照，主页保持可操作，避免下次启动重复提示。
             lifecycleScope.launch {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     AppServices.tabRepository.clear()
                 }
-            }
-            if (tabManager.size == 0) {
-                openNewTab(if (startupBehavior == 2) ABOUT_BLANK else ABOUT_HOME)
             }
         }, 5000)
     }
@@ -9164,27 +9162,39 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private var scrollAccum = 0
+    private var pendingScrollDir = 0
+    private val applyScrollDirection = Runnable {
+        val dir = pendingScrollDir
+        pendingScrollDir = 0
+        if (dir == 0) return@Runnable
+        handleQuickEngineAutoHide(dir * 10)
+        applyToolbarScrollHidden(dir * 10)
+        refreshGlassBlurThrottled()
+    }
 
     private fun handleToolbarAutoHide(rawDy: Int) {
-        refreshGlassBlurThrottled()
         if (rawDy == 0) return
-        // 滚动惯性下 dy 会频繁变号，累计到一定距离再切换，避免底栏/快捷引擎反复收展造成闪烁。
+        // 滚动惯性下 dy 会频繁变号：累计到 64dp 后，等滚动停止再执行一次收展。
         if ((rawDy > 0) != (scrollAccum > 0)) scrollAccum = 0
         scrollAccum += rawDy
-        if (kotlin.math.abs(scrollAccum) < 48) return
-        val dy = if (scrollAccum > 0) 10 else -10
+        if (kotlin.math.abs(scrollAccum) < 64) return
+        pendingScrollDir = if (scrollAccum > 0) 1 else -1
         scrollAccum = 0
-        handleQuickEngineAutoHide(dy)
+        view?.removeCallbacks(applyScrollDirection)
+        view?.postDelayed(applyScrollDirection, 160L)
+    }
+
+    private fun applyToolbarScrollHidden(dy: Int) {
         if (!AppServices.settings.toolbarAutoHide()) return
         if (AppServices.settings.uiStyle() == 1) {
             if (addressEditing) return
             val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
             val hidden = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(12)
-            if (dy > 6 && !toolbarHidden) {
+            if (dy > 0 && !toolbarHidden) {
                 toolbarHidden = true
                 dock.animate().translationY(hidden.toFloat()).setDuration(180)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
-            } else if (dy < -6 && toolbarHidden) {
+            } else if (dy < 0 && toolbarHidden) {
                 toolbarHidden = false
                 dock.animate().translationY(0f).setDuration(180)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
@@ -9193,7 +9203,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         if (AppServices.settings.toolbarPosition() != 0) return
         val views = toolbarAutoHideViews()
-        if (dy > 6 && !toolbarHidden) {
+        if (dy > 0 && !toolbarHidden) {
             toolbarHidden = true
             views.forEach { target ->
                 if (target.visibility == View.VISIBLE && target.height > 0) {
@@ -9201,7 +9211,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
             }
             animateToolbarGroup(views, show = false)
-        } else if (dy < -6 && toolbarHidden) {
+        } else if (dy < 0 && toolbarHidden) {
             toolbarHidden = false
             animateToolbarGroup(views, show = true)
         }
@@ -9292,6 +9302,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     override fun onDestroyView() {
+        view?.removeCallbacks(applyScrollDirection)
         MenuPopup.dismiss()
         tts?.shutdown()
         tts = null
