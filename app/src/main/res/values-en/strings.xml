@@ -785,7 +785,7 @@
     <string name="settings_download_confirm">Ask before downloading</string>
     <string name="settings_home_sites">Frequent sites</string>
     <string name="settings_home_search">Search box</string>
-    <string name="settings_operate">Controls</string>
+    <string name="settings_operate">Behavior</string>
     <string name="settings_theme_night">Theme and night</string>
     <string name="settings_font">Fonts</string>
     <string name="settings_menus_toolbar">Menu and toolbar</string>
@@ -995,6 +995,7 @@
     <string name="home_tab_toolbar">Toolbar</string>
     <string name="home_tab_menu">Menu</string>
     <string name="home_tab_tabs">Tabs</string>
+    <string name="home_tab_theme">Theme</string>
     <string name="home_customize">Home customization</string>
     <string name="home_custom_fullscreen">Fullscreen</string>
     <string name="home_custom_refresh">Refresh</string>

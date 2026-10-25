@@ -132,7 +132,7 @@ class HomeCustomizeFragment : Fragment() {
                 previewShell?.setMenuVisible(activeTab == 6)
             },
             onAddressClick = {
-                activeTab = 4
+                activeTab = 2
                 renderTabs()
                 buildControls()
             },
@@ -154,12 +154,13 @@ class HomeCustomizeFragment : Fragment() {
         val labels = listOf(
             getString(R.string.home_tab_logo),
             getString(R.string.home_tab_search),
+            getString(R.string.home_tab_address),
             getString(R.string.home_tab_background),
             getString(R.string.home_tab_sites),
-            getString(R.string.home_tab_address),
             getString(R.string.home_tab_toolbar),
             getString(R.string.home_tab_menu),
             getString(R.string.home_tab_tabs),
+            getString(R.string.home_tab_theme),
             getString(R.string.home_tab_advanced)
         )
         labels.forEachIndexed { index, label ->
@@ -272,11 +273,12 @@ class HomeCustomizeFragment : Fragment() {
         val rows = when (activeTab) {
             0 -> logoRows()
             1 -> searchRows()
-            2 -> backgroundRows()
-            3 -> favoriteRows()
-            4 -> addressRows()
+            2 -> addressRows()
+            3 -> backgroundRows()
+            4 -> favoriteRows()
             5 -> toolbarRows()
             7 -> tabsRows()
+            8 -> themeRows()
             else -> advancedRows()
         }
         val card = CardList.styledCard(requireContext(), page = true)
@@ -440,8 +442,16 @@ class HomeCustomizeFragment : Fragment() {
     }
 
     private fun logoRows(): List<View> {
-        val textOn = settings.homeLogoShow() && !settings.homeLogoIconShow()
-        val iconOn = settings.homeLogoIconShow()
+        val mode = settings.homeLogoMode().coerceIn(0, 2)
+        val modeRow = choiceRow(
+            "显示内容",
+            arrayOf("文字", "Logo 图标", "时间"),
+            mode
+        ) { index ->
+            settings.setHomeLogoMode(index)
+            view?.post { buildControls() }
+            refreshPreview()
+        }
         val textRows = listOf(
             textRow(getString(R.string.settings_home_logo), settings.homeLogoText()) {
                 settings.setHomeLogoText(it)
@@ -462,42 +472,29 @@ class HomeCustomizeFragment : Fragment() {
             ) { index ->
                 settings.setHomeLogoWeight(index)
                 refreshPreview()
-            },
-            colorChoiceRow(
-                getString(R.string.settings_home_logo_color),
-                listOf(
-                    "跟随主题" to null,
-                    "主题色" to "accent",
-                    "蓝" to "#2F7CF6",
-                    "绿" to "#34C28F",
-                    "橙" to "#F2984A",
-                    "紫" to "#8A6FF0"
-                ),
-                settings.homeLogoColor()
-            ) { value ->
-                settings.setHomeLogoColor(value)
-                refreshPreview()
             }
-        ).map { if (textOn) it else disabledRow(it) }
+        ).map { if (mode == 0) it else disabledRow(it) }
+        val colorRow = colorChoiceRow(
+            getString(R.string.settings_home_logo_color),
+            listOf(
+                "跟随主题" to null,
+                "主题色" to "accent",
+                "蓝" to "#2F7CF6",
+                "绿" to "#34C28F",
+                "橙" to "#F2984A",
+                "紫" to "#8A6FF0"
+            ),
+            settings.homeLogoColor()
+        ) { value ->
+            settings.setHomeLogoColor(value)
+            refreshPreview()
+        }.let { if (mode == 1) disabledRow(it) else it }
         val iconRow = sliderRow("Logo 图标大小", settings.homeLogoIconSize(), 24, 120) {
             settings.setHomeLogoIconSize(it)
             refreshPreview()
         }
-        val iconSize = if (iconOn) iconRow else disabledRow(iconRow)
-        return listOf(
-            switchRow("显示字体", textOn) {
-                settings.setHomeLogoShow(it)
-                if (it) settings.setHomeLogoIconShow(false)
-                buildControls()
-                refreshPreview()
-            },
-            switchRow("显示 Logo 图标", iconOn) {
-                settings.setHomeLogoIconShow(it)
-                if (it) settings.setHomeLogoShow(false)
-                buildControls()
-                refreshPreview()
-            }
-        ) + textRows + iconSize
+        val iconSize = if (mode == 1) iconRow else disabledRow(iconRow)
+        return listOf(modeRow) + textRows + listOf(colorRow, iconSize)
     }
 
     private fun disabledRow(view: View): View {
@@ -1229,6 +1226,73 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setCloseTabToast(it)
             }
         )
+    }
+
+    /** 主题：夜间、网页暗色、滤镜、主题色与网页文字颜色。 */
+    private fun themeRows(): List<View> = listOf(
+        switchRow("跟随系统夜间", settings.nightFollowSystem()) {
+            settings.setNightFollowSystem(it)
+            (activity as? ShellActivity)?.let { act ->
+                ShellActivity.smoothRecreateForNightSwitch(act)
+            }
+        },
+        switchRow("夜间 CSS", settings.nightCssEnabled()) {
+            settings.setNightCssEnabled(it)
+            if (it) settings.setWebViewDark(false)
+            AppServices.applyWebViewDark?.invoke()
+            view?.post { buildControls() }
+            refreshPreview()
+        },
+        switchRow("网页暗色", settings.webViewDark()) {
+            settings.setWebViewDark(it)
+            if (it) settings.setNightCssEnabled(false)
+            AppServices.applyWebViewDark?.invoke()
+            view?.post { buildControls() }
+            refreshPreview()
+        },
+        sliderRow("夜间滤镜", settings.nightFilter(), 0, 255) {
+            settings.setNightFilter(it)
+            refreshPreview()
+        },
+        choiceRow(
+            "主题色",
+            arrayOf("默认（蓝）", "绿", "橙", "紫"),
+            themeColorIndex()
+        ) { index ->
+            settings.setSkin(themeSkins[index])
+            activity?.recreate()
+        },
+        choiceRow(
+            "网页文字颜色",
+            arrayOf("原色", "跟随主色", "仅白天", "仅夜晚"),
+            settings.webTextColor().coerceIn(0, 3)
+        ) {
+            settings.setWebTextColor(it)
+            AppServices.applyWebTextAccent?.invoke()
+            refreshPreview()
+        },
+        navRow("主题色识别", null) { openThemeColorPage() }
+    )
+
+    private val themeSkins = arrayOf(null, "green", "orange", "purple")
+
+    private fun themeColorIndex(): Int = when (settings.skin()) {
+        "green" -> 1
+        "orange" -> 2
+        "purple" -> 3
+        else -> 0
+    }
+
+    private fun openThemeColorPage() {
+        val fragment = SettingsDetailFragment().apply {
+            arguments = android.os.Bundle().apply {
+                putString(SettingsDetailFragment.ARG_VIEW, SettingsDetailFragment.VIEW_THEME_COLOR)
+            }
+        }
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.shell_root, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 
     private fun advancedRows(): List<View> = listOf(

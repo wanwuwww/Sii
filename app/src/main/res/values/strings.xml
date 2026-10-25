@@ -786,7 +786,7 @@
     <string name="settings_download_confirm">下载前询问</string>
     <string name="settings_home_sites">常用网站</string>
     <string name="settings_home_search">搜索框</string>
-    <string name="settings_operate">操作设定</string>
+    <string name="settings_operate">行为</string>
     <string name="settings_theme_night">主题与夜间</string>
     <string name="settings_font">字体</string>
     <string name="settings_menus_toolbar">菜单与工具栏</string>
@@ -996,6 +996,7 @@
     <string name="home_tab_toolbar">工具栏</string>
     <string name="home_tab_menu">菜单</string>
     <string name="home_tab_tabs">标签页</string>
+    <string name="home_tab_theme">主题</string>
     <string name="home_customize">主页定制</string>
     <string name="home_custom_fullscreen">全屏</string>
     <string name="home_custom_refresh">刷新</string>

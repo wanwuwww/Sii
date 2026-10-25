@@ -367,10 +367,8 @@ class SettingsDetailFragment : Fragment() {
         )
         sectionTitle(R.string.settings_habits)
         card(
-            navRow(getString(R.string.settings_theme_night)) { open(VIEW_V2_THEME) },
             navRow(getString(R.string.settings_gestures)) { open(VIEW_V2_GESTURE) },
             navRow(getString(R.string.settings_lp_custom)) { open(VIEW_LP_CUSTOM) },
-            navRow(getString(R.string.settings_tabs_start)) { open(VIEW_V2_TABS) },
             navRow(getString(R.string.settings_operate)) { open(VIEW_V2_OPERATE) },
             choiceRow(
                 getString(R.string.settings_screen_orientation),
@@ -1121,6 +1119,11 @@ class SettingsDetailFragment : Fragment() {
 
     private fun buildV2Operate() {
         card(
+            choiceRow(
+                getString(R.string.settings_startup_behavior),
+                STARTUP_BEHAVIOR_NAMES,
+                settings.startupBehavior().coerceIn(0, 2)
+            ) { settings.setStartupBehavior(it) },
             choiceRow(
                 getString(R.string.settings_back_action),
                 BACK_ACTION_NAMES,

@@ -386,6 +386,16 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setFixedMenuHeight(value: Int) = putInt(SettingsKeys.FIXED_MENU_HEIGHT, value.coerceIn(44, 80))
     override fun homeLogoIconShow(): Boolean = bool(SettingsKeys.HOME_LOGO_ICON_SHOW, true)
     override fun setHomeLogoIconShow(value: Boolean) = putBool(SettingsKeys.HOME_LOGO_ICON_SHOW, value)
+
+    override fun homeLogoMode(): Int {
+        val stored = int(SettingsKeys.HOME_LOGO_MODE, SettingsDefaults.HOME_LOGO_MODE)
+        if (stored >= 0) return stored.coerceIn(0, 2)
+        // 旧版只有「文字 / 图标」开关，未设置过的设备按旧开关推断。
+        return if (homeLogoIconShow()) 1 else 0
+    }
+
+    override fun setHomeLogoMode(value: Int) =
+        putInt(SettingsKeys.HOME_LOGO_MODE, value.coerceIn(0, 2))
     override fun homeLogoIconSize(): Int = int(SettingsKeys.HOME_LOGO_ICON_SIZE, 80).coerceIn(24, 120)
     override fun setHomeLogoIconSize(value: Int) = putInt(SettingsKeys.HOME_LOGO_ICON_SIZE, value.coerceIn(24, 80))
 

@@ -67,6 +67,16 @@ class HomePanel(
     private var siteDragStartY = 0f
     private var siteDragMode = false
 
+    private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val clockTick = object : Runnable {
+        override fun run() {
+            updateClock()
+            if (view.isAttachedToWindow && AppServices.settings.homeLogoMode() == 2) {
+                clockHandler.postDelayed(this, 15_000L)
+            }
+        }
+    }
+
     init {
         searchInput.setOnEditorActionListener { _, actionId, event ->            if (actionId == EditorInfo.IME_ACTION_GO ||
                 (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER)
@@ -114,6 +124,10 @@ class HomePanel(
             view.findViewById<View>(R.id.home_scan).visibility = View.GONE
             editButton.visibility = View.GONE
         }
+        view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = startClock()
+            override fun onViewDetachedFromWindow(v: View) = stopClock()
+        })
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 searchBox.animate()
@@ -173,7 +187,7 @@ class HomePanel(
         val logo = view.findViewById<TextView>(R.id.home_logo) ?: return
         val modern = AppServices.settings.uiStyle() == 1
         val baseTop = when (pos) {
-            0 -> dp(24)
+            0 -> dp(36)
             2 -> dp(0)
             else -> dp(72)
         }
@@ -188,6 +202,35 @@ class HomePanel(
                 icon.layoutParams = lp
             }
         }
+        view.findViewById<View>(R.id.home_clock)?.let { clock ->
+            (clock.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                lp.topMargin = top
+                clock.layoutParams = lp
+            }
+        }
+        applySearchBoxOrder(pos)
+    }
+
+    /** 顶部布局时搜索框与 Logo 互换：搜索框置顶，Logo/图标/时间位于其下。 */
+    private fun applySearchBoxOrder(pos: Int) {
+        val content = view.findViewById<LinearLayout>(R.id.home_content) ?: return
+        val box = view.findViewById<View>(R.id.home_search_box) ?: return
+        if (pos == 0) {
+            if (content.indexOfChild(box) != 0) {
+                content.removeView(box)
+                content.addView(box, 0)
+            }
+            return
+        }
+        val anchor = listOfNotNull(
+            view.findViewById<View>(R.id.home_logo),
+            view.findViewById<View>(R.id.home_logo_icon),
+            view.findViewById<View>(R.id.home_clock)
+        ).maxOfOrNull { content.indexOfChild(it) } ?: return
+        if (content.indexOfChild(box) != anchor + 1) {
+            content.removeView(box)
+            content.addView(box, (anchor + 1).coerceAtMost(content.childCount))
+        }
     }
 
     /** 应用主页样式：位置、Logo、列数、图标、搜索框、背景与名称。 */
@@ -200,17 +243,22 @@ class HomePanel(
         val s = AppServices.settings
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
-        val iconShow = s.homeLogoIconShow()
-        logo?.visibility = if (s.homeLogoShow() && !iconShow) View.VISIBLE else View.GONE
-        logoIcon?.visibility = if (iconShow) View.VISIBLE else View.GONE
-        if (logoIcon != null && iconShow) {
+        val mode = s.homeLogoMode()
+        logo?.visibility = if (mode == 0) View.VISIBLE else View.GONE
+        logoIcon?.visibility = if (mode == 1) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.home_clock)?.visibility =
+            if (mode == 2) View.VISIBLE else View.GONE
+        if (logoIcon != null) {
             val size = dp(s.homeLogoIconSize().coerceIn(24, 120))
-            logoIcon.layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                topMargin = dp(72)
-                bottomMargin = dp(22)
-                gravity = Gravity.CENTER_HORIZONTAL
+            (logoIcon.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                lp.width = size
+                lp.height = size
+                lp.bottomMargin = dp(22)
+                lp.gravity = Gravity.CENTER_HORIZONTAL
+                logoIcon.layoutParams = lp
             }
         }
+        if (mode == 2) updateClock() else stopClock()
         logo?.text = s.homeLogoText().ifBlank { "Sii" }
         val logoSize = s.homeLogoSize().takeIf { it > 0 } ?: 34
         logo?.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, logoSize.coerceIn(16, 64).toFloat())
@@ -520,11 +568,56 @@ class HomePanel(
     /** View 销毁时释放浮层、背景解码任务与图片引用。 */
     fun release() {
         hideSuggestions()
+        stopClock()
         bgJob?.cancel()
         bgJob = null
         scope.cancel()
         bgKey = null
         view.background = null
+    }
+
+    /** 时间 Logo 刷新：只在时间模式且页面可见时计时。 */
+    private fun startClock() {
+        clockHandler.removeCallbacks(clockTick)
+        if (AppServices.settings.homeLogoMode() != 2) return
+        updateClock()
+        clockHandler.postDelayed(clockTick, 15_000L)
+    }
+
+    private fun stopClock() {
+        clockHandler.removeCallbacks(clockTick)
+    }
+
+    private fun updateClock() {
+        val timeView = view.findViewById<TextView>(R.id.home_clock_time) ?: return
+        val dateView = view.findViewById<TextView>(R.id.home_clock_date)
+        val now = java.util.Calendar.getInstance()
+        timeView.text = String.format(
+            java.util.Locale.getDefault(),
+            "%02d:%02d",
+            now.get(java.util.Calendar.HOUR_OF_DAY),
+            now.get(java.util.Calendar.MINUTE)
+        )
+        dateView?.text = String.format(
+            java.util.Locale.getDefault(),
+            "%d月%d日 %s",
+            now.get(java.util.Calendar.MONTH) + 1,
+            now.get(java.util.Calendar.DAY_OF_MONTH),
+            now.getDisplayName(
+                java.util.Calendar.DAY_OF_WEEK,
+                java.util.Calendar.SHORT,
+                java.util.Locale.getDefault()
+            )
+        )
+        val colorValue = AppServices.settings.homeLogoColor()
+        val color = when {
+            colorValue == "accent" -> ThemeAccent.color(context)
+            !colorValue.isNullOrBlank() -> parseColorValue(colorValue)
+                ?: context.getColor(R.color.text_primary)
+            else -> context.getColor(R.color.text_primary)
+        }
+        timeView.setTextColor(color)
+        dateView?.setTextColor(context.getColor(R.color.text_secondary))
     }
 
     fun bind(items: List<FavoriteItem>) {

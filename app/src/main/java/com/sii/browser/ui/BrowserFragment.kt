@@ -4959,7 +4959,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         "adblock", "adpick" -> "rules"
         "dark", "nightauto" -> SettingsDetailFragment.VIEW_V2_THEME
         "incog" -> SettingsDetailFragment.VIEW_V2_INCOG
-        "newtab" -> SettingsDetailFragment.VIEW_V2_TABS
+        "newtab" -> SettingsDetailFragment.VIEW_V2_OPERATE
         else -> null
     }
 

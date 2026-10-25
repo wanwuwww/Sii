@@ -255,6 +255,7 @@ object SettingsKeys {
     const val SUGGEST_ORDER = "suggestorder"
     const val HOME_LOGO_ICON_SIZE = "home_logo_icon_size"
     const val HOME_LOGO_ICON_SHOW = "home_logo_icon_show"
+    const val HOME_LOGO_MODE = "homologomode"
     const val FIXED_MENU_HEIGHT = "fixed_menu_height"
     const val FIXED_MENU_ICON_SIZE = "fixed_menu_icon_size"
     const val FIXED_MENU_TEXT_SIZE = "fixed_menu_text_size"

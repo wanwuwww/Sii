@@ -217,6 +217,11 @@ interface AppearanceSettings {
     fun fixedMenuHeight(): Int
     fun setFixedMenuHeight(value: Int)
     fun homeLogoIconShow(): Boolean
+
+    /** Logo 显示内容：0 = 文字，1 = 图标，2 = 时间。 */
+    fun homeLogoMode(): Int
+
+    fun setHomeLogoMode(value: Int)
     fun setHomeLogoIconShow(value: Boolean)
     fun homeLogoIconSize(): Int
     fun setHomeLogoIconSize(value: Int)

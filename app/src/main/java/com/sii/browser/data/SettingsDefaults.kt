@@ -113,6 +113,7 @@ object SettingsDefaults {
     const val MENU_SHOW_LABELS = true
     const val FIXED_MENU_SHOW_LABELS = true
     const val HOME_LOGO_ICON_SHOW = true
+    const val HOME_LOGO_MODE = -1
     const val HOME_LOGO_ICON_SIZE = 80
 
     /** 退出时清理。 */

@@ -46,6 +46,36 @@
             android:visibility="gone" />
 
         <LinearLayout
+            android:id="@+id/home_clock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="72dp"
+            android:layout_marginBottom="22dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/home_clock_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="@color/text_primary"
+                android:textSize="56sp" />
+
+            <TextView
+                android:id="@+id/home_clock_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/home_search_box"
             android:layout_width="match_parent"
             android:layout_height="56dp"
