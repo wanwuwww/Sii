@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_sii"
+        android:shortcutId="new_tab"
+        android:shortcutShortLabel="@string/shortcut_new_tab">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.sii.browser.ui.ShellActivity"
+            android:targetPackage="com.sii.browser">
+            <extra
+                android:name="sii_action"
+                android:value="new_tab" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_sii"
+        android:shortcutId="search"
+        android:shortcutShortLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.sii.browser.ui.ShellActivity"
+            android:targetPackage="com.sii.browser">
+            <extra
+                android:name="sii_action"
+                android:value="search" />
+        </intent>
+    </shortcut>
+
+</shortcuts>

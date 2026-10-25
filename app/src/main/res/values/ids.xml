@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="tag_anim_color" type="id" />
+    <item name="download_progress" type="id" />
+    <item name="download_state" type="id" />
+    <item name="download_size" type="id" />
+</resources>

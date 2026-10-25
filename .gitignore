@@ -1,0 +1,27 @@
+*.zip
+
+# Sii 工程构建产物
+local.properties
+keystore/
+.gradle/
+build/
+*.apk
+*.aab
+*.zip
+.kotlin/
+
+/art/
+/Sii-debug.apk
+/.aicode/attachments/
+
+# 发布分支不包含开发规则、记忆与原型文件
+/AGENTS.md
+/.aicode/
+/design/
+
+# 源码备份目录
+/sii-source-*/
+
+# 本地交接与状态，不进入发布仓库
+/STATUS.md
+/scripts/

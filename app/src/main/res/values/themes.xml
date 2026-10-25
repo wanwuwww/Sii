@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Sii" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="accentSoft">@color/accent_soft</item>
+        <item name="alertDialogTheme">@style/SiiDialog</item>
+        <item name="android:alertDialogTheme">@style/SiiDialog</item>
+        <item name="android:statusBarColor">@color/toolbar_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Sii</item>
+    </style>
+
+    <!-- 全局窗口动画：进出淡入淡出 -->
+    <style name="Animation.Sii" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/fade_in</item>
+        <item name="android:activityOpenExitAnimation">@anim/fade_out</item>
+        <item name="android:activityCloseEnterAnimation">@anim/fade_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/fade_out</item>
+    </style>
+
+    <!-- 统一弹窗：底部弹出、上方 16dp 圆角、卡片底色、accent 确认按钮。 -->
+    <style name="SiiDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="android:windowMinWidthMajor">92%</item>
+        <item name="android:windowMinWidthMinor">92%</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="buttonBarPositiveButtonStyle">@style/SiiDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/SiiDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/SiiDialogButton</item>
+    </style>
+
+    <style name="SiiDialogNight" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="android:windowMinWidthMajor">92%</item>
+        <item name="android:windowMinWidthMinor">92%</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="buttonBarPositiveButtonStyle">@style/SiiDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/SiiDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/SiiDialogButton</item>
+    </style>
+
+    <style name="SiiDialogButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:textColor">?attr/colorAccent</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+    </style>
+    <style name="SiiDialogGreen" parent="SiiDialog">
+        <item name="android:colorAccent">@color/accent_green</item>
+        <item name="colorAccent">@color/accent_green</item>
+    </style>
+    <style name="SiiDialogOrange" parent="SiiDialog">
+        <item name="android:colorAccent">@color/accent_orange</item>
+        <item name="colorAccent">@color/accent_orange</item>
+    </style>
+    <style name="SiiDialogPurple" parent="SiiDialog">
+        <item name="android:colorAccent">@color/accent_purple</item>
+        <item name="colorAccent">@color/accent_purple</item>
+    </style>
+    <style name="SiiDialogNightGreen" parent="SiiDialogNight">
+        <item name="android:colorAccent">@color/accent_green</item>
+        <item name="colorAccent">@color/accent_green</item>
+    </style>
+    <style name="SiiDialogNightOrange" parent="SiiDialogNight">
+        <item name="android:colorAccent">@color/accent_orange</item>
+        <item name="colorAccent">@color/accent_orange</item>
+    </style>
+    <style name="SiiDialogNightPurple" parent="SiiDialogNight">
+        <item name="android:colorAccent">@color/accent_purple</item>
+        <item name="colorAccent">@color/accent_purple</item>
+    </style>
+
+    <style name="Theme.Sii.Dialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowMinWidthMajor">80%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="colorAccent">@color/accent</item>
+    </style>
+
+    <style name="Theme.Sii.Trampoline" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <style name="Theme.Sii.Night" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="accentSoft">@color/accent_soft</item>
+        <item name="alertDialogTheme">@style/SiiDialogNight</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNight</item>
+        <item name="android:statusBarColor">@color/toolbar_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Sii</item>
+    </style>
+    <style name="Theme.Sii.Green" parent="Theme.Sii">
+        <item name="android:colorAccent">@color/accent_green</item>
+        <item name="colorAccent">@color/accent_green</item>
+        <item name="accentSoft">@color/accent_soft_green</item>
+        <item name="alertDialogTheme">@style/SiiDialogGreen</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogGreen</item>
+    </style>
+    <style name="Theme.Sii.Orange" parent="Theme.Sii">
+        <item name="android:colorAccent">@color/accent_orange</item>
+        <item name="colorAccent">@color/accent_orange</item>
+        <item name="accentSoft">@color/accent_soft_orange</item>
+        <item name="alertDialogTheme">@style/SiiDialogOrange</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogOrange</item>
+    </style>
+    <style name="Theme.Sii.Purple" parent="Theme.Sii">
+        <item name="android:colorAccent">@color/accent_purple</item>
+        <item name="colorAccent">@color/accent_purple</item>
+        <item name="accentSoft">@color/accent_soft_purple</item>
+        <item name="alertDialogTheme">@style/SiiDialogPurple</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogPurple</item>
+    </style>
+
+    <style name="Theme.Sii.Night.Green" parent="Theme.Sii.Night">
+        <item name="android:colorAccent">@color/accent_green</item>
+        <item name="colorAccent">@color/accent_green</item>
+        <item name="accentSoft">@color/accent_soft_green</item>
+        <item name="alertDialogTheme">@style/SiiDialogNightGreen</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightGreen</item>
+    </style>
+    <style name="Theme.Sii.Night.Orange" parent="Theme.Sii.Night">
+        <item name="android:colorAccent">@color/accent_orange</item>
+        <item name="colorAccent">@color/accent_orange</item>
+        <item name="accentSoft">@color/accent_soft_orange</item>
+        <item name="alertDialogTheme">@style/SiiDialogNightOrange</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightOrange</item>
+    </style>
+    <style name="Theme.Sii.Night.Purple" parent="Theme.Sii.Night">
+        <item name="android:colorAccent">@color/accent_purple</item>
+        <item name="colorAccent">@color/accent_purple</item>
+        <item name="accentSoft">@color/accent_soft_purple</item>
+        <item name="alertDialogTheme">@style/SiiDialogNightPurple</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightPurple</item>
+    </style>
+
+    <!-- 新版深色弹窗（白天/夜间通用，跟随主色变体） -->
+    <style name="SiiDialogModern" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog_dark</item>
+        <item name="android:windowMinWidthMajor">92%</item>
+        <item name="android:windowMinWidthMinor">92%</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:textColorPrimary">@color/on_dark_primary</item>
+        <item name="android:textColorSecondary">@color/on_dark_secondary</item>
+        <item name="android:textColorAlertDialogListItem">@color/on_dark_primary</item>
+        <item name="android:editTextColor">@color/on_dark_primary</item>
+        <item name="android:textColorHint">@color/on_dark_secondary</item>
+        <item name="android:colorBackground">@color/dialog_surface_dark</item>
+        <item name="buttonBarPositiveButtonStyle">@style/SiiDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/SiiDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/SiiDialogButton</item>
+    </style>
+    <style name="SiiDialogModernGreen" parent="SiiDialogModern">
+        <item name="android:colorAccent">@color/accent_green</item>
+        <item name="colorAccent">@color/accent_green</item>
+    </style>
+    <style name="SiiDialogModernOrange" parent="SiiDialogModern">
+        <item name="android:colorAccent">@color/accent_orange</item>
+        <item name="colorAccent">@color/accent_orange</item>
+    </style>
+    <style name="SiiDialogModernPurple" parent="SiiDialogModern">
+        <item name="android:colorAccent">@color/accent_purple</item>
+        <item name="colorAccent">@color/accent_purple</item>
+    </style>
+
+    <style name="ThemeOverlay.Sii.DialogModern" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogModern</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogModern</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogModernGreen" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogModernGreen</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogModernGreen</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogModernOrange" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogModernOrange</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogModernOrange</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogModernPurple" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogModernPurple</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogModernPurple</item>
+    </style>
+
+    <style name="ThemeOverlay.Sii.DialogClassic" parent="">
+        <item name="alertDialogTheme">@style/SiiDialog</item>
+        <item name="android:alertDialogTheme">@style/SiiDialog</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicGreen" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogGreen</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogGreen</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicOrange" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogOrange</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogOrange</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicPurple" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogPurple</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogPurple</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicNight" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogNight</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNight</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicNightGreen" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogNightGreen</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightGreen</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicNightOrange" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogNightOrange</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightOrange</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicNightPurple" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogNightPurple</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightPurple</item>
+    </style>
+
+    <!-- 底部工具栏按钮 -->
+    <style name="ToolbarButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+    </style>
+
+    <style name="ToolbarLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+</resources>
