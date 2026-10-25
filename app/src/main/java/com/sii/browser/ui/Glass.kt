@@ -14,10 +14,10 @@ import com.sii.browser.di.AppServices
  */
 object GlassStyle {
 
-    fun fill(context: Context, dark: Boolean, strength: Int): Int {
+    fun fill(context: Context, dark: Boolean, strength: Int, minAlpha: Int = 150): Int {
         val s = strength.coerceIn(0, 100)
-        // 强度越高越通透；最底保留一层颜色，避免完全透明时文字发虚。
-        val alpha = (255 - s * 150 / 100).coerceIn(70, 255)
+        // 强度越高越通透；minAlpha 保证文字可读（菜单/面板用高下限）。
+        val alpha = (255 - s * 150 / 100).coerceIn(minAlpha.coerceIn(0, 255), 255)
         val base = if (dark) 0x1B1E23 else 0xFFFFFF
         return (alpha shl 24) or base
     }
@@ -34,7 +34,8 @@ object GlassStyle {
         dark: Boolean,
         radiusPx: Float,
         strength: Int,
-        topOnly: Boolean = false
+        topOnly: Boolean = false,
+        minAlpha: Int = 150
     ): GradientDrawable = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         cornerRadii = if (topOnly) {
@@ -45,7 +46,7 @@ object GlassStyle {
                 radiusPx, radiusPx, radiusPx, radiusPx
             )
         }
-        setColor(fill(context, dark, strength))
+        setColor(fill(context, dark, strength, minAlpha))
         setStroke(context.resources.displayMetrics.density.toInt().coerceAtLeast(1), stroke(dark, strength))
     }
 }
@@ -68,8 +69,8 @@ object GlassBlur {
         if (!AppServices.settings.glassBlur()) return null
         if (source == null || source.width <= 0 || source.height <= 0) return null
         if (width <= 0 || height <= 0) return null
-        val smallWidth = (width / 10).coerceAtLeast(8)
-        val smallHeight = (height / 10).coerceAtLeast(8)
+        val smallWidth = (width / 5).coerceAtLeast(12)
+        val smallHeight = (height / 5).coerceAtLeast(12)
         val small = Bitmap.createBitmap(smallWidth, smallHeight, Bitmap.Config.ARGB_8888)
         runCatching {
             val canvas = Canvas(small)
@@ -82,6 +83,8 @@ object GlassBlur {
         return RoundedBitmapDrawableFactory.create(context.resources, small).apply {
             cornerRadius = radiusPx
             setAntiAlias(true)
+            // 柔和底图，避免颜色过艳影响上方文字。
+            alpha = 120
         }
     }
 }

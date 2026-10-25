@@ -16,8 +16,16 @@ object StartupExit {
     @Volatile
     private var abnormalPending = false
 
+    /** 只在进程内首次启动时判定，Activity 重建不重复读取。 */
+    private var initialized = false
+
     /** 冷启动时调用：读出上次是否正常结束，并把本次标记为运行中。 */
     fun readAndMarkRunning(context: Context) {
+        if (initialized) {
+            abnormalPending = false
+            return
+        }
+        initialized = true
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         abnormalPending = prefs.contains(KEY_CLEAN) && !prefs.getBoolean(KEY_CLEAN, true)
         prefs.edit().putBoolean(KEY_CLEAN, false).apply()

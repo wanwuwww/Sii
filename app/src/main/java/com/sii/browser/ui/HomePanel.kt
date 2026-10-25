@@ -311,7 +311,7 @@ class HomePanel(
             style != 0 -> null
             !on -> null
             modern -> GlassStyle.background(
-                context, dark, dp(24).toFloat(), AppServices.settings.glassStrength()
+                context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(), minAlpha = 200
             )
             else -> context.getDrawable(R.drawable.bg_home_card)
         }

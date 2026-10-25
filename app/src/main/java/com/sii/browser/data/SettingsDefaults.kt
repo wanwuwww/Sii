@@ -189,7 +189,7 @@ object SettingsDefaults {
     const val GLASS_STRENGTH = 60
 
     /** 实时模糊（Android 12+）。 */
-    const val GLASS_BLUR = true
+    const val GLASS_BLUR = false
 
     /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
     const val HOME_STYLE = 0

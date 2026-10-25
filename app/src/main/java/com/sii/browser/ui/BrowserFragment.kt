@@ -3882,7 +3882,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
-        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength)
+        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 210)
         else requireContext().getColor(R.color.bg)
         val mergedAlpha = ((((fill ushr 24) and 0xFF) * alpha) / 255).coerceIn(0, 255)
         val radius = dp(28).toFloat()
@@ -3905,7 +3905,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (modern) {
                     background = android.graphics.drawable.GradientDrawable().apply {
                         cornerRadius = dp(22).toFloat()
-                        setColor(GlassStyle.fill(requireContext(), dark, strength))
+                        setColor(GlassStyle.fill(requireContext(), dark, strength, 200))
                         setStroke(dp(1), GlassStyle.stroke(dark, strength))
                     }
                 } else {
@@ -4615,7 +4615,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (modern) {
                 background = GlassStyle.background(
                     requireContext(), dark, dp(28).toFloat(),
-                    AppServices.settings.glassStrength(), topOnly = true
+                    AppServices.settings.glassStrength(), topOnly = true, minAlpha = 225
                 )
                 backgroundTintList = null
             } else {
@@ -9092,7 +9092,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val radius = dp(28).toFloat()
         val width = dock.width.takeIf { it > 0 } ?: dp(320)
         val height = dock.height.takeIf { it > 0 } ?: dp(96)
-        val glass = GlassStyle.background(requireContext(), night, radius, strength)
+        val glass = GlassStyle.background(requireContext(), night, radius, strength, minAlpha = 170)
         val blurred = GlassBlur.layer(
             requireContext(), tabManager.currentWebView, width, height, radius
         )
