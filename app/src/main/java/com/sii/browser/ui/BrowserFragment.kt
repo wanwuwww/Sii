@@ -3859,7 +3859,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val radius = dp(28).toFloat()
         panel.background = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadii = floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
+            // 新版面板与底栏之间留了距离，四角都做圆角；经典模式仍贴底，只圆上方两角。
+            cornerRadii = if (modern) {
+                floatArrayOf(radius, radius, radius, radius, radius, radius, radius, radius)
+            } else {
+                floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
+            }
             setColor((color and 0x00FFFFFF) or (alpha shl 24))
         }
         val actionBg = if (dark) R.drawable.bg_sheet_action_dark else R.drawable.bg_card
@@ -4068,7 +4073,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         // 面板未显示过时 overlay 高度为 0，用浏览器内容区高度回退。
         val overlayHeight = overlay.height.takeIf { it > 0 }
             ?: ((view?.height ?: resources.displayMetrics.heightPixels) - margins)
-        val maxHeight = (overlayHeight - actionsHeight - headerHeight)
+        // 新版面板底部要让出悬浮底栏高度，限高时一并扣除，避免多标签时面板顶出屏幕。
+        val modernLift = if (AppServices.settings.uiStyle() == 1) {
+            (view?.findViewById<View>(R.id.modern_chrome)?.height?.takeIf { it > 0 } ?: dpToPx(56)) +
+                dpToPx(14)
+        } else 0
+        val maxHeight = (overlayHeight - actionsHeight - headerHeight - modernLift)
             .coerceAtLeast(dpToPx(160))
         scroll.post {
             if (!isAdded) return@post
@@ -8839,7 +8849,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         overlayParams.bottomMargin = if (!modern && position == 0) barHeight else 0
         dimParams.topMargin = 0
         dimParams.bottomMargin = 0
-        panelParams.bottomMargin = 0
+        // 新版底栏悬浮在内容之上，面板底部要让出同样高度，否则底部按钮被压在底栏下面。
+        panelParams.bottomMargin = if (modern) {
+            (view?.findViewById<View>(R.id.modern_chrome)?.height?.takeIf { it > 0 } ?: dp(56)) +
+                dp(14)
+        } else 0
         overlay.layoutParams = overlayParams
         dim.layoutParams = dimParams
         panel.layoutParams = panelParams
