@@ -237,6 +237,8 @@ object SettingsKeys {
     const val SUB_INTERVAL = "subinterval"
     const val TAB_POS = "tabpos"
     const val TAB_CARD_GRID = "tab_card_grid"
+    const val TAB_GRID_COLUMNS = "tab_grid_columns"
+    const val TAB_SHOW_THUMB = "tab_show_thumb"
     const val UI_STYLE = "ui_style"
     const val TABS_PANEL_TRANSPARENCY = "tabs_panel_transparency"
     const val HLS_TO_MP4 = "hls_to_mp4"

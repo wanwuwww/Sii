@@ -157,6 +157,8 @@ object SettingsDefaults {
 
     /** 标签页使用卡片网格；false = 当前简约列表。 */
     const val TAB_CARD_GRID = true
+    const val TAB_GRID_COLUMNS = 2
+    const val TAB_SHOW_THUMB = true
 
     /** 广告拦截总开关。 */
     const val ADBLOCK_ENABLED = false

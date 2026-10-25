@@ -209,6 +209,18 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun tabCardGrid(): Boolean =
         bool(SettingsKeys.TAB_CARD_GRID, SettingsDefaults.TAB_CARD_GRID)
 
+    override fun tabGridColumns(): Int =
+        int(SettingsKeys.TAB_GRID_COLUMNS, SettingsDefaults.TAB_GRID_COLUMNS).coerceIn(2, 3)
+
+    override fun setTabGridColumns(value: Int) =
+        putInt(SettingsKeys.TAB_GRID_COLUMNS, value.coerceIn(2, 3))
+
+    override fun tabShowThumb(): Boolean =
+        bool(SettingsKeys.TAB_SHOW_THUMB, SettingsDefaults.TAB_SHOW_THUMB)
+
+    override fun setTabShowThumb(value: Boolean) =
+        putBool(SettingsKeys.TAB_SHOW_THUMB, value)
+
     override fun setTabCardGrid(value: Boolean) = putBool(SettingsKeys.TAB_CARD_GRID, value)
 
     override fun uiStyle(): Int =

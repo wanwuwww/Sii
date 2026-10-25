@@ -4114,7 +4114,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val list = tabsList ?: return
         val index = tabManager.currentIndex
         if (index < 0) return
-        val row = if (AppServices.settings.tabCardGrid()) index / 2 else index
+        val row = if (AppServices.settings.tabCardGrid()) {
+            index / AppServices.settings.tabGridColumns().coerceIn(2, 3)
+        } else index
         scroll.postOnAnimation {
             val child = list.getChildAt(row) ?: return@postOnAnimation
             scroll.smoothScrollTo(0, child.top)
@@ -4124,7 +4126,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun renderGridTabCards(list: LinearLayout) {
         list.setOnDragListener(null)
         val density = resources.displayMetrics.density
-        tabManager.tabs.chunked(2).forEachIndexed { rowIndex, pair ->
+        val columns = AppServices.settings.tabGridColumns().coerceIn(2, 3)
+        tabManager.tabs.chunked(columns).forEachIndexed { rowIndex, pair ->
             val row = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
@@ -4133,13 +4136,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 ).apply { bottomMargin = (10 * density).toInt() }
             }
             pair.forEachIndexed { cell, tab ->
-                val index = rowIndex * 2 + cell
+                val index = rowIndex * columns + cell
                 val card = buildTabCard(tab, index, grid = true)
                 card.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    .apply { marginEnd = if (cell == 0) (8 * density).toInt() else 0 }
+                    .apply { marginEnd = if (cell < columns - 1) (8 * density).toInt() else 0 }
                 row.addView(card)
             }
-            if (pair.size == 1) {
+            repeat(columns - pair.size) {
                 row.addView(View(requireContext()).apply {
                     layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
                 })
@@ -4224,7 +4227,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         return -1
     }
 
-    /** 标签卡片。 */
     /** 新版网格卡片的缩略图区：图片铺满，无图时用主色淡底 + 首字母占位。 */
     private fun modernTabThumb(tab: Tab): View {
         val context = requireContext()
@@ -4259,6 +4261,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
     }
 
+    /** 标签卡片。 */
     private fun buildTabCard(tab: Tab, index: Int, grid: Boolean = false): View {
         val context = requireContext()
         val active = index == tabManager.currentIndex
@@ -4352,9 +4355,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dp(10) }
             isClickable = true
-            if (modern && grid) addView(modernTabThumb(tab))
+            if (modern && grid && AppServices.settings.tabShowThumb()) addView(modernTabThumb(tab))
             addView(head)
-            if (grid && !modern) {
+            if (grid && !modern && AppServices.settings.tabShowThumb()) {
                 val thumb = tab.thumbnail
                 if (thumb != null) {
                     addView(android.widget.FrameLayout(context).apply {

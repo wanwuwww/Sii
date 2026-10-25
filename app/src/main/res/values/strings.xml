@@ -995,6 +995,7 @@
     <string name="home_tab_address">地址栏</string>
     <string name="home_tab_toolbar">工具栏</string>
     <string name="home_tab_menu">菜单</string>
+    <string name="home_tab_tabs">标签页</string>
     <string name="home_customize">主页定制</string>
     <string name="home_custom_fullscreen">全屏</string>
     <string name="home_custom_refresh">刷新</string>

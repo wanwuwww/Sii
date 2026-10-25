@@ -384,10 +384,6 @@ class SettingsDetailFragment : Fragment() {
                 settings.setKeepOn(it)
             },
             switchRow(
-                getString(R.string.settings_closetab_toast),
-                settings.closeTabToast()
-            ) { settings.setCloseTabToast(it) },
-            switchRow(
                 getString(R.string.settings_sniff),
                 settings.sniffEnabled(),
                 getString(R.string.settings_sniff_desc)
@@ -1012,20 +1008,7 @@ class SettingsDetailFragment : Fragment() {
                 getString(R.string.settings_startup_behavior),
                 STARTUP_BEHAVIOR_NAMES,
                 settings.startupBehavior().coerceIn(0, 2)
-            ) { settings.setStartupBehavior(it) },
-            choiceRow(
-                getString(R.string.settings_tab_button_order),
-                TAB_BUTTON_ORDER_NAMES,
-                if (settings.tabActionSwap()) 1 else 0
-            ) { settings.setTabActionSwap(it == 1) },
-            switchRow(
-                getString(R.string.settings_tab_undo_visible),
-                settings.tabUndoVisible()
-            ) { settings.setTabUndoVisible(it) },
-            switchRow(
-                getString(R.string.settings_closetab_toast),
-                settings.closeTabToast()
-            ) { settings.setCloseTabToast(it) }
+            ) { settings.setStartupBehavior(it) }
         )
     }
 

@@ -994,6 +994,7 @@
     <string name="home_tab_address">Address bar</string>
     <string name="home_tab_toolbar">Toolbar</string>
     <string name="home_tab_menu">Menu</string>
+    <string name="home_tab_tabs">Tabs</string>
     <string name="home_customize">Home customization</string>
     <string name="home_custom_fullscreen">Fullscreen</string>
     <string name="home_custom_refresh">Refresh</string>

@@ -159,6 +159,7 @@ class HomeCustomizeFragment : Fragment() {
             getString(R.string.home_tab_address),
             getString(R.string.home_tab_toolbar),
             getString(R.string.home_tab_menu),
+            getString(R.string.home_tab_tabs),
             getString(R.string.home_tab_advanced)
         )
         labels.forEachIndexed { index, label ->
@@ -275,6 +276,7 @@ class HomeCustomizeFragment : Fragment() {
             3 -> favoriteRows()
             4 -> addressRows()
             5 -> toolbarRows()
+            7 -> tabsRows()
             else -> advancedRows()
         }
         val card = CardList.styledCard(requireContext(), page = true)
@@ -1175,16 +1177,61 @@ class HomeCustomizeFragment : Fragment() {
         if (enabled) setOnClickListener { onClick() }
     }
 
+    /** 标签页：样式、网格、透明度与操作按钮。 */
+    private fun tabsRows(): List<View> {
+        val grid = settings.tabCardGrid()
+        val styleRow = choiceRow(
+            "标签卡样式",
+            arrayOf("列表", "网格"),
+            if (grid) 1 else 0
+        ) { index ->
+            settings.setTabCardGrid(index == 1)
+            refreshPreview()
+            view?.post { buildControls() }
+        }
+        val columnsRow = choiceRow(
+            "网格列数",
+            arrayOf("2 列", "3 列"),
+            settings.tabGridColumns().coerceIn(2, 3) - 2
+        ) { index ->
+            settings.setTabGridColumns(index + 2)
+            refreshPreview()
+        }
+        val thumbRow = switchRow("显示网页缩略图", settings.tabShowThumb()) {
+            settings.setTabShowThumb(it)
+            refreshPreview()
+        }
+        if (!grid) {
+            disableRow(columnsRow, true)
+            disableRow(thumbRow, true)
+        }
+        return listOf(
+            styleRow,
+            columnsRow,
+            thumbRow,
+            sliderRow("面板背景透明度", settings.tabsPanelTransparency(), 0, 100) {
+                settings.setTabsPanelTransparency(it)
+                refreshPreview()
+            },
+            choiceRow(
+                "新建/撤销顺序",
+                arrayOf("新建在左", "撤销在左"),
+                if (settings.tabActionSwap()) 1 else 0
+            ) { index ->
+                settings.setTabActionSwap(index == 1)
+                refreshPreview()
+            },
+            switchRow("显示撤销按钮", settings.tabUndoVisible()) {
+                settings.setTabUndoVisible(it)
+                refreshPreview()
+            },
+            switchRow("关闭标签后提示", settings.closeTabToast()) {
+                settings.setCloseTabToast(it)
+            }
+        )
+    }
+
     private fun advancedRows(): List<View> = listOf(
-        sliderRow(
-            getString(R.string.settings_tabs_panel_transparency),
-            settings.tabsPanelTransparency(),
-            0, 100
-        ) { settings.setTabsPanelTransparency(it) },
-        switchRow(
-            getString(R.string.settings_tab_card_grid),
-            settings.tabCardGrid()
-        ) { settings.setTabCardGrid(it) },
         sliderRow(
             getString(R.string.settings_card_alpha),
             settings.settingsCardAlpha(),

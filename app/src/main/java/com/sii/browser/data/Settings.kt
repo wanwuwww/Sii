@@ -79,6 +79,16 @@ interface Settings :
 
     fun setTabCardGrid(value: Boolean)
 
+    /** 标签网格列数：2 或 3。 */
+    fun tabGridColumns(): Int
+
+    fun setTabGridColumns(value: Int)
+
+    /** 标签网格是否显示网页缩略图。 */
+    fun tabShowThumb(): Boolean
+
+    fun setTabShowThumb(value: Boolean)
+
     /** 界面风格：0 = 经典，1 = 新版。 */
     fun uiStyle(): Int
 
