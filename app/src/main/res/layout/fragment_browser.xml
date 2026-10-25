@@ -705,6 +705,7 @@
 
             <!-- 固定操作：用户可定制的快捷项 -->
             <HorizontalScrollView
+                android:id="@+id/menu_fixed_bar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:scrollbars="none">
@@ -720,6 +721,7 @@
 
             <!-- 分隔线 -->
             <View
+                android:id="@+id/menu_divider"
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginStart="18dp"

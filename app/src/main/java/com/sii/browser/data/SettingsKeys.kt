@@ -224,6 +224,7 @@ object SettingsKeys {
     const val SEARCH_TOOLBAR_ORDER = "searchtoolbarorder"
     const val HIDDEN_MENUS = "hiddenmenus"
     const val FIXED_ITEMS = "fixeditems"
+    const val FIXED_MENU_POSITION = "fixedmenuposition"
     const val SEARCH_SHORTCUTS = "searchshortcuts"
 
     // 实现类方法体中的散落 key

@@ -223,7 +223,8 @@ class DataStoreSettings(private val context: Context) : Settings {
         putInt(SettingsKeys.SETTINGS_CARD_ALPHA, value.coerceIn(0, 100))
 
     override fun tabsPanelTransparency(): Int =
-        int(SettingsKeys.TABS_PANEL_TRANSPARENCY, 0).coerceIn(0, 100)
+        int(SettingsKeys.TABS_PANEL_TRANSPARENCY, SettingsDefaults.TABS_PANEL_TRANSPARENCY)
+            .coerceIn(0, 100)
 
     override fun setTabsPanelTransparency(value: Int) =
         putInt(SettingsKeys.TABS_PANEL_TRANSPARENCY, value.coerceIn(0, 100))
@@ -1002,6 +1003,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setFixedItems(value: String?) {
         putStr(SettingsKeys.FIXED_ITEMS, value)
     }
+
+    override fun fixedMenuPosition(): Int =
+        int(SettingsKeys.FIXED_MENU_POSITION, SettingsDefaults.FIXED_MENU_POSITION).coerceIn(0, 1)
+
+    override fun setFixedMenuPosition(value: Int) =
+        putInt(SettingsKeys.FIXED_MENU_POSITION, value.coerceIn(0, 1))
 
     override fun videoOrientation(): Int = int(SettingsKeys.VIDEO_ORIENTATION, 0)
 

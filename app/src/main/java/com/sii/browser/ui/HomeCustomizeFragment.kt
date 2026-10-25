@@ -342,6 +342,15 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setFixedMenuShowLabels(it)
                 refreshPreview()
             })
+            add(choiceRow(
+                "固定菜单位置",
+                arrayOf("移动菜单项上方", "移动菜单项下方"),
+                settings.fixedMenuPosition().coerceIn(0, 1)
+            ) { index ->
+                settings.setFixedMenuPosition(index)
+                refreshPreview()
+                view?.post { buildControls() }
+            })
             add(sliderRow("固定菜单栏高度", settings.fixedMenuHeight(), 44, 80) {
                 settings.setFixedMenuHeight(it)
                 refreshPreview()

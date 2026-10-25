@@ -749,6 +749,11 @@ interface BehaviorSettings {
 
     fun setFixedItems(value: String?)
 
+    /** 固定菜单位置：0 = 移动项上方，1 = 移动项下方。 */
+    fun fixedMenuPosition(): Int
+
+    fun setFixedMenuPosition(value: Int)
+
     /** 视频方向（videoorientation）。 */
     fun videoOrientation(): Int
 

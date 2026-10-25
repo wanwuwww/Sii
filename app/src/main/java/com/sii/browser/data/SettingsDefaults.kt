@@ -108,6 +108,8 @@ object SettingsDefaults {
     const val FIXED_MENU_HEIGHT = 51
     const val FIXED_MENU_ICON_SIZE = 25
     const val FIXED_MENU_TEXT_SIZE = 10
+    /** 固定菜单位置：0 = 移动项上方，1 = 移动项下方。 */
+    const val FIXED_MENU_POSITION = 0
     const val MENU_SHOW_LABELS = true
     const val FIXED_MENU_SHOW_LABELS = true
     const val HOME_LOGO_ICON_SHOW = true
@@ -169,7 +171,7 @@ object SettingsDefaults {
     const val UI_STYLE = 1
 
     /** 标签页背景透明度，0 = 不透明，100 = 全透明。 */
-    const val TABS_PANEL_TRANSPARENCY = 0
+    const val TABS_PANEL_TRANSPARENCY = 15
 
     /** HLS 下载完成后是否重封装为 MP4。 */
     const val HLS_TO_MP4 = true

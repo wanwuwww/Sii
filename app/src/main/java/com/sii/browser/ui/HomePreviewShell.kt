@@ -367,43 +367,71 @@ class HomePreviewShell(
             }
         }
         val upper = menuUpperItems()
+        val fixed = menuFixedItems()
         val columns = AppServices.settings.menuColumns().coerceIn(4, 5)
-        if (AppServices.settings.menuScrollStyle() == 1) {
-            for (rowIndex in 0..1) {
-                val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-                upper.forEachIndexed { index, item ->
-                    if (index % 2 == rowIndex) row.addView(menuPreviewItem(item, columns, fixed = false))
+        val dark = AppServices.settings.isNightMode()
+        menuPanel.addView(
+            LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(4), dp(14), dp(6))
+                addView(TextView(context).apply {
+                    text = context.getString(R.string.menu)
+                    setTextSize(15f)
+                    setTextColor(
+                        if (dark) android.graphics.Color.WHITE
+                        else ContextCompat.getColor(context, R.color.text_primary)
+                    )
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    layoutParams = LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                })
+                addView(TextView(context).apply {
+                    text = context.getString(R.string.settings)
+                    setTextSize(13f)
+                    setTextColor(ThemeAccent.color(context))
+                })
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        val addUpper = {
+            if (AppServices.settings.menuScrollStyle() == 1) {
+                for (rowIndex in 0..1) {
+                    val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                    upper.forEachIndexed { index, item ->
+                        if (index % 2 == rowIndex) row.addView(menuPreviewItem(item, columns, fixed = false))
+                    }
+                    menuPanel.addView(
+                        HorizontalScrollView(context).apply {
+                            isHorizontalScrollBarEnabled = false
+                            addView(row)
+                        },
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(58))
+                    )
+                }
+            } else {
+                val grid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+                upper.chunked(columns).forEach { chunk ->
+                    val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                    chunk.forEach { item ->
+                        row.addView(menuPreviewItem(item, columns, fixed = false))
+                    }
+                    grid.addView(row)
                 }
                 menuPanel.addView(
-                    HorizontalScrollView(context).apply {
-                        isHorizontalScrollBarEnabled = false
-                        addView(row)
-                    },
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(58))
+                    grid,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
                 )
             }
-        } else {
-            val grid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            upper.chunked(columns).forEach { chunk ->
-                val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-                chunk.forEach { item ->
-                    row.addView(menuPreviewItem(item, columns, fixed = false))
-                }
-                grid.addView(row)
-            }
-            menuPanel.addView(
-                grid,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            )
         }
-        val fixed = menuFixedItems()
-        if (fixed.isNotEmpty()) {
-            menuPanel.addView(View(context).apply {
-                setBackgroundColor(ContextCompat.getColor(context, R.color.line))
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
+        val addFixed = {
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
             fixed.forEach { row.addView(menuPreviewItem(it, fixed.size, fixed = true)) }
             menuPanel.addView(
@@ -416,6 +444,20 @@ class HomePreviewShell(
                     dp(AppServices.settings.fixedMenuHeight())
                 )
             )
+        }
+        val addDivider = {
+            menuPanel.addView(View(context).apply {
+                setBackgroundColor(ContextCompat.getColor(context, R.color.line))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
+        }
+        if (fixed.isNotEmpty() && AppServices.settings.fixedMenuPosition() == 0) {
+            addFixed()
+            if (upper.isNotEmpty()) addDivider()
+            addUpper()
+        } else {
+            addUpper()
+            if (fixed.isNotEmpty()) addDivider()
+            if (fixed.isNotEmpty()) addFixed()
         }
         overlay.addView(menuPanel, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

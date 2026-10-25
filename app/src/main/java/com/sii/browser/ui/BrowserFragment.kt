@@ -4552,8 +4552,25 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
     }
 
+    /** 固定菜单栏位置：0 = 移动项上方，1 = 移动项下方（分隔线跟随）。 */
+    private fun applyFixedMenuPosition() {
+        val panel = view?.findViewById<LinearLayout>(R.id.menu_panel) ?: return
+        val fixedBar = view?.findViewById<View>(R.id.menu_fixed_bar) ?: return
+        val divider = view?.findViewById<View>(R.id.menu_divider) ?: return
+        panel.removeView(fixedBar)
+        panel.removeView(divider)
+        if (AppServices.settings.fixedMenuPosition() == 1) {
+            panel.addView(divider)
+            panel.addView(fixedBar)
+        } else {
+            panel.addView(fixedBar, minOf(2, panel.childCount))
+            panel.addView(divider, minOf(3, panel.childCount))
+        }
+    }
+
     private fun renderMenuSheet() {
         val catalog = menuCatalog()
+        applyFixedMenuPosition()
         val byId = catalog.associateBy { it.id }
         val fixedOrder = AppServices.settings.fixedItems()?.split(",")?.filter { it.isNotEmpty() }
             ?.takeIf { it.isNotEmpty() } ?: DEFAULT_FIXED
