@@ -3851,10 +3851,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val alpha = 255 - transparency * 255 / 100
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
-        val color = if (dark) {
-            0xFF1B1E23.toInt()
-        } else {
-            requireContext().getColor(R.color.bg)
+        val color = when {
+            dark -> 0xFF1B1E23.toInt()
+            modern -> 0xFFFFFFFF.toInt()
+            else -> requireContext().getColor(R.color.bg)
         }
         val radius = dp(28).toFloat()
         panel.background = android.graphics.drawable.GradientDrawable().apply {
@@ -3866,13 +3866,22 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
             }
             setColor((color and 0x00FFFFFF) or (alpha shl 24))
+            if (modern) setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
         }
-        val actionBg = if (dark) R.drawable.bg_sheet_action_dark else R.drawable.bg_card
         val actionText = if (dark) android.graphics.Color.WHITE
+        else if (modern) 0xFF1A1A1A.toInt()
         else requireContext().getColor(R.color.text_primary)
         listOf(R.id.tabs_new, R.id.tabs_undo).forEach { id ->
             view?.findViewById<TextView>(id)?.apply {
-                setBackgroundResource(actionBg)
+                if (modern) {
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = dp(22).toFloat()
+                        setColor(if (dark) 0xFF2A2E33.toInt() else 0xFFF4F5F7.toInt())
+                        setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x12000000)
+                    }
+                } else {
+                    setBackgroundResource(R.drawable.bg_card)
+                }
                 setTextColor(actionText)
             }
         }
@@ -4216,6 +4225,40 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     /** 标签卡片。 */
+    /** 新版网格卡片的缩略图区：图片铺满，无图时用主色淡底 + 首字母占位。 */
+    private fun modernTabThumb(tab: Tab): View {
+        val context = requireContext()
+        val accent = ThemeAccent.color(context)
+        return android.widget.FrameLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(112)
+            )
+            val thumb = tab.thumbnail
+            if (thumb != null) {
+                addView(ImageView(context).apply {
+                    setImageBitmap(thumb)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    layoutParams = android.widget.FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                })
+            } else {
+                addView(TextView(context).apply {
+                    text = (tab.title.ifEmpty { tab.url.ifEmpty { "?" } }).take(1).uppercase()
+                    setTextSize(30f)
+                    setTextColor(accent)
+                    gravity = android.view.Gravity.CENTER
+                    setBackgroundColor((accent and 0x00FFFFFF) or 0x1F000000)
+                    layoutParams = android.widget.FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                })
+            }
+        }
+    }
+
     private fun buildTabCard(tab: Tab, index: Int, grid: Boolean = false): View {
         val context = requireContext()
         val active = index == tabManager.currentIndex
@@ -4280,32 +4323,38 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundResource(
-                when {
-                    dark && active -> R.drawable.bg_tab_card_active_dark
-                    dark -> R.drawable.bg_tab_card_dark
-                    active -> R.drawable.bg_tab_card_active
-                    else -> R.drawable.bg_tab_card
+            if (modern) {
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(if (dark) 0xFF262A31.toInt() else 0xFFFFFFFF.toInt())
                 }
-            )
+            } else {
+                setBackgroundResource(
+                    if (active) R.drawable.bg_tab_card_active else R.drawable.bg_tab_card
+                )
+            }
             clipToOutline = true
             // 边框画在前景，避免缩略图覆盖左侧/底部描边。
             foreground = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(if (modern) 18 else 16).toFloat()
                 setColor(android.graphics.Color.TRANSPARENT)
                 setStroke(
                     dp(1),
-                    if (active) ThemeAccent.color(context)
-                    else context.getColor(R.color.line)
+                    when {
+                        active -> ThemeAccent.color(context)
+                        modern && dark -> 0x24FFFFFF
+                        else -> context.getColor(R.color.line)
+                    }
                 )
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dp(10) }
             isClickable = true
+            if (modern && grid) addView(modernTabThumb(tab))
             addView(head)
-            if (grid) {
+            if (grid && !modern) {
                 val thumb = tab.thumbnail
                 if (thumb != null) {
                     addView(android.widget.FrameLayout(context).apply {
@@ -8854,6 +8903,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             (view?.findViewById<View>(R.id.modern_chrome)?.height?.takeIf { it > 0 } ?: dp(56)) +
                 dp(14)
         } else 0
+        // 新版面板两侧留白，浮在胶囊底栏上方；经典模式仍贴边。
+        val sideInset = if (modern) dp(12) else 0
+        panelParams.leftMargin = sideInset
+        panelParams.rightMargin = sideInset
         overlay.layoutParams = overlayParams
         dim.layoutParams = dimParams
         panel.layoutParams = panelParams
@@ -8865,7 +8918,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val newButton = view?.findViewById<View>(R.id.tabs_new) ?: return
         val undoButton = view?.findViewById<View>(R.id.tabs_undo) ?: return
         val parent = newButton.parent as? LinearLayout ?: return
-        val height = dpToPx(48)
+        val height = if (AppServices.settings.uiStyle() == 1) dpToPx(44) else dpToPx(48)
         parent.removeAllViews()
         val showUndo = AppServices.settings.tabUndoVisible()
         if (!showUndo) {

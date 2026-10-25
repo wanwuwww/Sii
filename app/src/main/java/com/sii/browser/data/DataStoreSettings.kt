@@ -206,7 +206,8 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setTabBarPosition(value: Int) = putInt(SettingsKeys.TAB_POS, value)
 
-    override fun tabCardGrid(): Boolean = bool(SettingsKeys.TAB_CARD_GRID, false)
+    override fun tabCardGrid(): Boolean =
+        bool(SettingsKeys.TAB_CARD_GRID, SettingsDefaults.TAB_CARD_GRID)
 
     override fun setTabCardGrid(value: Boolean) = putBool(SettingsKeys.TAB_CARD_GRID, value)
 

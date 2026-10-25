@@ -154,7 +154,7 @@ object SettingsDefaults {
     const val SCREEN_ORIENTATION = 0
 
     /** 标签页使用卡片网格；false = 当前简约列表。 */
-    const val TAB_CARD_GRID = false
+    const val TAB_CARD_GRID = true
 
     /** 广告拦截总开关。 */
     const val ADBLOCK_ENABLED = false
