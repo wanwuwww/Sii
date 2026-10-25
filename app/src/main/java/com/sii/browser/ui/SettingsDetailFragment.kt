@@ -179,8 +179,7 @@ class SettingsDetailFragment : Fragment() {
 
     private fun build() {
         container.removeAllViews()
-        when (viewId) {
-            VIEW_GENERAL -> buildGeneral()
+        when (viewId) {            VIEW_GENERAL -> buildGeneral()
             VIEW_HABITS -> buildHabits()
             VIEW_ENGINE -> buildEngine()
             VIEW_DL_SET -> buildDlSet()
@@ -239,6 +238,7 @@ class SettingsDetailFragment : Fragment() {
             VIEW_ABOUT -> buildAbout()
             VIEW_CRASH_LOG -> buildCrashLog()
         }
+        focusRequestedRow()
     }
 
     // ---- 通用 ----
@@ -2678,6 +2678,7 @@ class SettingsDetailFragment : Fragment() {
 
     companion object {
         const val ARG_VIEW = "view"
+        const val ARG_FOCUS = "focus"
 
         const val VIEW_GENERAL = "general"
         const val VIEW_HABITS = "habits"
@@ -3845,6 +3846,41 @@ class SettingsDetailFragment : Fragment() {
     }
 
     /** 打开项目仓库：先退回浏览器，再用内置标签加载；内置浏览不可用时交给系统。 */
+    /** 从设置搜索跳转：滚动到匹配行并短暂高亮。 */
+    private fun focusRequestedRow() {
+        val keyword = arguments?.getString(ARG_FOCUS)?.takeIf { it.isNotBlank() } ?: return
+        container.post {
+            val target = findRowByText(container, keyword) ?: return@post
+            val scroll = view?.findViewById<android.widget.ScrollView>(R.id.settings_scroll)
+            scroll?.smoothScrollTo(0, target.top)
+            val accent = ThemeAccent.color(requireContext())
+            val highlight = (accent and 0x00FFFFFF) or (0x33 shl 24)
+            target.setBackgroundColor(highlight)
+            target.postDelayed({ target.background = null }, 1600)
+        }
+    }
+
+    private fun findRowByText(group: ViewGroup, keyword: String): View? {
+        for (i in 0 until group.childCount) {
+            val child = group.getChildAt(i)
+            if (child is ViewGroup) {
+                val found = findRowByText(child, keyword)
+                if (found != null) return found
+            } else if (child is android.widget.TextView &&
+                child.text.contains(keyword, ignoreCase = true)
+            ) {
+                var row: View = child
+                var parent = child.parent
+                while (parent is View && parent !== container) {
+                    row = parent
+                    parent = parent.parent
+                }
+                return row
+            }
+        }
+        return null
+    }
+
     private fun openRepository() {
         val url = getString(R.string.about_repo_url)
         if (AppServices.openUrl != null) {

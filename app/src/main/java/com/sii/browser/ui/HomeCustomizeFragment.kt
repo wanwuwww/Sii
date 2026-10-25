@@ -31,6 +31,10 @@ import com.sii.browser.di.AppServices
 /** 全屏「主页」定制：上方真实主页预览，下方五个分类控制面板。 */
 class HomeCustomizeFragment : Fragment() {
 
+    companion object {
+        const val ARG_TAB = "tab"
+    }
+
     private lateinit var previewHost: FrameLayout
     private lateinit var tabs: LinearLayout
     private lateinit var controls: LinearLayout
@@ -84,6 +88,7 @@ class HomeCustomizeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        activeTab = (arguments?.getInt(ARG_TAB, 0) ?: 0).coerceIn(0, 8)
         view.findViewById<View>(R.id.home_custom_back).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -245,8 +250,7 @@ class HomeCustomizeFragment : Fragment() {
         }
     }
 
-    override fun onDestroyView() {
-        previewShell?.view?.removeAllViews()
+    override fun onDestroyView() {        previewShell?.view?.removeAllViews()
         (preview?.view?.parent as? ViewGroup)?.removeView(preview?.view)
         preview?.release()
         preview = null
@@ -1239,6 +1243,7 @@ class HomeCustomizeFragment : Fragment() {
 
     /** 主题：夜间、网页暗色、滤镜、主题色与网页文字颜色。 */
     private fun themeRows(): List<View> = listOf(
+        navRow("界面风格预设", "一键套用") { showPresetDialog() },
         switchRow("跟随系统夜间", settings.nightFollowSystem()) {
             settings.setNightFollowSystem(it)
             (activity as? ShellActivity)?.let { act ->
@@ -1291,6 +1296,58 @@ class HomeCustomizeFragment : Fragment() {
         navRow("主题色识别", null) { openThemeColorPage() }
     )
 
+    /** 界面风格预设：一次性套用多项设置。 */
+    private fun showPresetDialog() {
+        val presets = arrayOf("经典", "玻璃胶囊", "极简白", "夜间深色")
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("界面风格预设")
+            .setItems(presets) { _, which -> applyPreset(which) }
+            .show()
+    }
+
+    private fun applyPreset(index: Int) {
+        when (index) {
+            0 -> {
+                settings.setUiStyle(0)
+                settings.setTabCardGrid(false)
+                settings.setMenuScrollStyle(0)
+                settings.setHomeStyle(0)
+                settings.setGlassBlur(false)
+                settings.setGlassStrength(0)
+                settings.setNightFollowSystem(false)
+                if (settings.isNightMode()) settings.toggleNightMode()
+            }
+            1 -> {
+                settings.setUiStyle(1)
+                settings.setTabCardGrid(true)
+                settings.setMenuScrollStyle(0)
+                settings.setHomeStyle(0)
+                settings.setGlassBlur(true)
+                settings.setGlassStrength(70)
+                if (settings.isNightMode()) settings.toggleNightMode()
+            }
+            2 -> {
+                settings.setUiStyle(1)
+                settings.setTabCardGrid(false)
+                settings.setHomeStyle(1)
+                settings.setGlassBlur(false)
+                settings.setGlassStrength(20)
+                if (settings.isNightMode()) settings.toggleNightMode()
+            }
+            else -> {
+                settings.setUiStyle(1)
+                settings.setTabCardGrid(true)
+                settings.setHomeStyle(0)
+                settings.setGlassBlur(true)
+                settings.setGlassStrength(80)
+                if (!settings.isNightMode()) settings.toggleNightMode()
+            }
+        }
+        (activity as? ShellActivity)?.let {
+            ShellActivity.smoothRecreateForNightSwitch(it)
+        } ?: activity?.recreate()
+    }
+
     private val themeSkins = arrayOf(null, "green", "orange", "purple")
 
     private fun themeColorIndex(): Int = when (settings.skin()) {
@@ -1300,8 +1357,7 @@ class HomeCustomizeFragment : Fragment() {
         else -> 0
     }
 
-    private fun openThemeColorPage() {
-        val fragment = SettingsDetailFragment().apply {
+    private fun openThemeColorPage() {        val fragment = SettingsDetailFragment().apply {
             arguments = android.os.Bundle().apply {
                 putString(SettingsDetailFragment.ARG_VIEW, SettingsDetailFragment.VIEW_THEME_COLOR)
             }

@@ -17,6 +17,7 @@ class SessionCleanupService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         ExitCleanup.clearNow()
+        com.sii.browser.data.StartupExit.markClean(applicationContext)
         stopSelf()
         super.onTaskRemoved(rootIntent)
     }

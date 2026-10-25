@@ -787,6 +787,11 @@
     <string name="settings_home_sites">常用网站</string>
     <string name="settings_home_search">搜索框</string>
     <string name="settings_operate">行为</string>
+    <string name="restore_tabs_title">恢复标签页</string>
+    <string name="restore_tabs_message">上次未正常关闭，是否恢复全部标签页？</string>
+    <string name="restore_tabs_confirm">恢复</string>
+    <string name="restore_tabs_skip">不恢复</string>
+    <string name="settings_search_hint">搜索设置</string>
     <string name="settings_theme_night">主题与夜间</string>
     <string name="settings_font">字体</string>
     <string name="settings_menus_toolbar">菜单与工具栏</string>

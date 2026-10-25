@@ -41,6 +41,27 @@
             android:textSize="18sp" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/toolbar_bg"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/settings_search"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_search_box"
+            android:hint="@string/settings_search_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:paddingHorizontal="14dp"
+            android:singleLine="true"
+            android:textSize="14sp" />
+    </LinearLayout>
+
     <ScrollView
         android:id="@+id/settings_scroll"
         android:layout_width="match_parent"

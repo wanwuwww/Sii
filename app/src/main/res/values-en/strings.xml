@@ -786,6 +786,11 @@
     <string name="settings_home_sites">Frequent sites</string>
     <string name="settings_home_search">Search box</string>
     <string name="settings_operate">Behavior</string>
+    <string name="restore_tabs_title">Restore tabs</string>
+    <string name="restore_tabs_message">The app closed unexpectedly last time. Restore all tabs?</string>
+    <string name="restore_tabs_confirm">Restore</string>
+    <string name="restore_tabs_skip">Don\'t restore</string>
+    <string name="settings_search_hint">Search settings</string>
     <string name="settings_theme_night">Theme and night</string>
     <string name="settings_font">Fonts</string>
     <string name="settings_menus_toolbar">Menu and toolbar</string>

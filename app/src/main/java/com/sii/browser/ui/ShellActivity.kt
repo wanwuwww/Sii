@@ -95,6 +95,7 @@ class ShellActivity : AppCompatActivity() {
         settings = AppServices.settings
         applyTheme()
         super.onCreate(savedInstanceState)
+        com.sii.browser.data.StartupExit.readAndMarkRunning(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode =
                 android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -356,6 +357,7 @@ class ShellActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (isFinishing && !isChangingConfigurations) {
             ExitCleanup.clearNow()
+            com.sii.browser.data.StartupExit.markClean(this)
         }
         super.onDestroy()
         softInputAssist?.let { lifecycle.removeObserver(it) }

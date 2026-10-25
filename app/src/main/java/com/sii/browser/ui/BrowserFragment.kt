@@ -330,7 +330,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             val restoreForRecreate = ShellActivity.consumeRestoreTabsAfterRecreate()
             val savedFromState = savedInstanceState?.getStringArrayList(KEY_TABS).orEmpty()
             val startupBehavior = AppServices.settings.startupBehavior()
+            val abnormalExit = com.sii.browser.data.StartupExit.consumeAbnormal()
             val shouldRestore = restoreForRecreate || savedInstanceState != null ||
+                abnormalExit ||
                 startupBehavior == 1 ||
                 (startupBehavior == 0 && AppServices.settings.restoreClosedTabs() == 1)
             val saved = if (shouldRestore) AppServices.tabRepository.restore() else emptyList()
@@ -354,22 +356,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 } else {
                     openNewTab(home)
                 }
+            } else if (abnormalExit && !AppServices.privacyManager.isIncognito) {
+                promptRestoreAfterAbnormalExit(saved, startupBehavior)
             } else {
-                saved.forEach { entity ->
-                    if (entity.url == ABOUT_HOME) {
-                        tabManager.newTab(ABOUT_HOME)
-                        tabManager.currentWebView?.loadUrl("about:blank")
-                    } else {
-                        tabManager.newTab(entity.url)
-                        tabManager.currentWebView?.loadUrl(entity.url)
-                    }
-                }
-                if (tabManager.current?.url == ABOUT_HOME) {
-                    showHome()
-                } else {
-                    showWeb()
-                }
-                updateAddressBarForCurrent()
+                restoreSavedTabs(saved)
             }
             AppServices.pendingOpenUrl?.let { url ->
                 AppServices.pendingOpenUrl = null
@@ -504,6 +494,46 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val restored = savedInstanceState?.getString(KEY_URL)
         if (!restored.isNullOrEmpty()) return restored
         return AppServices.settings.homeUrl()
+    }
+
+    /** 恢复一组持久化标签。 */
+    private fun restoreSavedTabs(saved: List<com.sii.browser.data.db.TabEntity>) {
+        saved.forEach { entity ->
+            if (entity.url == ABOUT_HOME) {
+                tabManager.newTab(ABOUT_HOME)
+                tabManager.currentWebView?.loadUrl("about:blank")
+            } else {
+                tabManager.newTab(entity.url)
+                tabManager.currentWebView?.loadUrl(entity.url)
+            }
+        }
+        if (tabManager.current?.url == ABOUT_HOME) showHome() else showWeb()
+        updateAddressBarForCurrent()
+    }
+
+    /** 上次非正常退出：询问是否恢复全部标签。 */
+    private fun promptRestoreAfterAbnormalExit(
+        saved: List<com.sii.browser.data.db.TabEntity>,
+        startupBehavior: Int
+    ) {
+        if (!isAdded) {
+            restoreSavedTabs(saved)
+            return
+        }
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.restore_tabs_title)
+            .setMessage(R.string.restore_tabs_message)
+            .setPositiveButton(R.string.restore_tabs_confirm) { _, _ -> restoreSavedTabs(saved) }
+            .setNegativeButton(R.string.restore_tabs_skip) { _, _ ->
+                lifecycleScope.launch {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        AppServices.tabRepository.clear()
+                    }
+                }
+                openNewTab(if (startupBehavior == 2) ABOUT_BLANK else ABOUT_HOME)
+            }
+            .setCancelable(false)
+            .show()
     }
 
 
