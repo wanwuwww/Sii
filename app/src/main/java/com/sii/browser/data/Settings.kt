@@ -716,6 +716,11 @@ interface BehaviorSettings {
 
     fun setTabUndoVisible(value: Boolean)
 
+    /** 非正常退出后是否提醒恢复标签。 */
+    fun exitRestorePrompt(): Boolean
+
+    fun setExitRestorePrompt(value: Boolean)
+
     fun sniffEnabled(): Boolean
 
     fun setSniffEnabled(value: Boolean)

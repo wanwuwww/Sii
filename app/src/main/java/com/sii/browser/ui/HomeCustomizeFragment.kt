@@ -1237,6 +1237,9 @@ class HomeCustomizeFragment : Fragment() {
             },
             switchRow("关闭标签后提示", settings.closeTabToast()) {
                 settings.setCloseTabToast(it)
+            },
+            switchRow("异常退出提醒", settings.exitRestorePrompt()) {
+                settings.setExitRestorePrompt(it)
             }
         )
     }

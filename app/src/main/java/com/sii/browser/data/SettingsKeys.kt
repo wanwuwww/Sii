@@ -241,6 +241,7 @@ object SettingsKeys {
     const val TAB_SHOW_THUMB = "tab_show_thumb"
     const val UI_STYLE = "ui_style"
     const val TABS_PANEL_TRANSPARENCY = "tabs_panel_transparency"
+    const val EXIT_RESTORE_PROMPT = "exit_restore_prompt"
     const val HLS_TO_MP4 = "hls_to_mp4"
     const val JS_CONSOLE_LOG = "js_console_log"
     const val SETTINGS_CARD_ALPHA = "settings_card_alpha"

@@ -962,6 +962,12 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setTabUndoVisible(value: Boolean) = putBool(SettingsKeys.TAB_UNDO_VISIBLE, value)
 
+    override fun exitRestorePrompt(): Boolean =
+        bool(SettingsKeys.EXIT_RESTORE_PROMPT, SettingsDefaults.EXIT_RESTORE_PROMPT)
+
+    override fun setExitRestorePrompt(value: Boolean) =
+        putBool(SettingsKeys.EXIT_RESTORE_PROMPT, value)
+
     override fun sniffEnabled(): Boolean = bool(SettingsKeys.SNIFF_ENABLED, true)
 
     override fun setSniffEnabled(value: Boolean) = putBool(SettingsKeys.SNIFF_ENABLED, value)

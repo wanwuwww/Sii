@@ -381,6 +381,14 @@ class ShellActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // 退到后台（回桌面/切应用）即视为正常结束；崩溃不会走到这里。
+        if (!isChangingConfigurations) {
+            com.sii.browser.data.StartupExit.markClean(this)
+        }
+    }
+
     override fun onDestroy() {
         if (isFinishing && !isChangingConfigurations) {
             ExitCleanup.clearNow()

@@ -365,7 +365,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     openNewTab(home)
                 }
             } else if (abnormalExit && !AppServices.privacyManager.isIncognito) {
-                promptRestoreAfterAbnormalExit(saved)
+                if (AppServices.settings.exitRestorePrompt()) {
+                    promptRestoreAfterAbnormalExit(saved)
+                } else {
+                    restoreSavedTabs(saved)
+                }
             } else {
                 restoreSavedTabs(saved)
             }
@@ -505,7 +509,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     /** 恢复一组持久化标签。 */
-    private fun restoreSavedTabs(saved: List<com.sii.browser.data.db.TabEntity>) {
+    private fun restoreSavedTabs(
+        saved: List<com.sii.browser.data.db.TabEntity>,
+        preferHome: Boolean = AppServices.lastHomeVisible
+    ) {
         saved.forEach { entity ->
             if (entity.url == ABOUT_HOME) {
                 tabManager.newTab(ABOUT_HOME)
@@ -515,7 +522,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tabManager.currentWebView?.loadUrl(entity.url)
             }
         }
-        if (AppServices.lastHomeVisible || tabManager.current?.url == ABOUT_HOME) {
+        val webIndex = tabManager.tabs.indexOfFirst { it.url != ABOUT_HOME }
+        if (!preferHome && webIndex >= 0) {
+            // 用户点了「恢复」：直接切到恢复出来的网页标签。
+            tabManager.switchTab(webIndex)
+            showWeb()
+        } else if (tabManager.current?.url == ABOUT_HOME) {
             showHome()
         } else {
             showWeb()
@@ -566,7 +578,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             setPadding(dp(14), dp(8), dp(14), dp(8))
             setOnClickListener {
                 root.removeView(bar)
-                restoreSavedTabs(saved)
+                restoreSavedTabs(saved, preferHome = false)
             }
         })
         root.addView(

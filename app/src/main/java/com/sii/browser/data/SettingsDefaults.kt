@@ -176,6 +176,9 @@ object SettingsDefaults {
     /** 标签页背景透明度，0 = 不透明，100 = 全透明。 */
     const val TABS_PANEL_TRANSPARENCY = 15
 
+    /** 非正常退出后是否提醒恢复标签。 */
+    const val EXIT_RESTORE_PROMPT = true
+
     /** HLS 下载完成后是否重封装为 MP4。 */
     const val HLS_TO_MP4 = true
 
