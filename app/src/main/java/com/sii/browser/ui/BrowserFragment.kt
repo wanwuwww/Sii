@@ -6290,7 +6290,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         pageLoadFinished[wv] = true
         if (wv === tabManager.currentWebView) {
             setRefreshLoading(false)
-            refreshGlassBlurThrottled()
             restorePendingScroll(wv)
         }
     }
@@ -9222,37 +9221,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }.start()
         }
     }
-    private var glassBlurLast = 0L
-
-    /** 底栏玻璃：模糊底图 + 玻璃填充，滚动时刷新。 */
     private fun applyDockGlass() {
         val dock = view?.findViewById<LinearLayout>(R.id.modern_chrome) ?: return
         val night = AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
         val radius = dp(28).toFloat()
-        val width = dock.width.takeIf { it > 0 } ?: dp(320)
-        val height = dock.height.takeIf { it > 0 } ?: dp(96)
-        val glass = GlassStyle.background(
+        dock.background = GlassStyle.background(
             requireContext(), night, radius, strength, minAlpha = DOCK_GLASS_MIN_ALPHA
         )
-        val blurred = GlassBlur.layer(
-            requireContext(), tabManager.currentWebView, width, height, radius
-        )
-        dock.background = if (blurred != null) {
-            android.graphics.drawable.LayerDrawable(arrayOf(blurred, glass))
-        } else {
-            glass
-        }
-    }
-
-    /** 滚动时节流刷新底栏模糊背景，避免每帧截图。 */
-    private fun refreshGlassBlurThrottled() {
-        if (AppServices.settings.uiStyle() != 1) return
-        if (!AppServices.settings.glassBlur()) return
-        val now = System.currentTimeMillis()
-        if (now - glassBlurLast < 250L) return
-        glassBlurLast = now
-        applyDockGlass()
     }
 
     private var scrollAccum = 0
