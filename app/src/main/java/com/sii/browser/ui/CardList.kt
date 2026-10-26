@@ -67,7 +67,7 @@ object CardList {
         )
         view.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(view.context, 18).toFloat()
+            cornerRadius = dp(view.context, 16).toFloat()
             setColor(fill)
             if (AppServices.settings.cardBorder()) {
                 setStroke(dp(view.context, 1), view.context.getColor(R.color.line))
@@ -88,7 +88,7 @@ object CardList {
         ).apply {
             marginStart = dp(context, 12)
             marginEnd = dp(context, 12)
-            bottomMargin = dp(context, 10)
+            bottomMargin = dp(context, 8)
         }
     }
 
@@ -122,15 +122,12 @@ object CardList {
         }
     }
 
-    /** 行分隔线：与行内边距对齐，两端内缩。 */
+    /** 行分隔线：1dp 全宽（对齐 .set-row 的 border-bottom）。 */
     fun divider(context: Context): View = View(context).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             dp(context, 1)
-        ).apply {
-            marginStart = dp(context, 16)
-            marginEnd = dp(context, 16)
-        }
+        )
         setBackgroundColor(context.getColor(R.color.line))
     }
 
@@ -140,10 +137,7 @@ object CardList {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             dp(context, 1)
-        ).apply {
-            marginStart = dp(context, 16)
-            marginEnd = dp(context, 16)
-        }
+        )
         setBackgroundColor(
             if (AppServices.settings.cardBorder()) context.getColor(R.color.line)
             else Color.TRANSPARENT

@@ -614,6 +614,21 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeGridColumns(value: Int) =
         putInt(SettingsKeys.HOME_GRID_COLUMNS, value)
 
+    override fun homeFocusTip(): Boolean = bool(SettingsKeys.HOME_FOCUS_TIP, true)
+
+    override fun setHomeFocusTip(value: Boolean) =
+        putBool(SettingsKeys.HOME_FOCUS_TIP, value)
+
+    override fun homeMagazineColumns(): Int = int(SettingsKeys.HOME_MAGAZINE_COLS, 2)
+
+    override fun setHomeMagazineColumns(value: Int) =
+        putInt(SettingsKeys.HOME_MAGAZINE_COLS, value)
+
+    override fun homeMagazineClock(): Boolean = bool(SettingsKeys.HOME_MAGAZINE_CLOCK, true)
+
+    override fun setHomeMagazineClock(value: Boolean) =
+        putBool(SettingsKeys.HOME_MAGAZINE_CLOCK, value)
+
     override fun homeIconSize(): Int =
         int(SettingsKeys.HOME_ICON_SIZE, SettingsDefaults.HOME_ICON_SIZE)
 

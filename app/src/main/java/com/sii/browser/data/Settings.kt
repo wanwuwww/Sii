@@ -406,6 +406,21 @@ interface BehaviorSettings {
 
     fun setHomeGridColumns(value: Int)
 
+    /** 专注主页：搜索框下方显示操作提示。 */
+    fun homeFocusTip(): Boolean
+
+    fun setHomeFocusTip(value: Boolean)
+
+    /** 杂志主页列数（2/3）。 */
+    fun homeMagazineColumns(): Int
+
+    fun setHomeMagazineColumns(value: Int)
+
+    /** 杂志主页是否显示时钟。 */
+    fun homeMagazineClock(): Boolean
+
+    fun setHomeMagazineClock(value: Boolean)
+
     /** 网站图标大小：0 小 / 1 中 / 2 大。 */
     fun homeIconSize(): Int
 

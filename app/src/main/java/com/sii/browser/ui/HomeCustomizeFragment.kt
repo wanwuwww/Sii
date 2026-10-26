@@ -533,6 +533,31 @@ class HomeCustomizeFragment : Fragment() {
             refreshPreview()
             view?.post { buildControls() }
         },
+        switchRow(
+            "专注：显示输入提示",
+            settings.homeFocusTip()
+        ) { value ->
+            settings.setHomeFocusTip(value)
+            refreshPreview()
+            view?.post { buildControls() }
+        },
+        choiceRow(
+            "杂志列数",
+            arrayOf("2 列", "3 列"),
+            (settings.homeMagazineColumns().coerceIn(2, 3)) - 2
+        ) { index ->
+            settings.setHomeMagazineColumns(index + 2)
+            refreshPreview()
+            view?.post { buildControls() }
+        },
+        switchRow(
+            "杂志：显示时钟",
+            settings.homeMagazineClock()
+        ) { value ->
+            settings.setHomeMagazineClock(value)
+            refreshPreview()
+            view?.post { buildControls() }
+        },
         choiceRow(
             getString(R.string.settings_home_layout),
             arrayOf("顶部", "居中", "底部"),
@@ -1463,6 +1488,8 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setHomeStyle(0)
                 settings.setGlassBlur(false)
                 settings.setGlassStrength(0)
+                settings.setNightFollowSystem(false)
+                if (settings.isNightMode()) settings.toggleNightMode()
             }
             1 -> {
                 settings.setUiStyle(1)
@@ -1471,6 +1498,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setHomeStyle(0)
                 settings.setGlassBlur(true)
                 settings.setGlassStrength(70)
+                if (settings.isNightMode()) settings.toggleNightMode()
             }
             2 -> {
                 settings.setUiStyle(1)
@@ -1479,6 +1507,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setHomeStyle(1)
                 settings.setGlassBlur(false)
                 settings.setGlassStrength(20)
+                if (settings.isNightMode()) settings.toggleNightMode()
             }
             3 -> {
                 settings.setUiStyle(1)
@@ -1487,6 +1516,8 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setHomeStyle(3)
                 settings.setGlassBlur(false)
                 settings.setGlassStrength(20)
+                settings.setHomeFocusTip(true)
+                settings.setHomeGridColumns(4)
             }
             4 -> {
                 settings.setUiStyle(1)
@@ -1495,6 +1526,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setHomeStyle(4)
                 settings.setGlassBlur(true)
                 settings.setGlassStrength(60)
+                settings.setHomeGridColumns(5)
             }
             else -> {
                 settings.setUiStyle(1)
@@ -1503,6 +1535,8 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setHomeStyle(2)
                 settings.setGlassBlur(true)
                 settings.setGlassStrength(50)
+                settings.setHomeMagazineColumns(2)
+                settings.setHomeMagazineClock(true)
             }
         }
         (activity as? ShellActivity)?.let {

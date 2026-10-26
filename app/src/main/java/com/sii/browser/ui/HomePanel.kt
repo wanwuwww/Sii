@@ -244,11 +244,14 @@ class HomePanel(
         view.findViewById<View>(R.id.home_content)?.setPadding(
             dp(side), dp(20), dp(side), if (modern) dp(96) else dp(20)
         )
+        // 专注样式：搜索框下方给一行操作提示。
+        view.findViewById<View>(R.id.home_tip)?.visibility =
+            if (style == 3 && s.homeFocusTip()) View.VISIBLE else View.GONE
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
         // 专注（3）与快捷宫格（4）不显示 Logo，把空间留给搜索框与图标。
         val mode = when (style) {
-            2 -> 2
+            2 -> if (s.homeMagazineClock()) 2 else -1
             3, 4 -> -1
             else -> s.homeLogoMode()
         }
@@ -284,9 +287,9 @@ class HomePanel(
         grid.removeAllViews()
         grid.columnCount = when (style) {
             1 -> 4
-            2 -> 2
+            2 -> s.homeMagazineColumns().coerceIn(2, 3)
             3 -> 4
-            4 -> 4
+            4 -> s.homeGridColumns().coerceIn(4, 6)
             5 -> 1
             else -> s.homeGridColumns().coerceIn(4, 6)
         }
@@ -352,6 +355,7 @@ class HomePanel(
     /** 搜索框圆角与高度（高度用上下内边距实现，不挤压内部按钮）。 */
     private fun applySearchStyle(focused: Boolean = false) {
         val box = view.findViewById<LinearLayout>(R.id.home_search_box) ?: return
+        val homeStyle = AppServices.settings.homeStyle()
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val baseRadius = when (AppServices.settings.homeSearchRadius()) {
@@ -383,10 +387,14 @@ class HomePanel(
         } else {
             searchBoxElevation
         }
-        val padV = when (AppServices.settings.homeSearchHeight()) {
-            0 -> 2
-            2 -> 8
-            else -> 4
+        val padV = if (homeStyle == 3) {
+            9
+        } else {
+            when (AppServices.settings.homeSearchHeight()) {
+                0 -> 2
+                2 -> 8
+                else -> 4
+            }
         }
         box.setPadding(dp(8), dp(padV), dp(4), dp(padV))
         val normalIcon = if (dark) 0xCCFFFFFF.toInt()
@@ -404,14 +412,15 @@ class HomePanel(
             searchInput.setTextColor(context.getColor(R.color.text_primary))
             searchInput.setHintTextColor(context.getColor(R.color.text_secondary))
         }
-        // 极简 / 杂志：改为细边框，去掉胶囊与阴影。
-        if (AppServices.settings.homeStyle() != 0) {
+        // 极简 / 杂志：细边框无阴影；专注：大圆角悬浮胶囊，作为页面唯一主角。
+        if (homeStyle != 0) {
+            val focus = homeStyle == 3
             box.background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(0x00000000)
+                cornerRadius = dp(if (focus) 26 else 12).toFloat()
+                setColor(if (focus) color else 0x00000000)
                 setStroke(dp(1), if (dark) 0x33FFFFFF else 0x26000000)
             }
-            box.elevation = 0f
+            box.elevation = if (focus) dp(6).toFloat() else 0f
         }
     }
 
@@ -1003,15 +1012,10 @@ class HomePanel(
         setTextColor(Color.WHITE)
         textSize = 16f
         gravity = Gravity.CENTER
-        val size = if (AppServices.settings.homeStyle() == 4) {
-            // 快捷宫格：图标放大到主导视觉的位置。
-            56
-        } else {
-            when (AppServices.settings.homeIconSize()) {
-                0 -> 40
-                2 -> 56
-                else -> 48
-            }
+        val size = when (AppServices.settings.homeIconSize()) {
+            0 -> 40
+            2 -> 56
+            else -> 48
         }
         layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
         background = GradientDrawable().apply {
