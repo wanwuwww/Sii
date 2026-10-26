@@ -75,6 +75,12 @@ object AppServices {
     /** 跨 Fragment 打开 URL 回调（书签/历史列表点击 → 浏览器加载）。 */
     var openUrl: ((String) -> Unit)? = null
 
+    /** 日夜切换前捕获当前网页滚动位置，重建后恢复。 */
+    var captureScrollForRecreate: (() -> Unit)? = null
+
+    @Volatile
+    var pendingScrollY: Int = -1
+
     /** 当前是否停留在主页；Fragment 重建（设置返回、日夜切换）后用它恢复显示状态。 */
     @Volatile
     var lastHomeVisible: Boolean = false

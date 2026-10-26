@@ -6248,7 +6248,18 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (wv === tabManager.currentWebView) {
             setRefreshLoading(false)
             refreshGlassBlurThrottled()
+            restorePendingScroll(wv)
         }
+    }
+
+    /** 日夜重建后把网页滚回原来的位置。 */
+    private fun restorePendingScroll(webView: android.webkit.WebView) {
+        val target = AppServices.pendingScrollY
+        if (target < 0) return
+        AppServices.pendingScrollY = -1
+        webView.postDelayed({
+            if (webView.height > 0) webView.scrollTo(0, target)
+        }, 260L)
     }
 
     /** 进度平滑追到目标值；WebView 只报少量进度时也会缓慢向 80% 靠近。 */
@@ -8182,6 +8193,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 视图重建后 showWeb 会重新挂载。
             loadUrlFor(url)
         }
+        AppServices.captureScrollForRecreate = {
+            AppServices.pendingScrollY = tabManager.currentWebView?.scrollY ?: -1
+        }
         val textZoom = effectiveTextZoom()
         tabManager.tabs.forEach { it.webView.settings.textZoom = textZoom }
         applyToolbarCustom()
@@ -9356,6 +9370,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         interceptorChain = null
         adPickBridges.clear()
         AppServices.openUrl = null
+        AppServices.captureScrollForRecreate = null
         AppServices.applyPageZoom = null
         AppServices.applyWebTextAccent = null
         AppServices.applyWebViewDark = null
@@ -9371,6 +9386,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             tabManager.closeAll()
         }
         AppServices.openUrl = null
+        AppServices.captureScrollForRecreate = null
         AppServices.applyPageZoom = null
         AppServices.applyWebTextAccent = null
         AppServices.applyWebViewDark = null

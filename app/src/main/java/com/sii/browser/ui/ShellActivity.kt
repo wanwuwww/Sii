@@ -62,6 +62,7 @@ class ShellActivity : AppCompatActivity() {
             } else {
                 0xFF000000.toInt()
             }
+            AppServices.captureScrollForRecreate?.invoke()
             activity.recreate()
         }
 
@@ -120,7 +121,7 @@ class ShellActivity : AppCompatActivity() {
             content.alpha = 0f
             content.animate()
                 .alpha(1f)
-                .setDuration(320)
+                .setDuration(480)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .start()
             val root = findViewById<android.view.ViewGroup>(android.R.id.content)
@@ -135,7 +136,7 @@ class ShellActivity : AppCompatActivity() {
                 )
                 cover.animate()
                     .alpha(0f)
-                    .setDuration(320)
+                    .setDuration(480)
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
                     .withEndAction { root.removeView(cover) }
                     .start()
