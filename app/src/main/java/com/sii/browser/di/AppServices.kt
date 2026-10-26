@@ -72,6 +72,12 @@ object AppServices {
     lateinit var readLaterRepository: ReadLaterRepository
         private set
 
+    /** 本地 MCP 服务端；浏览器侧能力由 BrowserFragment 注册。 */
+    lateinit var mcpServer: com.sii.browser.core.mcp.McpServer
+        private set
+
+    var mcpHost: com.sii.browser.core.mcp.McpHost? = null
+
     /** 跨 Fragment 打开 URL 回调（书签/历史列表点击 → 浏览器加载）。 */
     var openUrl: ((String) -> Unit)? = null
 
@@ -189,6 +195,7 @@ object AppServices {
         }
         passwordRepository = PasswordRepository(db.passwordDao())
         readLaterRepository = ReadLaterRepository(db.readLaterDao())
+        mcpServer = com.sii.browser.core.mcp.McpServer({ settings }, { mcpHost })
         CoroutineScope(Dispatchers.IO).launch {
             kotlinx.coroutines.delay(3000)
             val now = System.currentTimeMillis()

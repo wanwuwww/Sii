@@ -81,6 +81,11 @@
             android:stopWithTask="false" />
 
         <service
+            android:name=".ui.McpService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
             android:name=".download.DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

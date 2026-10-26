@@ -197,4 +197,21 @@ object SettingsDefaults {
     /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
     const val HOME_STYLE = 0
     const val CARD_BORDER = true
+
+    /** MCP 服务默认关闭；只监听本机回环。 */
+    const val MCP_ENABLED = false
+    const val MCP_PORT = 8765
+    const val MCP_ALLOW_LAN = false
+    const val MCP_FOREGROUND = true
+
+    /** 读取类默认可用；写操作与脚本默认关闭。 */
+    const val MCP_ALLOW_PAGE_READ = true
+    const val MCP_ALLOW_TABS = false
+    const val MCP_ALLOW_PAGE_ACTION = false
+    const val MCP_ALLOW_JS = false
+    const val MCP_ALLOW_BOOKMARK_WRITE = false
+    const val MCP_ALLOW_HISTORY_WRITE = false
+    const val MCP_ALLOW_INCOGNITO = false
+    const val MCP_ALLOW_CAPTURE = false
+    const val MCP_CAPTURE_BODY = false
 }

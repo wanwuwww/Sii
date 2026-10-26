@@ -273,5 +273,21 @@ object SettingsKeys {
     const val DATA_CHECKER = "datachecker2"
     const val IGNORED_SSL_WARNING = "ignoredsslwarning"
 
+    // MCP 服务
+    const val MCP_ENABLED = "mcp_enabled"
+    const val MCP_PORT = "mcp_port"
+    const val MCP_TOKEN = "mcp_token"
+    const val MCP_ALLOW_LAN = "mcp_allow_lan"
+    const val MCP_FOREGROUND = "mcp_foreground"
+    const val MCP_ALLOW_PAGE_READ = "mcp_allow_page_read"
+    const val MCP_ALLOW_TABS = "mcp_allow_tabs"
+    const val MCP_ALLOW_PAGE_ACTION = "mcp_allow_page_action"
+    const val MCP_ALLOW_JS = "mcp_allow_js"
+    const val MCP_ALLOW_BOOKMARK_WRITE = "mcp_allow_bookmark_write"
+    const val MCP_ALLOW_HISTORY_WRITE = "mcp_allow_history_write"
+    const val MCP_ALLOW_INCOGNITO = "mcp_allow_incognito"
+    const val MCP_ALLOW_CAPTURE = "mcp_allow_capture"
+    const val MCP_CAPTURE_BODY = "mcp_capture_body"
+
     const val UPDATER_PREFIX = "updater_"
 }

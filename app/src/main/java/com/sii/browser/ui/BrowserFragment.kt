@@ -488,6 +488,35 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
         }
         AppServices.trimThumbnails = { tabManager.trimThumbnails() }
+        AppServices.mcpHost = BrowserMcpHost(
+            tabManager = tabManager,
+            onOpenUrl = { loadInBrowser(it) },
+            onNewTab = { openNewTab(it) },
+            onSwitchTab = { index -> switchToTab(index) },
+            onCloseTab = { index -> closeTabAndHint(index) },
+            onNavigate = { action ->
+                val webView = tabManager.currentWebView
+                when {
+                    webView == null -> false
+                    action == "back" && webView.canGoBack() -> {
+                        webView.goBack()
+                        updateNavigationState()
+                        true
+                    }
+                    action == "forward" && webView.canGoForward() -> {
+                        webView.goForward()
+                        updateNavigationState()
+                        true
+                    }
+                    action == "reload" -> {
+                        webView.reload()
+                        true
+                    }
+                    else -> false
+                }
+            },
+            isUiReady = { isAdded && view != null }
+        )
     }
 
     private fun persistTabs() {
@@ -6441,7 +6470,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             chain.add(com.sii.browser.core.webview.SniffInterceptor(this))
             interceptorChain = chain
             val callback = BrowserCallback()
-            webViewClient = WebViewClientBridge(callback, UrlDecision(), chain)
+            webViewClient = WebViewClientBridge(
+                callback,
+                UrlDecision(),
+                chain,
+                captureEnabled = { AppServices.settings.mcpAllowCapture() }
+            )
             webChromeClient = WebChromeClientBridge(callback)
             // 水平滑动前进/后退（横向浏览占少数场景，不干扰竖向滚动）
             setOnTouchListener { _, event ->
@@ -6501,6 +6535,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             registerJsBridge(
                 "SiiSniff",
                 com.sii.browser.core.webview.SniffJsBridge(this, this)
+            )
+            registerJsBridge(
+                "SiiCapture",
+                com.sii.browser.core.webview.CaptureJsBridge(this)
             )
             com.sii.browser.core.adblock.AdPickBridge().also {
                 registerJsBridge("SiiAdPick", it)
@@ -6781,6 +6819,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (AppServices.settings.sniffEnabled()) {
                 webView?.injectJavaScript(com.sii.browser.core.webview.SniffJsBridge.SNIFF_JS)
             }
+            // 抓包：新导航清空该标签旧记录，再注入 fetch/XHR hook。
+            webView?.let { target ->
+                com.sii.browser.core.webview.NetworkCapture.clear(target)
+                if (AppServices.settings.mcpAllowCapture()) {
+                    target.injectJavaScript(
+                        com.sii.browser.core.webview.CaptureScript.js(
+                            AppServices.settings.mcpCaptureBody()
+                        )
+                    )
+                }
+            }
             val startedUrl = url.ifBlank { webView?.url.orEmpty() }
             if (startedUrl != "about:blank") {
                 errorPageLoading.remove(webView)
@@ -6900,6 +6949,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         override fun onPageFinished(webView: SiiWebView?, url: String) {
             if (webView === tabManager.currentWebView) hidePageLoadingCover()
             markPageFinished(webView)
+            // 补注入抓包 hook：onPageStarted 的注入可能落在旧文档上，
+            // 加载完成后补一次，确保后续 XHR/接口请求被记录（脚本自身幂等）。
+            if (webView != null && AppServices.settings.mcpAllowCapture()) {
+                webView.injectJavaScript(
+                    com.sii.browser.core.webview.CaptureScript.js(
+                        AppServices.settings.mcpCaptureBody()
+                    )
+                )
+            }
             if (webView === tabManager.currentWebView) scheduleProgressFinish()
             if (webView != null && errorPageLoading[webView] == true) return
             if (webView != null && webView === tabManager.currentWebView &&
@@ -9411,6 +9469,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         AppServices.trimThumbnails = null
         AppServices.sniffTarget = null
         AppServices.uiActions = null
+        AppServices.mcpHost = null
         super.onDestroy()
     }
 

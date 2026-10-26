@@ -172,6 +172,7 @@ class SettingsDetailFragment : Fragment() {
         VIEW_V2_IMPORT -> getString(R.string.settings_import_export)
         VIEW_V2_LAB -> getString(R.string.settings_lab)
         VIEW_V2_UPDATE -> getString(R.string.settings_update)
+        VIEW_V2_MCP -> getString(R.string.settings_mcp)
         VIEW_ABOUT -> getString(R.string.settings_about)
         VIEW_CRASH_LOG -> getString(R.string.settings_crash_log)
         else -> getString(R.string.settings)
@@ -235,6 +236,7 @@ class SettingsDetailFragment : Fragment() {
             VIEW_V2_IMPORT -> buildV2Import()
             VIEW_V2_LAB -> buildV2Lab()
             VIEW_V2_UPDATE -> buildV2Update()
+            VIEW_V2_MCP -> buildV2Mcp()
             VIEW_ABOUT -> buildAbout()
             VIEW_CRASH_LOG -> buildCrashLog()
         }
@@ -1928,6 +1930,7 @@ class SettingsDetailFragment : Fragment() {
         )
         sectionTitle(R.string.settings_section_other)
         card(
+            navRow(getString(R.string.settings_mcp)) { open(VIEW_V2_MCP) },
             navRow(getString(R.string.settings_lab)) { open(VIEW_V2_LAB) },
             navRow(getString(R.string.settings_update)) { open(VIEW_V2_UPDATE) }
         )
@@ -2056,6 +2059,223 @@ class SettingsDetailFragment : Fragment() {
                 getString(R.string.settings_cct_disabled_desc)
             ) { settings.setCctDisabled(it) }
         )
+    }
+
+    private fun buildV2Mcp() {
+        val server = AppServices.mcpServer
+        val enabled = settings.mcpEnabled()
+        val running = server.isRunning
+        val status = when {
+            running -> getString(R.string.mcp_status_running)
+            enabled -> getString(R.string.mcp_status_stopped)
+            else -> getString(R.string.mcp_status_off)
+        }
+        val host = if (settings.mcpAllowLan()) {
+            server.localIpv4() ?: "127.0.0.1"
+        } else {
+            "127.0.0.1"
+        }
+        val endpoint = if (enabled) "http://$host:${settings.mcpPort()}/mcp" else "-"
+        val token = settings.mcpToken().orEmpty()
+
+        sectionTitle(R.string.mcp_section_status)
+        card(
+            infoRow(getString(R.string.mcp_status), status),
+            infoRow(getString(R.string.mcp_endpoint), endpoint),
+            infoRow(
+                getString(R.string.mcp_tools_enabled),
+                getString(
+                    R.string.mcp_tools_enabled_value,
+                    server.enabledToolCount(),
+                    server.totalToolCount()
+                )
+            ),
+            infoRow(
+                getString(R.string.mcp_recent_calls),
+                server.auditSnapshot().size.toString()
+            )
+        )
+        server.lastError?.let { error ->
+            card(infoRow(getString(R.string.mcp_last_error), error))
+        }
+
+        sectionTitle(R.string.mcp_section_control)
+        card(
+            switchRow(
+                getString(R.string.mcp_enable),
+                enabled,
+                getString(R.string.mcp_enable_desc)
+            ) { value ->
+                settings.setMcpEnabled(value)
+                if (value) McpRuntime.ensureToken()
+                McpRuntime.sync(requireContext())
+                build()
+            },
+            switchRow(
+                getString(R.string.mcp_lan),
+                settings.mcpAllowLan(),
+                getString(R.string.mcp_lan_desc)
+            ) { value ->
+                settings.setMcpAllowLan(value)
+                McpRuntime.sync(requireContext())
+                build()
+            },
+            numberRow(
+                getString(R.string.mcp_port),
+                settings.mcpPort(),
+                1024,
+                65535
+            ) { value ->
+                settings.setMcpPort(value)
+                McpRuntime.sync(requireContext())
+                build()
+            },
+            navRow(getString(R.string.mcp_token), tokenMask(token)) {
+                showMcpTokenDialog()
+            },
+            navRow(
+                getString(R.string.mcp_copy_config),
+                getString(R.string.mcp_copy_config_desc)
+            ) { copyMcpConfig() }
+        )
+
+        sectionTitle(R.string.mcp_section_permissions)
+        card(
+            switchRow(
+                getString(R.string.mcp_perm_read),
+                settings.mcpAllowPageRead(),
+                getString(R.string.mcp_perm_read_desc)
+            ) { settings.setMcpAllowPageRead(it) },
+            switchRow(
+                getString(R.string.mcp_perm_tabs),
+                settings.mcpAllowTabs(),
+                getString(R.string.mcp_perm_tabs_desc)
+            ) { settings.setMcpAllowTabs(it) },
+            switchRow(
+                getString(R.string.mcp_perm_action),
+                settings.mcpAllowPageAction(),
+                getString(R.string.mcp_perm_action_desc)
+            ) { settings.setMcpAllowPageAction(it) },
+            switchRow(
+                getString(R.string.mcp_perm_js),
+                settings.mcpAllowJs(),
+                getString(R.string.mcp_perm_js_desc)
+            ) { settings.setMcpAllowJs(it) },
+            switchRow(
+                getString(R.string.mcp_perm_bookmark),
+                settings.mcpAllowBookmarkWrite(),
+                getString(R.string.mcp_perm_bookmark_desc)
+            ) { settings.setMcpAllowBookmarkWrite(it) },
+            switchRow(
+                getString(R.string.mcp_perm_history),
+                settings.mcpAllowHistoryWrite(),
+                getString(R.string.mcp_perm_history_desc)
+            ) { settings.setMcpAllowHistoryWrite(it) },
+            switchRow(
+                getString(R.string.mcp_perm_incognito),
+                settings.mcpAllowIncognito(),
+                getString(R.string.mcp_perm_incognito_desc)
+            ) { settings.setMcpAllowIncognito(it) }
+        )
+
+        sectionTitle(R.string.mcp_section_capture)
+        card(
+            switchRow(
+                getString(R.string.mcp_capture),
+                settings.mcpAllowCapture(),
+                getString(R.string.mcp_capture_desc)
+            ) { value ->
+                settings.setMcpAllowCapture(value)
+                if (!value) com.sii.browser.core.webview.NetworkCapture.clearAll()
+                build()
+            },
+            switchRow(
+                getString(R.string.mcp_capture_body),
+                settings.mcpCaptureBody(),
+                getString(R.string.mcp_capture_body_desc)
+            ) { settings.setMcpCaptureBody(it) },
+            navRow(
+                getString(R.string.mcp_clear_capture),
+                getString(R.string.mcp_clear_capture_desc)
+            ) {
+                com.sii.browser.core.webview.NetworkCapture.clearAll()
+                toast(R.string.mcp_clear_capture_done)
+            }
+        )
+
+        sectionTitle(R.string.mcp_section_audit)
+        card(
+            navRow(getString(R.string.mcp_audit), getString(R.string.mcp_audit_desc)) {
+                showMcpAudit()
+            }
+        )
+        aboutText(R.string.mcp_about)
+    }
+
+    private fun tokenMask(token: String): String =
+        if (token.length <= 12) token.ifEmpty { "-" }
+        else "${token.take(6)}…${token.takeLast(4)}"
+
+    private fun copyText(label: String, text: String) {
+        val manager = requireContext()
+            .getSystemService(android.content.ClipboardManager::class.java)
+        manager?.setPrimaryClip(android.content.ClipData.newPlainText(label, text))
+        toast(R.string.mcp_copied)
+    }
+
+    private fun copyMcpConfig() {
+        copyText("MCP config", McpRuntime.clientConfig())
+    }
+
+    private fun showMcpTokenDialog() {
+        val token = McpRuntime.ensureToken()
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.mcp_token)
+            .setMessage(token)
+            .setPositiveButton(R.string.mcp_token_copy) { _, _ ->
+                copyText("MCP token", token)
+            }
+            .setNeutralButton(R.string.mcp_token_reset) { _, _ ->
+                AlertDialog.Builder(requireContext())
+                    .setMessage(R.string.mcp_token_reset_confirm)
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        McpRuntime.resetToken()
+                        McpRuntime.sync(requireContext())
+                        toast(R.string.mcp_token_reset_done)
+                        build()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showMcpAudit() {
+        val entries = AppServices.mcpServer.auditSnapshot()
+        if (entries.isEmpty()) {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.mcp_audit)
+                .setMessage(R.string.mcp_audit_empty)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+        val format = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        val text = entries.take(40).joinToString("\n") { entry ->
+            val result = if (entry.ok) "OK" else "ERR"
+            "${format.format(java.util.Date(entry.time))}  ${entry.tool}  " +
+                "$result  ${entry.durationMs}ms  ${entry.client}"
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.mcp_audit)
+            .setMessage(text)
+            .setPositiveButton(R.string.mcp_audit_clear) { _, _ ->
+                AppServices.mcpServer.clearAudit()
+                build()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun buildV2Update() {
@@ -2736,6 +2956,7 @@ class SettingsDetailFragment : Fragment() {
         const val VIEW_V2_IMPORT = "v2Import"
         const val VIEW_V2_LAB = "v2Lab"
         const val VIEW_V2_UPDATE = "v2Update"
+        const val VIEW_V2_MCP = "v2Mcp"
         const val VIEW_ABOUT = "about"
         const val VIEW_CRASH_LOG = "crashLog"
 

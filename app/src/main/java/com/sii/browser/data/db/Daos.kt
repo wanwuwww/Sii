@@ -121,6 +121,12 @@ interface HistoryDao {
     @Query("SELECT * FROM history ORDER BY updated_at DESC LIMIT :limit")
     fun recent(limit: Int): Flow<List<HistoryItem>>
 
+    @Query(
+        "SELECT * FROM history WHERE url LIKE '%' || :query || '%' " +
+            "OR title LIKE '%' || :query || '%' ORDER BY updated_at DESC LIMIT :limit"
+    )
+    suspend fun search(query: String, limit: Int): List<HistoryItem>
+
     @Query("DELETE FROM history WHERE id = :id")
     suspend fun delete(id: Long)
 

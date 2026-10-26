@@ -1476,6 +1476,83 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setToolbarOrder(value: String?) = putStr(SettingsKeys.TOOLBAR_ORDER, value)
 
+    // ---- MCP 服务 ----
+
+    override fun mcpEnabled(): Boolean =
+        bool(SettingsKeys.MCP_ENABLED, SettingsDefaults.MCP_ENABLED)
+
+    override fun setMcpEnabled(value: Boolean) = putBool(SettingsKeys.MCP_ENABLED, value)
+
+    override fun mcpPort(): Int = int(SettingsKeys.MCP_PORT, SettingsDefaults.MCP_PORT)
+
+    override fun setMcpPort(value: Int) = putInt(SettingsKeys.MCP_PORT, value)
+
+    override fun mcpToken(): String? = str(SettingsKeys.MCP_TOKEN, null)
+
+    override fun setMcpToken(value: String?) = putStr(SettingsKeys.MCP_TOKEN, value)
+
+    override fun mcpAllowLan(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_LAN, SettingsDefaults.MCP_ALLOW_LAN)
+
+    override fun setMcpAllowLan(value: Boolean) = putBool(SettingsKeys.MCP_ALLOW_LAN, value)
+
+    override fun mcpForeground(): Boolean =
+        bool(SettingsKeys.MCP_FOREGROUND, SettingsDefaults.MCP_FOREGROUND)
+
+    override fun setMcpForeground(value: Boolean) = putBool(SettingsKeys.MCP_FOREGROUND, value)
+
+    override fun mcpAllowPageRead(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_PAGE_READ, SettingsDefaults.MCP_ALLOW_PAGE_READ)
+
+    override fun setMcpAllowPageRead(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_PAGE_READ, value)
+
+    override fun mcpAllowTabs(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_TABS, SettingsDefaults.MCP_ALLOW_TABS)
+
+    override fun setMcpAllowTabs(value: Boolean) = putBool(SettingsKeys.MCP_ALLOW_TABS, value)
+
+    override fun mcpAllowPageAction(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_PAGE_ACTION, SettingsDefaults.MCP_ALLOW_PAGE_ACTION)
+
+    override fun setMcpAllowPageAction(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_PAGE_ACTION, value)
+
+    override fun mcpAllowJs(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_JS, SettingsDefaults.MCP_ALLOW_JS)
+
+    override fun setMcpAllowJs(value: Boolean) = putBool(SettingsKeys.MCP_ALLOW_JS, value)
+
+    override fun mcpAllowBookmarkWrite(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_BOOKMARK_WRITE, SettingsDefaults.MCP_ALLOW_BOOKMARK_WRITE)
+
+    override fun setMcpAllowBookmarkWrite(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_BOOKMARK_WRITE, value)
+
+    override fun mcpAllowHistoryWrite(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_HISTORY_WRITE, SettingsDefaults.MCP_ALLOW_HISTORY_WRITE)
+
+    override fun setMcpAllowHistoryWrite(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_HISTORY_WRITE, value)
+
+    override fun mcpAllowIncognito(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_INCOGNITO, SettingsDefaults.MCP_ALLOW_INCOGNITO)
+
+    override fun setMcpAllowIncognito(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_INCOGNITO, value)
+
+    override fun mcpAllowCapture(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_CAPTURE, SettingsDefaults.MCP_ALLOW_CAPTURE)
+
+    override fun setMcpAllowCapture(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_CAPTURE, value)
+
+    override fun mcpCaptureBody(): Boolean =
+        bool(SettingsKeys.MCP_CAPTURE_BODY, SettingsDefaults.MCP_CAPTURE_BODY)
+
+    override fun setMcpCaptureBody(value: Boolean) =
+        putBool(SettingsKeys.MCP_CAPTURE_BODY, value)
+
     // ---- 导出分组 ----
 
     private fun boolKeys() = arrayOf(

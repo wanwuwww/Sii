@@ -151,6 +151,9 @@ class ShellActivity : AppCompatActivity() {
             }
         }
 
+        // MCP 开关开启时恢复监听；配置未变不会重启已运行的服务。
+        runCatching { McpRuntime.sync(this) }
+
         softInputAssist = SoftInputAssistObserver(this) { visible ->
             notifyFragments<SoftInputAware>().forEach { it.onSoftInputChanged(visible) }
         }.also { observer ->

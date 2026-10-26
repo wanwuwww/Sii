@@ -22,7 +22,8 @@ import android.webkit.WebViewClient
 class WebViewClientBridge(
     private val callback: WebViewCallback,
     private val urlDecision: UrlLoadDecision? = null,
-    private val interceptors: ResourceInterceptorChain
+    private val interceptors: ResourceInterceptorChain,
+    private val captureEnabled: () -> Boolean = { false }
 ) : WebViewClient() {
 
     private var currentUrl: String? = null
@@ -88,16 +89,35 @@ class WebViewClientBridge(
     }
 
     override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
-        return interceptors.intercept(url, null, currentUrl)
+        val response = interceptors.intercept(url, null, currentUrl)
             ?: callback.interceptResource(view as? SiiWebView, null, url, (view as? SiiWebView)?.getReferer())
-            ?: super.shouldInterceptRequest(view, url)
+        if (captureEnabled()) {
+            val target = view as? SiiWebView
+            if (target != null) {
+                if (response != null) NetworkCapture.recordBlocked(target, url, null, false)
+                else NetworkCapture.recordRequest(target, null, url, false)
+            }
+        }
+        return response ?: super.shouldInterceptRequest(view, url)
     }
 
     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
         val url = request.url.toString()
-        return interceptors.intercept(url, request, currentUrl)
+        val response = interceptors.intercept(url, request, currentUrl)
             ?: callback.interceptResource(view as? SiiWebView, request, url, (view as? SiiWebView)?.getReferer())
-            ?: super.shouldInterceptRequest(view, request)
+        if (captureEnabled()) {
+            val target = view as? SiiWebView
+            if (target != null) {
+                if (response != null) {
+                    NetworkCapture.recordBlocked(target, url, request.method, request.isForMainFrame)
+                } else {
+                    NetworkCapture.recordRequest(
+                        target, request.method, url, request.isForMainFrame
+                    )
+                }
+            }
+        }
+        return response ?: super.shouldInterceptRequest(view, request)
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {

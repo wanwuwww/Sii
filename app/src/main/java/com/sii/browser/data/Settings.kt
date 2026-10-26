@@ -12,7 +12,8 @@ interface Settings :
     UserAgentSettings,
     BehaviorSettings,
     DataSettings,
-    WebPageSettings {
+    WebPageSettings,
+    McpSettings {
 
     /** 语言。 */
     fun language(): String?
@@ -1223,4 +1224,79 @@ interface WebPageSettings {
     fun toolbarOrder(): String?
 
     fun setToolbarOrder(value: String?)
+}
+
+/**
+ * 本地 MCP 服务（浏览器作为服务端，外部 AI 客户端连接）。
+ * 总开关默认关；高危能力独立开关，默认关。
+ */
+interface McpSettings {
+    fun mcpEnabled(): Boolean
+
+    fun setMcpEnabled(value: Boolean)
+
+    /** 监听端口（默认 8765）。 */
+    fun mcpPort(): Int
+
+    fun setMcpPort(value: Int)
+
+    /** 访问令牌；空表示尚未生成。 */
+    fun mcpToken(): String?
+
+    fun setMcpToken(value: String?)
+
+    /** 允许局域网访问（false = 仅 127.0.0.1）。 */
+    fun mcpAllowLan(): Boolean
+
+    fun setMcpAllowLan(value: Boolean)
+
+    /** 后台常驻（前台服务 + 通知）。 */
+    fun mcpForeground(): Boolean
+
+    fun setMcpForeground(value: Boolean)
+
+    /** 读取页面文本、链接、选区、书签与历史搜索。 */
+    fun mcpAllowPageRead(): Boolean
+
+    fun setMcpAllowPageRead(value: Boolean)
+
+    /** 新建/切换/关闭标签与页面导航。 */
+    fun mcpAllowTabs(): Boolean
+
+    fun setMcpAllowTabs(value: Boolean)
+
+    /** 点击、填表、滚动。 */
+    fun mcpAllowPageAction(): Boolean
+
+    fun setMcpAllowPageAction(value: Boolean)
+
+    /** 在页面中执行任意 JavaScript。 */
+    fun mcpAllowJs(): Boolean
+
+    fun setMcpAllowJs(value: Boolean)
+
+    /** 新增/删除书签。 */
+    fun mcpAllowBookmarkWrite(): Boolean
+
+    fun setMcpAllowBookmarkWrite(value: Boolean)
+
+    /** 删除历史记录。 */
+    fun mcpAllowHistoryWrite(): Boolean
+
+    fun setMcpAllowHistoryWrite(value: Boolean)
+
+    /** 无痕模式下仍允许 MCP 读取。 */
+    fun mcpAllowIncognito(): Boolean
+
+    fun setMcpAllowIncognito(value: Boolean)
+
+    /** 抓包：采集网络请求供 MCP 读取。 */
+    fun mcpAllowCapture(): Boolean
+
+    fun setMcpAllowCapture(value: Boolean)
+
+    /** 抓包时附带响应体（更敏感）。 */
+    fun mcpCaptureBody(): Boolean
+
+    fun setMcpCaptureBody(value: Boolean)
 }

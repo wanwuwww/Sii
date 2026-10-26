@@ -24,5 +24,10 @@ class HistoryRepository(private val dao: HistoryDao) {
 
     suspend fun delete(id: Long) = dao.delete(id)
 
+    suspend fun findByUrl(url: String): HistoryItem? = dao.findByUrl(url)
+
+    suspend fun search(query: String, limit: Int = 20): List<HistoryItem> =
+        dao.search(query, limit.coerceIn(1, 200))
+
     suspend fun clearAll() = dao.clearAll()
 }
