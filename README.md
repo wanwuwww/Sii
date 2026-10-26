@@ -1,6 +1,6 @@
 # Sii Browser
 
-用 Kotlin 从零实现的 Android 浏览器（个人项目）：广告拦截、隐私保护、网页翻译、MCP 服务与网络抓包。原生 XML + View 界面，不收集用户信息。
+用 Kotlin 写的 Android 浏览器（个人项目）：广告拦截、隐私保护、网页翻译、MCP 服务与网络抓包。原生 XML + View 界面，不收集用户信息。
 
 ## 功能
 
