@@ -550,8 +550,8 @@
     <string name="settings_about_desc">About, version and licenses</string>
     <string name="settings_about_version">Version</string>
     <string name="about_project_desc">An Android browser written in Kotlin (personal project): ad blocking, privacy protection, page translation, MCP service and network capture. Native XML + View UI, no user data collection.</string>
-    <string name="settings_about_license">Open source licenses</string>
-    <string name="settings_about_repo">Source repository</string>
+    <string name="settings_about_license">Third-party licenses</string>
+    <string name="settings_about_repo">Project repository</string>
     <string name="settings_about_repo_copied">Repository URL copied</string>
     <string name="settings_license_text">Open source projects used by Sii:\n\nKotlin Standard Library, Kotlin Coroutines (Apache-2.0)\nAndroidX Core, AppCompat, Fragment, Lifecycle, Activity (Apache-2.0)\nAndroidX DataStore Preferences (Apache-2.0)\nAndroidX Room Runtime / KTX / Compiler (Apache-2.0)\nAndroidX Browser (Apache-2.0)\nAndroidX DocumentFile (Apache-2.0)\nAndroidX Biometric (Apache-2.0)\nAndroidX CameraX Core / Camera2 / Lifecycle / View (Apache-2.0)\nAndroidX Media3 (ExoPlayer / HLS / UI) (Apache-2.0)\nZXing Core (Apache-2.0)\nOkHttp, Okio (Apache-2.0)\n\nSee THIRD_PARTY_LICENSES.md in the repository for the full list and copyright notices. Update that list and this page when adding dependencies.\n\nIt uses a non-commercial license: no commercial use, attribution required, derivatives must follow the same terms. See LICENSE for details.</string>
     <string name="settings_site_rules">Individual site settings</string>

@@ -550,8 +550,8 @@
     <string name="settings_about_desc">项目说明、版本与许可</string>
     <string name="settings_about_version">版本</string>
     <string name="about_project_desc">用 Kotlin 写的 Android 浏览器（个人项目）：广告拦截、隐私保护、网页翻译、MCP 服务与网络抓包。原生 XML + View 界面，不收集用户信息。</string>
-    <string name="settings_about_license">开源许可</string>
-    <string name="settings_about_repo">开源仓库</string>
+    <string name="settings_about_license">第三方许可</string>
+    <string name="settings_about_repo">项目仓库</string>
     <string name="settings_about_repo_copied">仓库地址已复制</string>
     <string name="about_repo_url" translatable="false">https://github.com/wanwuwww/Sii</string>
     <string name="settings_license_text">Sii 使用的开源项目：\n\nKotlin Standard Library、Kotlin Coroutines（Apache-2.0）\nAndroidX Core、AppCompat、Fragment、Lifecycle、Activity（Apache-2.0）\nAndroidX DataStore Preferences（Apache-2.0）\nAndroidX Room Runtime / KTX / Compiler（Apache-2.0）\nAndroidX Browser（Apache-2.0）\nAndroidX DocumentFile（Apache-2.0）\nAndroidX Biometric（Apache-2.0）\nAndroidX CameraX Core / Camera2 / Lifecycle / View（Apache-2.0）\nAndroidX Media3（ExoPlayer / HLS / UI）（Apache-2.0）\nZXing Core（Apache-2.0）\nOkHttp、Okio（Apache-2.0）\n\n完整清单与版权声明见仓库 THIRD_PARTY_LICENSES.md。新增依赖时需同步更新该清单和此页面。\n\n项目采用非商业许可：禁止商用，需署名，衍生作品需遵守相同约束，详见 LICENSE。</string>
