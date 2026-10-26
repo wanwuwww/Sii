@@ -317,9 +317,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
         viewLifecycleOwner.lifecycleScope.launch {
             if (tabManager.size > 0) {
-                // 从设置/书签等页面返回：复用已有标签与 WebView
+                // 从设置/书签等页面返回：复用已有标签与 WebView，并按离开时的页面状态恢复。
                 renderTabs()
-                if (tabManager.current?.url == ABOUT_HOME) showHome() else showWeb()
+                if (AppServices.lastHomeVisible && tabManager.current != null) {
+                    showHome(createTab = false)
+                } else {
+                    showWeb()
+                }
                 updateAddressBarForCurrent()
                 AppServices.pendingOpenUrl?.let { url ->
                     AppServices.pendingOpenUrl = null
@@ -342,7 +346,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     if (url != ABOUT_HOME) tabManager.currentWebView?.loadUrl(url)
                     else tabManager.currentWebView?.loadUrl("about:blank")
                 }
-                if (tabManager.current?.url == ABOUT_HOME) showHome() else showWeb()
+                if (AppServices.lastHomeVisible || tabManager.current?.url == ABOUT_HOME) {
+                    showHome()
+                } else {
+                    showWeb()
+                }
             } else if (saved.isEmpty()) {
                 val home = if (startupBehavior == 2) ABOUT_BLANK else restoredUrl(savedInstanceState)
                 if (home == ABOUT_HOME) {
@@ -507,7 +515,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tabManager.currentWebView?.loadUrl(entity.url)
             }
         }
-        if (tabManager.current?.url == ABOUT_HOME) showHome() else showWeb()
+        if (AppServices.lastHomeVisible || tabManager.current?.url == ABOUT_HOME) {
+            showHome()
+        } else {
+            showWeb()
+        }
         updateAddressBarForCurrent()
     }
 
@@ -3671,6 +3683,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private fun showHome(createTab: Boolean = true) {
+        AppServices.lastHomeVisible = true
         hidePageLoadingCover()
         hideSniffPrompt()
         val wasWebVisible = homeContainer?.visibility != View.VISIBLE
@@ -3715,6 +3728,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private fun showWeb() {
+        AppServices.lastHomeVisible = false
         homePanel?.dismissSuggestions()
         homeContainer?.visibility = View.GONE
         attachCurrentWebView()
@@ -9154,24 +9168,29 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private var scrollAccum = 0
     private var pendingScrollDir = 0
+    private var lastToggleAt = 0L
     private val applyScrollDirection = Runnable {
         val dir = pendingScrollDir
         pendingScrollDir = 0
         if (dir == 0) return@Runnable
+        // 同一方向的收展保持 220ms 冷却，避免滚动中反方向抖动。
+        val now = System.currentTimeMillis()
+        if (now - lastToggleAt < 220L) return@Runnable
+        lastToggleAt = now
         handleQuickEngineAutoHide(dir * 10)
         applyToolbarScrollHidden(dir * 10)
     }
 
     private fun handleToolbarAutoHide(rawDy: Int) {
         if (rawDy == 0) return
-        // 滚动惯性下 dy 会频繁变号：累计到 64dp 后，等滚动停止再执行一次收展。
+        // 累计 40dp 后短暂停顿（60ms）即执行，兼顾跟手与去抖。
         if ((rawDy > 0) != (scrollAccum > 0)) scrollAccum = 0
         scrollAccum += rawDy
-        if (kotlin.math.abs(scrollAccum) < 64) return
+        if (kotlin.math.abs(scrollAccum) < 40) return
         pendingScrollDir = if (scrollAccum > 0) 1 else -1
         scrollAccum = 0
         view?.removeCallbacks(applyScrollDirection)
-        view?.postDelayed(applyScrollDirection, 160L)
+        view?.postDelayed(applyScrollDirection, 60L)
     }
 
     private fun applyToolbarScrollHidden(dy: Int) {

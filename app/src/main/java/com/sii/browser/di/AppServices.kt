@@ -75,6 +75,10 @@ object AppServices {
     /** 跨 Fragment 打开 URL 回调（书签/历史列表点击 → 浏览器加载）。 */
     var openUrl: ((String) -> Unit)? = null
 
+    /** 当前是否停留在主页；Fragment 重建（设置返回、日夜切换）后用它恢复显示状态。 */
+    @Volatile
+    var lastHomeVisible: Boolean = false
+
     /** 列表页点击后待浏览器消费的 URL；不依赖某个 Fragment 实例。 */
     var pendingOpenUrl: String? = null
 
