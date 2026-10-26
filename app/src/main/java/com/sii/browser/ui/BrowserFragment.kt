@@ -8820,7 +8820,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         tabBar?.visibility = View.GONE
         val glassStrength = AppServices.settings.glassStrength()
         dock.background = GlassStyle.background(
-            requireContext(), night, dp(28).toFloat(), glassStrength
+            requireContext(), night, dp(28).toFloat(), glassStrength,
+            minAlpha = DOCK_GLASS_MIN_ALPHA
         )
         dock.clipToOutline = true
         applyDockGlass()
@@ -9231,7 +9232,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val radius = dp(28).toFloat()
         val width = dock.width.takeIf { it > 0 } ?: dp(320)
         val height = dock.height.takeIf { it > 0 } ?: dp(96)
-        val glass = GlassStyle.background(requireContext(), night, radius, strength, minAlpha = 170)
+        val glass = GlassStyle.background(
+            requireContext(), night, radius, strength, minAlpha = DOCK_GLASS_MIN_ALPHA
+        )
         val blurred = GlassBlur.layer(
             requireContext(), tabManager.currentWebView, width, height, radius
         )
@@ -9598,6 +9601,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var addressTextProgrammatic = false
 
     private companion object {
+        /** 胶囊底栏不透明度下限：强度再高也要压住网页原文，否则透出的色块与文字会被读成渲染异常。 */
+        const val DOCK_GLASS_MIN_ALPHA = 225
         const val KEY_URL = "sii_browser_url"
         const val KEY_TABS = "sii_browser_tabs"
         /** 固定栏默认项：夜间/隐身/无图/电脑模式。 */
