@@ -279,7 +279,7 @@ class McpTools(
                 McpGroup.TABS,
                 schema(JSONObject().put("index", prop("integer", "Tab index; omit for current.")))
             ) { host, args ->
-                val index = tab(args) ?: -1
+                val index = args.optInt("index", -1)
                 val target = if (index < 0) host.state().activeTab else index
                 okOrNot(host.closeTab(target))
             }

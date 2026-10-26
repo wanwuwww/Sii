@@ -34,6 +34,7 @@ object NetworkCapture {
 
     private const val MAX_ENTRIES = 300
     private const val MAX_URL = 8 * 1024
+    private const val DUPLICATE_WINDOW_MS = 80L
     private const val MAX_BODY = 64 * 1024
     private const val MAX_REQUEST_BODY = 16 * 1024
 
@@ -49,6 +50,7 @@ object NetworkCapture {
         mime: String? = null
     ) {
         if (url.isBlank() || url.length > MAX_URL) return
+        if (isDuplicate(owner, url, mainFrame)) return
         add(
             owner,
             Entry(
@@ -72,6 +74,7 @@ object NetworkCapture {
     /** 拦截层命中的请求（广告/隐私规则）。 */
     fun recordBlocked(owner: Any, url: String, method: String?, mainFrame: Boolean) {
         if (url.isBlank() || url.length > MAX_URL) return
+        if (isDuplicate(owner, url, mainFrame)) return
         add(
             owner,
             Entry(
@@ -120,6 +123,19 @@ object NetworkCapture {
         )
     }
 
+    /**
+     * WebView 对同一请求会分别回调 shouldInterceptRequest 的两个重载，
+     * 按 URL + 是否主帧在极短窗口内合并，避免每条资源都记录两次。
+     */
+    private fun isDuplicate(owner: Any, url: String, mainFrame: Boolean): Boolean {
+        val now = System.currentTimeMillis()
+        return synchronized(lock) {
+            val last = store[owner]?.values?.lastOrNull() ?: return@synchronized false
+            last.url == url && last.mainFrame == mainFrame &&
+                now - last.time in 0..DUPLICATE_WINDOW_MS
+        }
+    }
+
     private fun trimBody(text: String): Pair<String, Boolean> {
         if (text.length <= MAX_BODY) return text to false
         return text.take(MAX_BODY) to true
@@ -153,9 +169,26 @@ object NetworkCapture {
 
     fun get(owner: Any, id: Long): Entry? = synchronized(lock) { store[owner]?.get(id) }
 
-    fun clear(owner: Any) {
-        synchronized(lock) { store.remove(owner) }
+    /**
+     * 清空记录。[keepMainFrameFor] 给出本次导航地址时保留同站主文档条目：
+     * 主文档在 onPageStarted 之前就已被拦截层记录，直接清空会丢掉导航请求本身。
+     */
+    fun clear(owner: Any, keepMainFrameFor: String? = null) {
+        val keepHost = keepMainFrameFor?.let { hostOf(it) }
+        synchronized(lock) {
+            if (keepHost.isNullOrEmpty()) {
+                store.remove(owner)
+                return
+            }
+            val map = store[owner] ?: return
+            val kept = map.values.lastOrNull { it.mainFrame && hostOf(it.url) == keepHost }
+            map.clear()
+            if (kept != null) map[kept.id] = kept
+        }
     }
+
+    private fun hostOf(url: String): String? =
+        runCatching { android.net.Uri.parse(url).host?.lowercase() }.getOrNull()
 
     fun clearAll() {
         synchronized(lock) { store.clear() }

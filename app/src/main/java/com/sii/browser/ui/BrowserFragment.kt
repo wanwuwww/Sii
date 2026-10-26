@@ -6819,9 +6819,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (AppServices.settings.sniffEnabled()) {
                 webView?.injectJavaScript(com.sii.browser.core.webview.SniffJsBridge.SNIFF_JS)
             }
-            // 抓包：新导航清空该标签旧记录，再注入 fetch/XHR hook。
+            val startedUrl = url.ifBlank { webView?.url.orEmpty() }
+            // 抓包：新导航清空该标签旧记录（保留本次主文档），再注入 fetch/XHR hook。
             webView?.let { target ->
-                com.sii.browser.core.webview.NetworkCapture.clear(target)
+                com.sii.browser.core.webview.NetworkCapture.clear(target, startedUrl)
                 if (AppServices.settings.mcpAllowCapture()) {
                     target.injectJavaScript(
                         com.sii.browser.core.webview.CaptureScript.js(
@@ -6830,7 +6831,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     )
                 }
             }
-            val startedUrl = url.ifBlank { webView?.url.orEmpty() }
             if (startedUrl != "about:blank") {
                 errorPageLoading.remove(webView)
                 errorPageUrl.remove(webView)
