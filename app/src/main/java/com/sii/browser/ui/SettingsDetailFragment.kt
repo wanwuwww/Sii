@@ -2828,6 +2828,19 @@ class SettingsDetailFragment : Fragment() {
 
     private fun buildAbout() {
         val rows = mutableListOf<View>()
+        val context = requireContext()
+        rows.add(android.widget.TextView(context).apply {
+            text = context.getString(R.string.about_project_desc)
+            setTextSize(13f)
+            setTextColor(context.getColor(R.color.text_secondary))
+            setLineSpacing(CardList.dp(context, 3).toFloat(), 1.2f)
+            setPadding(
+                CardList.dp(context, 16),
+                CardList.dp(context, 14),
+                CardList.dp(context, 16),
+                CardList.dp(context, 14)
+            )
+        })
         val latest = settings.updateLatest()?.split("|")?.takeIf { it.size >= 2 }
         if (latest != null) {
             rows.add(

@@ -547,8 +547,9 @@
     <string name="settings_appearance_home_desc">Night mode, font size and home</string>
     <string name="settings_advanced_desc">Browser identity and desktop mode identity</string>
     <string name="settings_about">About</string>
-    <string name="settings_about_desc">Version, repository and licenses</string>
+    <string name="settings_about_desc">About, version and licenses</string>
     <string name="settings_about_version">Version</string>
+    <string name="about_project_desc">An Android browser built from scratch in Kotlin (personal project). Sii is an independent project and is not affiliated with any third-party browser product or its authors.</string>
     <string name="settings_about_license">Open source licenses</string>
     <string name="settings_about_repo">Source repository</string>
     <string name="settings_about_repo_copied">Repository URL copied</string>

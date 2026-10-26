@@ -547,8 +547,9 @@
     <string name="settings_appearance_home_desc">夜间模式、字号与主页</string>
     <string name="settings_advanced_desc">浏览器标识与桌面模式标识</string>
     <string name="settings_about">关于</string>
-    <string name="settings_about_desc">版本、仓库与许可</string>
+    <string name="settings_about_desc">项目说明、版本与许可</string>
     <string name="settings_about_version">版本</string>
+    <string name="about_project_desc">用 Kotlin 从零实现的 Android 浏览器（个人项目）。Sii 是独立项目，与任何第三方浏览器产品及其作者无关联。</string>
     <string name="settings_about_license">开源许可</string>
     <string name="settings_about_repo">开源仓库</string>
     <string name="settings_about_repo_copied">仓库地址已复制</string>
