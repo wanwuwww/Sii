@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-Sii-NC
+// Copyright (c) 2026 wanwuwww
 package com.sii.browser.download
 
 import com.sii.browser.data.db.DownloadChunk

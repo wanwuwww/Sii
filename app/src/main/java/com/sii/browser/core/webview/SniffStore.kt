@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-Sii-NC
+// Copyright (c) 2026 wanwuwww
 package com.sii.browser.core.webview
 
 /** 嗅探到的资源类型（用于列表分类）。 */

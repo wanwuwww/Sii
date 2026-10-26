@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-Sii-NC
+// Copyright (c) 2026 wanwuwww
 package com.sii.browser.core.webview
 
 /** 内存网络日志：只记录主文档与被广告拦截的请求，最多 200 条。 */

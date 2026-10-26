@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-Sii-NC
+// Copyright (c) 2026 wanwuwww
 package com.sii.browser.core.privacy
 
 /** 隐私保护规则包：按类别下载，不打包进 APK。 */
