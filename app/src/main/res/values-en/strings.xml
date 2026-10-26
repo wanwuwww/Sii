@@ -1039,6 +1039,8 @@
     <string name="mcp_token_reset">Reset</string>
     <string name="mcp_token_reset_confirm">Connected clients will be disconnected and must use the new token.</string>
     <string name="mcp_token_reset_done">Token reset</string>
+    <string name="mcp_copy_url">Copy connection URL</string>
+    <string name="mcp_copy_url_desc">Token included; paste into clients that only take a URL</string>
     <string name="mcp_copy_config">Copy client config</string>
     <string name="mcp_copy_config_desc">URL and token, ready to paste into an MCP client</string>
     <string name="mcp_copied">Copied</string>

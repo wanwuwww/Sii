@@ -2134,6 +2134,10 @@ class SettingsDetailFragment : Fragment() {
                 showMcpTokenDialog()
             },
             navRow(
+                getString(R.string.mcp_copy_url),
+                getString(R.string.mcp_copy_url_desc)
+            ) { copyMcpUrl() },
+            navRow(
                 getString(R.string.mcp_copy_config),
                 getString(R.string.mcp_copy_config_desc)
             ) { copyMcpConfig() }
@@ -2225,6 +2229,17 @@ class SettingsDetailFragment : Fragment() {
 
     private fun copyMcpConfig() {
         copyText("MCP config", McpRuntime.clientConfig())
+    }
+
+    /** 含令牌的连接地址：只需填写 URL 的客户端可直接使用。 */
+    private fun copyMcpUrl() {
+        val token = settings.mcpToken().orEmpty().ifBlank { McpRuntime.ensureToken() }
+        val host = if (settings.mcpAllowLan()) {
+            AppServices.mcpServer.localIpv4() ?: "127.0.0.1"
+        } else {
+            "127.0.0.1"
+        }
+        copyText("MCP URL", "http://$host:${settings.mcpPort()}/mcp?token=$token")
     }
 
     private fun showMcpTokenDialog() {

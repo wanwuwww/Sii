@@ -1040,6 +1040,8 @@
     <string name="mcp_token_reset">重置</string>
     <string name="mcp_token_reset_confirm">重置后已连接的客户端会断开，需要重新填写令牌。</string>
     <string name="mcp_token_reset_done">令牌已重置</string>
+    <string name="mcp_copy_url">复制连接地址</string>
+    <string name="mcp_copy_url_desc">已含令牌，只需填写 URL 的客户端直接粘贴</string>
     <string name="mcp_copy_config">复制客户端配置</string>
     <string name="mcp_copy_config_desc">含地址与令牌，可直接粘贴到 MCP 客户端</string>
     <string name="mcp_copied">已复制</string>
