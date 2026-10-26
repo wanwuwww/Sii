@@ -231,19 +231,31 @@ object AppServices {
         CoroutineScope(Dispatchers.IO).launch { runCatching { autoCheckUpdate(application) } }
     }
 
-    /** 启动时自动检查更新：有新版且未提醒过时发通知（点击打开下载页）。 */
+    /** 启动时自动检查更新：按提示档位处理，24 小时最多一次，失败静默。 */
     private suspend fun autoCheckUpdate(app: Application) {
-        if (!settings.updateAutoCheck()) return
+        val prompt = settings.updatePrompt()
+        if (prompt <= 0) return
+        val now = System.currentTimeMillis()
+        if (now - settings.updateLastCheck() < 24L * 60 * 60 * 1000) return
+        // 先落时间戳：失败也算一次，避免网络异常时反复要请求耗尽 GitHub 限流。
+        settings.setUpdateLastCheck(now)
         val info = com.sii.browser.data.UpdateChecker.check() ?: return
-        val current = runCatching {
+        val local = runCatching {
             val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
-            if (android.os.Build.VERSION.SDK_INT >= 28) packageInfo.longVersionCode
+            val code = if (android.os.Build.VERSION.SDK_INT >= 28) packageInfo.longVersionCode
             else @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
-        }.getOrDefault(0L)
-        if (info.versionCode <= current) return
-        if (info.versionCode <= settings.updateLastNotified()) return
-        notifyUpdate(app, info)
-        settings.setUpdateLastNotified(info.versionCode)
+            packageInfo.versionName.orEmpty() to code
+        }.getOrNull() ?: return
+        if (!com.sii.browser.data.UpdateChecker.isUpdate(info, local.first, local.second)) {
+            settings.setUpdateLatest(null)
+            return
+        }
+        val name = info.versionName.ifBlank { info.versionCode.toString() }
+        if (name == settings.updateIgnoredVersion()) return
+        settings.setUpdateLatest(
+            listOf(name, info.url, info.notes.orEmpty()).joinToString("|")
+        )
+        if (prompt >= 2) notifyUpdate(app, info)
     }
 
     private fun notifyUpdate(app: Application, info: com.sii.browser.data.UpdateChecker.UpdateInfo) {

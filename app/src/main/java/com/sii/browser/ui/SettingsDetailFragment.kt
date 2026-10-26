@@ -2294,17 +2294,39 @@ class SettingsDetailFragment : Fragment() {
     }
 
     private fun buildV2Update() {
-        card(
-            navRow(getString(R.string.settings_check_update)) { checkForUpdate() },
-            switchRow(
-                getString(R.string.settings_update_auto),
-                settings.updateAutoCheck()
-            ) { settings.setUpdateAutoCheck(it) },
+        val rows = mutableListOf<View>()
+        val latest = settings.updateLatest()?.split("|")?.takeIf { it.size >= 2 }
+        if (latest != null) {
+            rows.add(
+                navRow(
+                    getString(R.string.update_found_row, latest[0]),
+                    getString(R.string.update_open_release)
+                ) { openUpdateUrl(latest[1]) }
+            )
+        }
+        rows.add(navRow(getString(R.string.settings_check_update)) { checkForUpdate() })
+        rows.add(
+            choiceRow(
+                getString(R.string.settings_update_prompt),
+                arrayOf(
+                    getString(R.string.update_prompt_off),
+                    getString(R.string.update_prompt_settings),
+                    getString(R.string.update_prompt_notification)
+                ),
+                settings.updatePrompt().coerceIn(0, 2),
+                getString(R.string.settings_update_prompt_desc)
+            ) { value ->
+                settings.setUpdatePrompt(value)
+                build()
+            }
+        )
+        rows.add(
             textRow(
                 getString(R.string.settings_update_url),
                 settings.updateCheckUrl().orEmpty()
             ) { settings.setUpdateCheckUrl(it.ifBlank { null }) }
         )
+        card(*rows.toTypedArray())
     }
 
     // ---- 外观与主页 ----
@@ -2805,8 +2827,18 @@ class SettingsDetailFragment : Fragment() {
     // ---- 高级 ----
 
     private fun buildAbout() {
-        card(
-            infoRow(getString(R.string.settings_about_version), appVersion()),
+        val rows = mutableListOf<View>()
+        val latest = settings.updateLatest()?.split("|")?.takeIf { it.size >= 2 }
+        if (latest != null) {
+            rows.add(
+                navRow(
+                    getString(R.string.update_found_row, latest[0]),
+                    getString(R.string.update_open_release)
+                ) { openUpdateUrl(latest[1]) }
+            )
+        }
+        rows.add(infoRow(getString(R.string.settings_about_version), appVersion()))
+        rows.add(
             navRow(
                 getString(R.string.settings_about_repo),
                 getString(R.string.about_repo_url).removePrefix("https://")
@@ -2815,10 +2847,12 @@ class SettingsDetailFragment : Fragment() {
                     copyRepositoryUrl()
                     true
                 }
-            },
-            navRow(getString(R.string.settings_crash_log)) { open(VIEW_CRASH_LOG) },
-            navRow(getString(R.string.settings_about_license)) { showLicense() }
+            }
         )
+        rows.add(navRow(getString(R.string.settings_check_update)) { checkForUpdate() })
+        rows.add(navRow(getString(R.string.settings_crash_log)) { open(VIEW_CRASH_LOG) })
+        rows.add(navRow(getString(R.string.settings_about_license)) { showLicense() })
+        card(*rows.toTypedArray())
     }
 
     private fun buildCrashLog() {
@@ -3529,43 +3563,47 @@ class SettingsDetailFragment : Fragment() {
     /** 检查更新（地址未配置时提示先填地址）。 */
 
     private fun checkForUpdate() {
-        val endpoint = settings.updateCheckUrl()
-        if (endpoint.isNullOrBlank()) {
-            toast(R.string.update_url_missing)
-            return
-        }
         viewLifecycleOwner.lifecycleScope.launch {
             val info = com.sii.browser.data.UpdateChecker.check()
             if (info == null) {
                 toast(R.string.update_check_failed)
                 return@launch
             }
-            if (info.versionCode <= appVersionCode()) {
+            if (!com.sii.browser.data.UpdateChecker.isUpdate(info, appVersion(), appVersionCode())) {
+                settings.setUpdateLatest(null)
                 toast(R.string.update_latest)
                 return@launch
             }
+            val name = info.versionName.ifBlank { info.versionCode.toString() }
+            settings.setUpdateLatest(
+                listOf(name, info.url, info.notes.orEmpty()).joinToString("|")
+            )
             val message = buildString {
-                append("新版本：").append(info.versionName.ifEmpty { info.versionCode.toString() })
-                info.notes?.let { append("\n").append(it) }
+                append(getString(R.string.update_available, name))
+                info.notes?.let { append("\n\n").append(it.take(600)) }
             }
             AlertDialog.Builder(requireContext())
                 .setTitle(R.string.settings_check_update)
                 .setMessage(message)
-                .setPositiveButton(R.string.update_download) { _, _ ->
-                    if (info.url.isNotBlank()) {
-                        runCatching {
-                            startActivity(
-                                android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(info.url)
-                                )
-                            )
-                        }
-                    }
+                .setPositiveButton(R.string.update_download) { _, _ -> openUpdateUrl(info.url) }
+                .setNeutralButton(R.string.update_ignore_version) { _, _ ->
+                    settings.setUpdateIgnoredVersion(name)
+                    settings.setUpdateLatest(null)
+                    toast(R.string.update_ignored)
+                    build()
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
+    }
+
+    /** 打开 Release 页面：优先用浏览器内打开，设置页不在栈顶时先回根页。 */
+    private fun openUpdateUrl(url: String) {
+        if (url.isBlank()) return
+        val manager = parentFragmentManager
+        repeat(manager.backStackEntryCount) { manager.popBackStackImmediate() }
+        val opener = AppServices.openUrl
+        if (opener != null) opener(url) else openRepositoryExternal(url)
     }
 
     private fun card(vararg rows: View) {

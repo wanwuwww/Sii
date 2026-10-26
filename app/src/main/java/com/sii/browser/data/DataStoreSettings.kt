@@ -1408,6 +1408,31 @@ class DataStoreSettings(private val context: Context) : Settings {
         putStr(SettingsKeys.UPDATE_CHECK_URL, value)
     }
 
+    override fun updatePrompt(): Int {
+        // 旧版只有「自动检查」开关：未写过新键时按它推算，避免升级后行为突变。
+        val fallback = if (updateAutoCheck()) 1 else 0
+        return int(SettingsKeys.UPDATE_PROMPT, fallback)
+    }
+
+    override fun setUpdatePrompt(value: Int) = putInt(SettingsKeys.UPDATE_PROMPT, value)
+
+    override fun updateIgnoredVersion(): String? =
+        str(SettingsKeys.UPDATE_IGNORED, null)?.takeIf { it.isNotBlank() }
+
+    override fun setUpdateIgnoredVersion(value: String?) {
+        putStr(SettingsKeys.UPDATE_IGNORED, value)
+    }
+
+    override fun updateLastCheck(): Long = long(SettingsKeys.UPDATE_LAST_CHECK, 0L)
+
+    override fun setUpdateLastCheck(value: Long) = putLong(SettingsKeys.UPDATE_LAST_CHECK, value)
+
+    override fun updateLatest(): String? = str(SettingsKeys.UPDATE_LATEST, null)
+
+    override fun setUpdateLatest(value: String?) {
+        putStr(SettingsKeys.UPDATE_LATEST, value)
+    }
+
     override fun cctDisabled(): Boolean = bool(SettingsKeys.CCT_DISABLED, false)
 
     override fun setCctDisabled(value: Boolean) = putBool(SettingsKeys.CCT_DISABLED, value)
@@ -1579,11 +1604,13 @@ class DataStoreSettings(private val context: Context) : Settings {
         SettingsKeys.READER_THEME_COLOR, SettingsKeys.VIDEO_ORIENTATION,
         SettingsKeys.BOOKMARKS_VIEW_MODE, SettingsKeys.LAB_FLAG, SettingsKeys.DUA_CHOICE,
         SettingsKeys.WEB_FLAG_2, SettingsKeys.QUICK_ENGINE_POS, SettingsKeys.SETTINGS_CARD_ALPHA,
-        SettingsKeys.TABS_PANEL_TRANSPARENCY, SettingsKeys.MENU_SCROLL_STYLE
+        SettingsKeys.TABS_PANEL_TRANSPARENCY, SettingsKeys.MENU_SCROLL_STYLE,
+        SettingsKeys.UPDATE_PROMPT
     )
 
     private fun longKeys() = arrayOf(
-        SettingsKeys.UPDATER_FILTER_SUBSCRIPTIONS, SettingsKeys.UPDATER_SCRIPTS
+        SettingsKeys.UPDATER_FILTER_SUBSCRIPTIONS, SettingsKeys.UPDATER_SCRIPTS,
+        SettingsKeys.UPDATE_LAST_CHECK
     )
 
     private fun stringKeys() = arrayOf(
@@ -1593,6 +1620,7 @@ class DataStoreSettings(private val context: Context) : Settings {
         SettingsKeys.READER_CUSTOM_CSS, SettingsKeys.SEARCH_TOOLBAR_DISABLED,
         SettingsKeys.DUA_STRING, SettingsKeys.SEARCH_TOOLBAR_ORDER,
         SettingsKeys.HIDDEN_MENUS, SettingsKeys.SEARCH_SHORTCUTS, SettingsKeys.TOOLBAR_ORDER,
-        SettingsKeys.BOOKMARK_SORT, SettingsKeys.BOOKMARK_SIZE, SettingsKeys.BOOKMARK_ICON
+        SettingsKeys.BOOKMARK_SORT, SettingsKeys.BOOKMARK_SIZE, SettingsKeys.BOOKMARK_ICON,
+        SettingsKeys.UPDATE_IGNORED, SettingsKeys.UPDATE_LATEST
     )
 }

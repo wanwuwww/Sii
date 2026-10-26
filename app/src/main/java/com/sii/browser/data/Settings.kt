@@ -1150,6 +1150,26 @@ interface WebPageSettings {
 
     fun setUpdateCheckUrl(value: String?)
 
+    /** 更新提醒方式：0 关闭自动检查 / 1 仅设置页 / 2 系统通知。 */
+    fun updatePrompt(): Int
+
+    fun setUpdatePrompt(value: Int)
+
+    /** 用户选择忽略的版本名；空表示未忽略。 */
+    fun updateIgnoredVersion(): String?
+
+    fun setUpdateIgnoredVersion(value: String?)
+
+    /** 上次自动检查时间（毫秒），用于 24 小时节流。 */
+    fun updateLastCheck(): Long
+
+    fun setUpdateLastCheck(value: Long)
+
+    /** 最近一次发现的新版本，格式 `versionName|url|notes`，供关于页静默展示。 */
+    fun updateLatest(): String?
+
+    fun setUpdateLatest(value: String?)
+
     /** 禁用 Custom Tabs（外部链接一律用 Sii 主界面打开）。 */
     fun cctDisabled(): Boolean
 

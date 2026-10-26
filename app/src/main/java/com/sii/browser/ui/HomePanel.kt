@@ -243,7 +243,13 @@ class HomePanel(
         val s = AppServices.settings
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
-        val mode = if (s.homeStyle() == 2) 2 else s.homeLogoMode()
+        val style = s.homeStyle()
+        // 专注（3）与快捷宫格（4）不显示 Logo，把空间留给搜索框与图标。
+        val mode = when (style) {
+            2 -> 2
+            3, 4 -> -1
+            else -> s.homeLogoMode()
+        }
         logo?.visibility = if (mode == 0) View.VISIBLE else View.GONE
         logoIcon?.visibility = if (mode == 1) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.home_clock)?.visibility =
@@ -274,9 +280,11 @@ class HomePanel(
             else -> logo?.setTextColor(context.getColor(R.color.text_primary))
         }
         grid.removeAllViews()
-        grid.columnCount = when (s.homeStyle()) {
+        grid.columnCount = when (style) {
             1 -> 4
             2 -> 2
+            4 -> 5
+            5 -> 1
             else -> s.homeGridColumns().coerceIn(4, 6)
         }
         applySearchStyle()
@@ -291,7 +299,9 @@ class HomePanel(
     }
 
     private fun applySitesVisibility() {
-        val show = AppServices.settings.showSites()
+        // 专注样式只留搜索入口，不显示常用网站。
+        val show = AppServices.settings.showSites() &&
+            AppServices.settings.homeStyle() != 3
         val card = view.findViewById<View>(R.id.home_sites_card)
         card?.visibility = if (show) View.VISIBLE else View.GONE
         applySitesCardBg(card)
@@ -787,11 +797,22 @@ class HomePanel(
 
     private fun siteView(item: FavoriteItem): View {
         val name = item.title.ifEmpty { item.url }
+        val list = AppServices.settings.homeStyle() == 5
         return cell().apply {
             tag = item.id
             pressable(this)
-            addView(iconView(name.take(1), colorOf(item.url)))
-            addView(labelView(name))
+            addView(iconView(name.take(1), colorOf(item.url)).apply {
+                if (list) layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
+            })
+            addView(labelView(name).apply {
+                if (list) {
+                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                    ).apply { marginStart = dp(12) }
+                }
+            })
             if (editing) {
                 addView(removeBadge(item.id))
                 setOnLongClickListener {
@@ -853,15 +874,29 @@ class HomePanel(
 
     private fun addView(): View = cell().apply {
         pressable(this)
-        addView(iconView("＋", null))
-        addView(labelView(context.getString(R.string.home_sites_add)))
+        val list = AppServices.settings.homeStyle() == 5
+        addView(iconView("＋", null).apply {
+            if (list) layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
+        })
+        addView(labelView(context.getString(R.string.home_sites_add)).apply {
+            if (list) {
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                ).apply { marginStart = dp(12) }
+            }
+        })
         setOnClickListener { showAddDialog() }
     }
 
     private fun cell(): LinearLayout = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
+        // 列表样式：单列横排，图标在左、名称在右。
+        val list = AppServices.settings.homeStyle() == 5
+        orientation = if (list) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        gravity = if (list) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.CENTER
         isClickable = true
+        if (list) setPadding(dp(12), dp(8), dp(12), dp(8))
         val gap = AppServices.settings.homeCellGap().takeIf { it >= 0 } ?: 8
         layoutParams = GridLayout.LayoutParams().apply {
             width = 0
