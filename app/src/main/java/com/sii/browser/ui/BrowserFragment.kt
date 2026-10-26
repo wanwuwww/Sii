@@ -9091,44 +9091,35 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val scroll = view?.findViewById<View>(R.id.search_toolbar_scroll) ?: return
         quickEngineAnimator?.cancel()
         if (quickEngineFullHeight <= 0) quickEngineFullHeight = dp(40)
-        val start = if (scroll.visibility == View.VISIBLE) {
-            scroll.layoutParams.height.coerceAtLeast(0)
-        } else 0
-        val end = if (show) quickEngineFullHeight else 0
-        if (show) scroll.visibility = View.VISIBLE
-        if (start == end || !ValueAnimator.areAnimatorsEnabled()) {
-            scroll.layoutParams = scroll.layoutParams.apply { height = end }
-            scroll.alpha = 1f
-            if (!show) scroll.visibility = View.GONE
+        scroll.animate().cancel()
+        if (!ValueAnimator.areAnimatorsEnabled()) {
+            if (show) {
+                scroll.layoutParams = scroll.layoutParams.apply { height = quickEngineFullHeight }
+                scroll.visibility = View.VISIBLE
+                scroll.alpha = 1f
+                scroll.translationY = 0f
+            } else {
+                scroll.visibility = View.GONE
+                scroll.alpha = 0f
+            }
             return
         }
-        scroll.alpha = if (show) 0.4f else 1f
-        val animator = ValueAnimator.ofInt(start, end).apply {
-            duration = 160L
-            addUpdateListener { animation ->
-                val height = animation.animatedValue as Int
-                scroll.layoutParams = scroll.layoutParams.apply { this.height = height }
-                val fraction = if (end != start) {
-                    (height - start).toFloat() / (end - start)
-                } else 1f
-                scroll.alpha = if (show) 0.4f + 0.6f * fraction else 1f - 0.6f * fraction
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (!show) {
-                        scroll.visibility = View.GONE
-                        scroll.alpha = 0f
-                    } else {
-                        scroll.alpha = 1f
-                        scroll.layoutParams = scroll.layoutParams.apply {
-                            height = quickEngineFullHeight
-                        }
-                    }
-                }
-            })
+        if (show) {
+            // 高度一次恢复，随后只做淡入与位移，避免逐帧布局造成卡顿。
+            scroll.layoutParams = scroll.layoutParams.apply { height = quickEngineFullHeight }
+            scroll.visibility = View.VISIBLE
+            scroll.alpha = 0f
+            scroll.translationY = -dp(8).toFloat()
+            scroll.animate().alpha(1f).translationY(0f).setDuration(160)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+        } else {
+            scroll.animate().alpha(0f).translationY(-dp(8).toFloat()).setDuration(140)
+                .withEndAction {
+                    scroll.visibility = View.GONE
+                    scroll.alpha = 0f
+                    scroll.translationY = 0f
+                }.start()
         }
-        quickEngineAnimator = animator
-        animator.start()
     }
     private var glassBlurLast = 0L
 
@@ -9169,7 +9160,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (dir == 0) return@Runnable
         handleQuickEngineAutoHide(dir * 10)
         applyToolbarScrollHidden(dir * 10)
-        refreshGlassBlurThrottled()
     }
 
     private fun handleToolbarAutoHide(rawDy: Int) {
