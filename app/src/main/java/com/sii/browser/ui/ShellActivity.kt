@@ -49,10 +49,19 @@ class ShellActivity : AppCompatActivity() {
 
         private var restoreTabsAfterRecreate = false
 
+        /** 切换前旧主题的底色，用于新界面的过渡遮罩。 */
+        private var pendingFromColor = 0
+
         /** 夜间/白天切换：置位后 recreate，新实例恢复全部标签并淡入。 */
         fun smoothRecreateForNightSwitch(activity: Activity) {
             nightSwitchPending = true
             restoreTabsAfterRecreate = true
+            // 设置已写入切换后的状态，这里取切换前的底色。
+            pendingFromColor = if (AppServices.settings.isNightMode()) {
+                0xFFFFFFFF.toInt()
+            } else {
+                0xFF000000.toInt()
+            }
             activity.recreate()
         }
 
@@ -104,16 +113,33 @@ class ShellActivity : AppCompatActivity() {
         applySystemBarInsets()
         applyStatusBarColor()
         applyOrientation()
-        // 夜间/白天切换后：内容从半透明淡入，避免黑白突变。
+        // 夜间/白天切换后：旧主题底色盖住新界面再淡出，同时内容淡入，避免黑白突变。
         if (nightSwitchPending) {
             nightSwitchPending = false
             val content = findViewById<View>(R.id.shell_root)
-            content.alpha = 0.2f
+            content.alpha = 0f
             content.animate()
                 .alpha(1f)
-                .setDuration(300)
+                .setDuration(320)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .start()
+            val root = findViewById<android.view.ViewGroup>(android.R.id.content)
+            if (root != null) {
+                val cover = View(this).apply { setBackgroundColor(pendingFromColor) }
+                root.addView(
+                    cover,
+                    android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+                cover.animate()
+                    .alpha(0f)
+                    .setDuration(320)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .withEndAction { root.removeView(cover) }
+                    .start()
+            }
         }
 
         if (savedInstanceState == null) {
