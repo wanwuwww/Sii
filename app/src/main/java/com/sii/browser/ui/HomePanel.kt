@@ -237,13 +237,15 @@ class HomePanel(
     fun applyHomeStyle() {
         applyLayoutPos()
         val modern = AppServices.settings.uiStyle() == 1
-        view.findViewById<View>(R.id.home_content)?.setPadding(
-            dp(20), dp(20), dp(20), if (modern) dp(96) else dp(20)
-        )
         val s = AppServices.settings
+        val style = s.homeStyle()
+        // 专注样式没有 Logo，横向留白加大，让搜索框像一张独立卡片。
+        val side = if (style == 3) 32 else 20
+        view.findViewById<View>(R.id.home_content)?.setPadding(
+            dp(side), dp(20), dp(side), if (modern) dp(96) else dp(20)
+        )
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
-        val style = s.homeStyle()
         // 专注（3）与快捷宫格（4）不显示 Logo，把空间留给搜索框与图标。
         val mode = when (style) {
             2 -> 2
@@ -283,10 +285,12 @@ class HomePanel(
         grid.columnCount = when (style) {
             1 -> 4
             2 -> 2
-            4 -> 5
+            3 -> 4
+            4 -> 4
             5 -> 1
             else -> s.homeGridColumns().coerceIn(4, 6)
         }
+        applyListSurface(style)
         applySearchStyle()
         applyBackground()
         applySitesVisibility()
@@ -296,6 +300,23 @@ class HomePanel(
     private fun parseColorValue(value: String?): Int? {
         if (value.isNullOrBlank()) return null
         return runCatching { Color.parseColor(value) }.getOrNull()
+    }
+
+    /** 列表样式：常用网站整体包在圆角卡片里，行间用细线分隔。 */
+    private fun applyListSurface(style: Int) {
+        if (style != 5) {
+            grid.background = null
+            grid.setPadding(0, 0, 0, 0)
+            return
+        }
+        val dark = AppServices.settings.isNightMode()
+        grid.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = dp(18).toFloat()
+            setColor(if (dark) 0xFF1B1E23.toInt() else 0xFFFFFFFF.toInt())
+            setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
+        }
+        grid.setPadding(0, dp(4), 0, dp(4))
     }
 
     private fun applySitesVisibility() {
@@ -718,8 +739,105 @@ class HomePanel(
 
     private fun render() {
         grid.removeAllViews()
+        if (AppServices.settings.homeStyle() == 5) {
+            sites.forEachIndexed { index, item ->
+                grid.addView(listRow(item, showDivider = index > 0))
+            }
+            if (!previewMode) grid.addView(listRowAdd(showDivider = sites.isNotEmpty()))
+            return
+        }
         sites.forEach { grid.addView(siteView(it)) }
         if (!previewMode) grid.addView(addView())
+    }
+
+    private fun listRow(item: FavoriteItem, showDivider: Boolean): View =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = GridLayout.LayoutParams().apply {
+                width = 0
+                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            }
+            if (showDivider) addView(listDivider())
+            addView(listRowContent(item))
+        }
+
+    private fun listRowAdd(showDivider: Boolean): View =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = GridLayout.LayoutParams().apply {
+                width = 0
+                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            }
+            if (showDivider) addView(listDivider())
+            addView(listAddContent())
+        }
+
+    private fun listDivider(): View = View(context).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
+        ).apply { marginStart = dp(64) }
+        setBackgroundColor(context.getColor(R.color.line))
+    }
+
+    private fun listRowContent(item: FavoriteItem): View {
+        val name = item.title.ifEmpty { item.url }
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(56)
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            isClickable = true
+            tag = item.id
+            pressable(this)
+            addView(iconView(name.take(1), colorOf(item.url)).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
+            })
+            addView(labelView(name).apply {
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                ).apply { marginStart = dp(12) }
+            })
+            addView(TextView(context).apply {
+                text = "›"
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setTextColor(context.getColor(R.color.text_secondary))
+            })
+            if (editing) {
+                addView(removeBadge(item.id))
+            } else if (!previewMode) {
+                setOnClickListener {
+                    exitSearchInput()
+                    onOpen(item.url)
+                }
+                setOnLongClickListener {
+                    showReorderDialog(item)
+                    true
+                }
+            }
+        }
+    }
+
+    private fun listAddContent(): View = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(56)
+        setPadding(dp(16), dp(8), dp(16), dp(8))
+        isClickable = true
+        pressable(this)
+        addView(iconView("＋", null).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
+        })
+        addView(labelView(context.getString(R.string.home_sites_add)).apply {
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+            ).apply { marginStart = dp(12) }
+        })
+        setOnClickListener { showAddDialog() }
     }
 
     private fun handleFavoriteDrag(event: android.view.DragEvent): Boolean {
@@ -797,22 +915,11 @@ class HomePanel(
 
     private fun siteView(item: FavoriteItem): View {
         val name = item.title.ifEmpty { item.url }
-        val list = AppServices.settings.homeStyle() == 5
         return cell().apply {
             tag = item.id
             pressable(this)
-            addView(iconView(name.take(1), colorOf(item.url)).apply {
-                if (list) layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
-            })
-            addView(labelView(name).apply {
-                if (list) {
-                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                    textSize = 14f
-                    layoutParams = LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                    ).apply { marginStart = dp(12) }
-                }
-            })
+            addView(iconView(name.take(1), colorOf(item.url)))
+            addView(labelView(name))
             if (editing) {
                 addView(removeBadge(item.id))
                 setOnLongClickListener {
@@ -874,29 +981,15 @@ class HomePanel(
 
     private fun addView(): View = cell().apply {
         pressable(this)
-        val list = AppServices.settings.homeStyle() == 5
-        addView(iconView("＋", null).apply {
-            if (list) layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
-        })
-        addView(labelView(context.getString(R.string.home_sites_add)).apply {
-            if (list) {
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                textSize = 14f
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                ).apply { marginStart = dp(12) }
-            }
-        })
+        addView(iconView("＋", null))
+        addView(labelView(context.getString(R.string.home_sites_add)))
         setOnClickListener { showAddDialog() }
     }
 
     private fun cell(): LinearLayout = LinearLayout(context).apply {
-        // 列表样式：单列横排，图标在左、名称在右。
-        val list = AppServices.settings.homeStyle() == 5
-        orientation = if (list) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-        gravity = if (list) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.CENTER
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
         isClickable = true
-        if (list) setPadding(dp(12), dp(8), dp(12), dp(8))
         val gap = AppServices.settings.homeCellGap().takeIf { it >= 0 } ?: 8
         layoutParams = GridLayout.LayoutParams().apply {
             width = 0
@@ -910,10 +1003,15 @@ class HomePanel(
         setTextColor(Color.WHITE)
         textSize = 16f
         gravity = Gravity.CENTER
-        val size = when (AppServices.settings.homeIconSize()) {
-            0 -> 40
-            2 -> 56
-            else -> 48
+        val size = if (AppServices.settings.homeStyle() == 4) {
+            // 快捷宫格：图标放大到主导视觉的位置。
+            56
+        } else {
+            when (AppServices.settings.homeIconSize()) {
+                0 -> 40
+                2 -> 56
+                else -> 48
+            }
         }
         layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
         background = GradientDrawable().apply {

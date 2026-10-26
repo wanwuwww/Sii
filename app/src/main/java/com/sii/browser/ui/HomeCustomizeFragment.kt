@@ -300,7 +300,7 @@ class HomeCustomizeFragment : Fragment() {
         CardList.addRows(
             card,
             listOf(
-                navRow("界面风格预设", "经典 / 玻璃胶囊 / 极简白") { showPresetDialog() }
+                navRow("界面风格预设", "经典 / 玻璃胶囊 / 极简白 / 专注搜索 / 快捷宫格 / 杂志") { showPresetDialog() }
             )
         )
         controls.addView(card)
@@ -1314,13 +1314,143 @@ class HomeCustomizeFragment : Fragment() {
         navRow("主题色识别", null) { openThemeColorPage() }
     )
 
-    /** 界面风格预设：一次性套用多项设置。 */
+    /** 界面风格预设：卡片 + 缩略预览，点一下套用。 */
     private fun showPresetDialog() {
         val presets = arrayOf("经典", "玻璃胶囊", "极简白", "专注搜索", "快捷宫格", "杂志")
-        android.app.AlertDialog.Builder(requireContext())
+        val ctx = requireContext()
+        val grid = android.widget.GridLayout(ctx).apply {
+            columnCount = 2
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+        val dialog = android.app.AlertDialog.Builder(ctx)
             .setTitle("界面风格预设")
-            .setItems(presets) { _, which -> applyPreset(which) }
-            .show()
+            .setView(grid)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        val current = currentPreset()
+        presets.forEachIndexed { index, name ->
+            grid.addView(
+                presetCard(index, name, selected = index == current) {
+                    dialog.dismiss()
+                    applyPreset(index)
+                }
+            )
+        }
+        dialog.show()
+    }
+
+    /** 按当前设置推断套的是哪套预设，用于对话框里标记选中项。 */
+    private fun currentPreset(): Int = when {
+        settings.uiStyle() == 0 -> 0
+        settings.homeStyle() == 3 -> 3
+        settings.homeStyle() == 4 -> 4
+        settings.homeStyle() == 2 -> 5
+        settings.homeStyle() == 1 -> 2
+        else -> 1
+    }
+
+    private fun presetCard(index: Int, name: String, selected: Boolean, onClick: () -> Unit): View {
+        val ctx = requireContext()
+        return android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                width = 0
+                columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+                setMargins(dp(4), dp(4), dp(4), dp(4))
+            }
+            addView(
+                presetPreview(index, selected),
+                android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(86)
+                )
+            )
+            addView(android.widget.TextView(ctx).apply {
+                text = if (selected) "$name · 当前" else name
+                textSize = 12.5f
+                gravity = android.view.Gravity.CENTER
+                setTextColor(
+                    if (selected) ThemeAccent.color(ctx) else ctx.getColor(R.color.text_primary)
+                )
+                setPadding(0, dp(7), 0, dp(2))
+            })
+            isClickable = true
+            setOnClickListener { onClick() }
+        }
+    }
+
+    /** 迷你预览：搜索条 + 图标点 + 底栏形状，足以区分六套风格。 */
+    private fun presetPreview(index: Int, selected: Boolean): View {
+        val ctx = requireContext()
+        val frame = android.widget.FrameLayout(ctx)
+        frame.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = dp(14).toFloat()
+            setColor(ctx.getColor(R.color.card))
+            setStroke(
+                dp(if (selected) 2 else 1),
+                if (selected) ThemeAccent.color(ctx) else ctx.getColor(R.color.line)
+            )
+        }
+        val line = androidx.core.graphics.ColorUtils.setAlphaComponent(
+            ctx.getColor(R.color.text_primary), 46
+        )
+
+        fun bar(widthDp: Int, heightDp: Int, radiusDp: Int, bottom: Boolean): View =
+            View(ctx).apply {
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(radiusDp).toFloat()
+                    setColor(line)
+                }
+                frame.addView(
+                    this,
+                    android.widget.FrameLayout.LayoutParams(dp(widthDp), dp(heightDp)).apply {
+                        gravity = if (bottom) {
+                            android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
+                        } else {
+                            android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+                        }
+                        if (bottom) bottomMargin = dp(8) else topMargin = dp(12)
+                    }
+                )
+            }
+
+        val modern = index != 0
+        bar(if (index == 3) 84 else 96, if (modern) 14 else 10, if (modern) 7 else 3, false)
+        if (index != 3) {
+            val row = android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+            }
+            val count = if (index == 5) 2 else 4
+            val size = if (index == 4) 16 else 12
+            repeat(count) {
+                row.addView(
+                    View(ctx).apply {
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            cornerRadius = dp(4).toFloat()
+                            setColor(line)
+                        }
+                    },
+                    android.widget.LinearLayout.LayoutParams(dp(size), dp(size)).apply {
+                        marginStart = dp(4)
+                        marginEnd = dp(4)
+                    }
+                )
+            }
+            frame.addView(
+                row,
+                android.widget.FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { gravity = android.view.Gravity.CENTER }
+            )
+        }
+        if (index == 0) {
+            bar(122, 10, 0, true)
+        } else {
+            bar(100, 16, 8, true)
+        }
+        return frame
     }
 
     private fun applyPreset(index: Int) {
