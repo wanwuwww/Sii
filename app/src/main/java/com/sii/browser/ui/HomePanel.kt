@@ -237,24 +237,13 @@ class HomePanel(
     fun applyHomeStyle() {
         applyLayoutPos()
         val modern = AppServices.settings.uiStyle() == 1
-        val s = AppServices.settings
-        val style = s.homeStyle()
-        // 专注样式没有 Logo，横向留白加大，让搜索框像一张独立卡片。
-        val side = if (style == 3) 32 else 20
         view.findViewById<View>(R.id.home_content)?.setPadding(
-            dp(side), dp(20), dp(side), if (modern) dp(96) else dp(20)
+            dp(20), dp(20), dp(20), if (modern) dp(96) else dp(20)
         )
-        // 专注样式：搜索框下方给一行操作提示。
-        view.findViewById<View>(R.id.home_tip)?.visibility =
-            if (style == 3 && s.homeFocusTip()) View.VISIBLE else View.GONE
+        val s = AppServices.settings
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
-        // 专注（3）与快捷宫格（4）不显示 Logo，把空间留给搜索框与图标。
-        val mode = when (style) {
-            2 -> if (s.homeMagazineClock()) 2 else -1
-            3, 4 -> -1
-            else -> s.homeLogoMode()
-        }
+        val mode = if (s.homeStyle() == 2) 2 else s.homeLogoMode()
         logo?.visibility = if (mode == 0) View.VISIBLE else View.GONE
         logoIcon?.visibility = if (mode == 1) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.home_clock)?.visibility =
@@ -285,15 +274,11 @@ class HomePanel(
             else -> logo?.setTextColor(context.getColor(R.color.text_primary))
         }
         grid.removeAllViews()
-        grid.columnCount = when (style) {
+        grid.columnCount = when (s.homeStyle()) {
             1 -> 4
-            2 -> s.homeMagazineColumns().coerceIn(2, 3)
-            3 -> 4
-            4 -> s.homeGridColumns().coerceIn(4, 6)
-            5 -> 1
+            2 -> 2
             else -> s.homeGridColumns().coerceIn(4, 6)
         }
-        applyListSurface(style)
         applySearchStyle()
         applyBackground()
         applySitesVisibility()
@@ -305,27 +290,8 @@ class HomePanel(
         return runCatching { Color.parseColor(value) }.getOrNull()
     }
 
-    /** 列表样式：常用网站整体包在圆角卡片里，行间用细线分隔。 */
-    private fun applyListSurface(style: Int) {
-        if (style != 5) {
-            grid.background = null
-            grid.setPadding(0, 0, 0, 0)
-            return
-        }
-        val dark = AppServices.settings.isNightMode()
-        grid.background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = dp(18).toFloat()
-            setColor(if (dark) 0xFF1B1E23.toInt() else 0xFFFFFFFF.toInt())
-            setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
-        }
-        grid.setPadding(0, dp(4), 0, dp(4))
-    }
-
     private fun applySitesVisibility() {
-        // 专注样式只留搜索入口，不显示常用网站。
-        val show = AppServices.settings.showSites() &&
-            AppServices.settings.homeStyle() != 3
+        val show = AppServices.settings.showSites()
         val card = view.findViewById<View>(R.id.home_sites_card)
         card?.visibility = if (show) View.VISIBLE else View.GONE
         applySitesCardBg(card)
@@ -355,7 +321,6 @@ class HomePanel(
     /** 搜索框圆角与高度（高度用上下内边距实现，不挤压内部按钮）。 */
     private fun applySearchStyle(focused: Boolean = false) {
         val box = view.findViewById<LinearLayout>(R.id.home_search_box) ?: return
-        val homeStyle = AppServices.settings.homeStyle()
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val baseRadius = when (AppServices.settings.homeSearchRadius()) {
@@ -387,14 +352,10 @@ class HomePanel(
         } else {
             searchBoxElevation
         }
-        val padV = if (homeStyle == 3) {
-            9
-        } else {
-            when (AppServices.settings.homeSearchHeight()) {
-                0 -> 2
-                2 -> 8
-                else -> 4
-            }
+        val padV = when (AppServices.settings.homeSearchHeight()) {
+            0 -> 2
+            2 -> 8
+            else -> 4
         }
         box.setPadding(dp(8), dp(padV), dp(4), dp(padV))
         val normalIcon = if (dark) 0xCCFFFFFF.toInt()
@@ -412,15 +373,14 @@ class HomePanel(
             searchInput.setTextColor(context.getColor(R.color.text_primary))
             searchInput.setHintTextColor(context.getColor(R.color.text_secondary))
         }
-        // 极简 / 杂志：细边框无阴影；专注：大圆角悬浮胶囊，作为页面唯一主角。
-        if (homeStyle != 0) {
-            val focus = homeStyle == 3
+        // 极简 / 杂志：改为细边框，去掉胶囊与阴影。
+        if (AppServices.settings.homeStyle() != 0) {
             box.background = GradientDrawable().apply {
-                cornerRadius = dp(if (focus) 26 else 12).toFloat()
-                setColor(if (focus) color else 0x00000000)
+                cornerRadius = dp(12).toFloat()
+                setColor(0x00000000)
                 setStroke(dp(1), if (dark) 0x33FFFFFF else 0x26000000)
             }
-            box.elevation = if (focus) dp(6).toFloat() else 0f
+            box.elevation = 0f
         }
     }
 
@@ -748,105 +708,8 @@ class HomePanel(
 
     private fun render() {
         grid.removeAllViews()
-        if (AppServices.settings.homeStyle() == 5) {
-            sites.forEachIndexed { index, item ->
-                grid.addView(listRow(item, showDivider = index > 0))
-            }
-            if (!previewMode) grid.addView(listRowAdd(showDivider = sites.isNotEmpty()))
-            return
-        }
         sites.forEach { grid.addView(siteView(it)) }
         if (!previewMode) grid.addView(addView())
-    }
-
-    private fun listRow(item: FavoriteItem, showDivider: Boolean): View =
-        LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = GridLayout.LayoutParams().apply {
-                width = 0
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-            }
-            if (showDivider) addView(listDivider())
-            addView(listRowContent(item))
-        }
-
-    private fun listRowAdd(showDivider: Boolean): View =
-        LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = GridLayout.LayoutParams().apply {
-                width = 0
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-            }
-            if (showDivider) addView(listDivider())
-            addView(listAddContent())
-        }
-
-    private fun listDivider(): View = View(context).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
-        ).apply { marginStart = dp(64) }
-        setBackgroundColor(context.getColor(R.color.line))
-    }
-
-    private fun listRowContent(item: FavoriteItem): View {
-        val name = item.title.ifEmpty { item.url }
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            minimumHeight = dp(56)
-            setPadding(dp(16), dp(8), dp(16), dp(8))
-            isClickable = true
-            tag = item.id
-            pressable(this)
-            addView(iconView(name.take(1), colorOf(item.url)).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
-            })
-            addView(labelView(name).apply {
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                textSize = 14f
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                ).apply { marginStart = dp(12) }
-            })
-            addView(TextView(context).apply {
-                text = "›"
-                textSize = 18f
-                gravity = Gravity.CENTER
-                setTextColor(context.getColor(R.color.text_secondary))
-            })
-            if (editing) {
-                addView(removeBadge(item.id))
-            } else if (!previewMode) {
-                setOnClickListener {
-                    exitSearchInput()
-                    onOpen(item.url)
-                }
-                setOnLongClickListener {
-                    showReorderDialog(item)
-                    true
-                }
-            }
-        }
-    }
-
-    private fun listAddContent(): View = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(56)
-        setPadding(dp(16), dp(8), dp(16), dp(8))
-        isClickable = true
-        pressable(this)
-        addView(iconView("＋", null).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
-        })
-        addView(labelView(context.getString(R.string.home_sites_add)).apply {
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            textSize = 14f
-            layoutParams = LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-            ).apply { marginStart = dp(12) }
-        })
-        setOnClickListener { showAddDialog() }
     }
 
     private fun handleFavoriteDrag(event: android.view.DragEvent): Boolean {
