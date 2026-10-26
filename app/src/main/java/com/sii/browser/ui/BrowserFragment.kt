@@ -364,7 +364,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 } else {
                     openNewTab(home)
                 }
-            } else if (abnormalExit && !AppServices.privacyManager.isIncognito) {
+            } else if (abnormalExit && !AppServices.privacyManager.isIncognito &&
+                saved.any { it.url != ABOUT_HOME }
+            ) {
                 if (AppServices.settings.exitRestorePrompt()) {
                     promptRestoreAfterAbnormalExit(saved)
                 } else {

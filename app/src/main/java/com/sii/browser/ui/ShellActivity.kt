@@ -375,17 +375,9 @@ class ShellActivity : AppCompatActivity() {
         super.onResume()
         applyDialogTheme()
         // 任务被移除时由该服务接收 onTaskRemoved；只放后台不会清理。
+        // 始终启动，才能区分「从最近任务划掉」（正常退出）与「被系统杀掉」（异常退出）。
         runCatching {
-            val intent = Intent(this, SessionCleanupService::class.java)
-            if (settings.clearDataOnExit() == 1) startService(intent) else stopService(intent)
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // 退到后台（回桌面/切应用）即视为正常结束；崩溃不会走到这里。
-        if (!isChangingConfigurations) {
-            com.sii.browser.data.StartupExit.markClean(this)
+            startService(Intent(this, SessionCleanupService::class.java))
         }
     }
 
