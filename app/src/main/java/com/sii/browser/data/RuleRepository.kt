@@ -9,10 +9,12 @@ import com.sii.browser.data.db.RuleEntity
 import com.sii.browser.data.db.RuleSummary
 import com.sii.browser.data.db.RuleType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 /**
  * 规则仓库：规则持久化、订阅下载更新，并把全部规则装载进 [AdBlockEngine]。
@@ -24,6 +26,14 @@ class RuleRepository(
     private val dao: RuleDao,
     private val client: OkHttpClient = OkHttpClient()
 ) {
+
+    /** 隐私规则包体积较大（EasyPrivacy 约 2MB），默认 10 秒读超时在慢网络下会被切断。 */
+    private val packClient: OkHttpClient by lazy {
+        client.newBuilder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+    }
 
     fun all(): Flow<List<RuleSummary>> = dao.all()
 
@@ -92,7 +102,12 @@ class RuleRepository(
             )
             if (current != null) dao.setEnabled(id, enabled)
             if (enabled && (current?.contentLength ?: 0) == 0) {
-                if (!downloadPrivacyPack(id, pack.url)) ok = false
+                var downloaded = downloadPrivacyPack(id, pack.url)
+                if (!downloaded) {
+                    delay(1200)
+                    downloaded = downloadPrivacyPack(id, pack.url)
+                }
+                if (!downloaded) ok = false
             }
         }
         ok
@@ -108,7 +123,7 @@ class RuleRepository(
         withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(url).build()
-                client.newCall(request).execute().use { resp ->
+                packClient.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) return@withContext false
                     val body = resp.body?.string().orEmpty()
                     if (body.isEmpty()) return@withContext false
