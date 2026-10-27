@@ -150,6 +150,10 @@ class DataStoreSettings(private val context: Context) : Settings {
         )
     }
 
+    override fun setNightMode(value: Int) {
+        putInt(SettingsKeys.NIGHT_MODE, value.coerceIn(1, 3))
+    }
+
     override fun toggleNightMode(): Boolean {
         val next = !isNightMode()
         // 手动开关只在「强制暗 3」与「强制亮 2」之间切换，永不回落到「跟随系统 1」；

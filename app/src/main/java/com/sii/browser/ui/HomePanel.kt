@@ -712,9 +712,12 @@ class HomePanel(
         applySearchVisibility()
         applyLayoutPos()
         val modern = AppServices.settings.uiStyle() == 1
-        view.findViewById<View>(R.id.home_content)?.setPadding(
+        val content = view.findViewById<android.view.ViewGroup>(R.id.home_content)
+        content?.setPadding(
             dp(20), dp(20), dp(20), if (modern) dp(96) else dp(20)
         )
+        // 聚焦时搜索框会放大到 padding 区域；clipToPadding 默认 true 会把两侧圆角裁平。
+        content?.clipToPadding = false
         val s = AppServices.settings
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)

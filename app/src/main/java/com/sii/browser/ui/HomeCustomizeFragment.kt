@@ -302,7 +302,7 @@ class HomeCustomizeFragment : Fragment() {
         CardList.addRows(
             card,
             listOf(
-                navRow("界面风格预设", "经典 / 玻璃胶囊 / 极简白") { showPresetDialog() }
+                navRow("界面风格预设", "经典 / 玻璃胶囊 / 极简白 / 专注") { showPresetDialog() }
             )
         )
         controls.addView(card)
@@ -1334,9 +1334,9 @@ class HomeCustomizeFragment : Fragment() {
         navRow("主题色识别", null) { openThemeColorPage() }
     )
 
-    /** 界面风格预设：一次性套用多项设置。 */
+    /** 界面风格预设：只套用界面相关项。 */
     private fun showPresetDialog() {
-        val presets = arrayOf("经典", "玻璃胶囊", "极简白")
+        val presets = arrayOf("经典", "玻璃胶囊", "极简白", "专注")
         android.app.AlertDialog.Builder(requireContext())
             .setTitle("界面风格预设")
             .setItems(presets) { _, which -> applyPreset(which) }
@@ -1347,30 +1347,39 @@ class HomeCustomizeFragment : Fragment() {
         when (index) {
             0 -> {
                 settings.setUiStyle(0)
-                settings.setTabCardGrid(false)
-                settings.setMenuScrollStyle(0)
                 settings.setHomeStyle(0)
-                settings.setGlassBlur(false)
                 settings.setGlassStrength(0)
-                settings.setNightFollowSystem(false)
-                if (settings.isNightMode()) settings.toggleNightMode()
+                settings.setGlassBlur(false)
+                settings.setTabCardGrid(true)
+                settings.setMenuScrollStyle(0)
+                settings.setNightMode(2)
             }
             1 -> {
                 settings.setUiStyle(1)
+                settings.setHomeStyle(0)
+                settings.setGlassStrength(100)
+                settings.setGlassBlur(true)
                 settings.setTabCardGrid(true)
                 settings.setMenuScrollStyle(0)
-                settings.setHomeStyle(0)
-                settings.setGlassBlur(true)
-                settings.setGlassStrength(70)
-                if (settings.isNightMode()) settings.toggleNightMode()
+                settings.setNightMode(2)
+            }
+            2 -> {
+                settings.setUiStyle(0)
+                settings.setHomeStyle(1)
+                settings.setGlassStrength(0)
+                settings.setGlassBlur(false)
+                settings.setTabCardGrid(true)
+                settings.setMenuScrollStyle(0)
+                settings.setNightMode(2)
             }
             else -> {
                 settings.setUiStyle(1)
+                settings.setHomeStyle(0)
+                settings.setGlassStrength(70)
+                settings.setGlassBlur(true)
                 settings.setTabCardGrid(false)
-                settings.setHomeStyle(1)
-                settings.setGlassBlur(false)
-                settings.setGlassStrength(20)
-                if (settings.isNightMode()) settings.toggleNightMode()
+                settings.setMenuScrollStyle(1)
+                settings.setNightMode(2)
             }
         }
         (activity as? ShellActivity)?.let {

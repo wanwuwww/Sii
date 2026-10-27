@@ -33,6 +33,9 @@ interface Settings :
 
     fun setNightFollowSystem(follow: Boolean)
 
+    /** 直接设置夜间模式：1=跟随系统，2=强制亮，3=强制暗。 */
+    fun setNightMode(value: Int)
+
     /** 菜单手动切换夜间模式：开=强制暗色（优先于自动跟随系统），关=恢复跟随系统。返回切换后是否为暗色。 */
     fun toggleNightMode(): Boolean
 
