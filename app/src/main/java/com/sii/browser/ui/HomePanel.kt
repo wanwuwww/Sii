@@ -51,6 +51,8 @@ class HomePanel(
 
     private val searchInput = view.findViewById<EditText>(R.id.home_search_input)
     private val searchBox = view.findViewById<View>(R.id.home_search_box)
+    private val topSearchBox = view.findViewById<View>(R.id.home_top_search)
+    private val topSearchInput = view.findViewById<EditText>(R.id.home_top_search_input)
     private val searchScan = view.findViewById<ImageButton>(R.id.home_scan)
     private val searchBoxElevation = searchBox.elevation
     private val grid = view.findViewById<GridLayout>(R.id.home_sites)
@@ -59,6 +61,9 @@ class HomePanel(
     private var editing = false
     private var sites: List<FavoriteItem> = emptyList()
     private var suggestionPopup: SuggestionPopup? = null
+    private var topSuggestionPopup: SuggestionPopup? = null
+    private var topSuggestJob: Job? = null
+    private var topSuggestionsSuppressed = false
     private var suggestionsSuppressed = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var bgJob: Job? = null
@@ -75,6 +80,7 @@ class HomePanel(
     private var pullTriggered = false
     private var touchDownX = 0f
     private var touchDownY = 0f
+    private var lastImeVisible = false
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -140,9 +146,9 @@ class HomePanel(
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 searchBox.animate()
-                    .scaleX(1.02f)
-                    .scaleY(1.02f)
-                    .setDuration(180L)
+                    .scaleX(1.01f)
+                    .scaleY(1.01f)
+                    .setDuration(140L)
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
                     .start()
                 if (AppServices.settings.uiStyle() == 1) {
@@ -182,14 +188,140 @@ class HomePanel(
             render()
         }
         setupPullToSearch()
-        view.findViewById<View>(R.id.home_top_search)?.setOnClickListener { focusSearch() }
+        setupTopSearchInput()
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            val imeVisible = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
+            if (imeVisible != lastImeVisible) {
+                lastImeVisible = imeVisible
+                animateContentForIme()
+            }
+            insets
+        }
         applyHomeStyle()
+    }
+
+    /** 键盘弹出/收起时主页内容会重新居中，位置是跳变的；这里给整体做一次位移补偿动画。 */
+    private fun animateContentForIme() {
+        if (!view.isShown) return
+        val content = view.findViewById<View>(R.id.home_content) ?: return
+        val before = IntArray(2)
+        content.getLocationOnScreen(before)
+        view.post {
+            val after = IntArray(2)
+            content.getLocationOnScreen(after)
+            val dy = before[1] - after[1]
+            if (dy == 0) return@post
+            content.animate().cancel()
+            content.translationY = dy.toFloat()
+            content.animate()
+                .translationY(0f)
+                .setDuration(220L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
+    }
+
+    /** 顶部搜索框：可独立输入；中间搜索框在它显示时只负责把焦点转过去。 */
+    private fun setupTopSearchInput() {
+        topSearchBox.setOnClickListener { focusTopSearch() }
+        topSearchInput.setOnFocusChangeListener { _, hasFocus ->
+            topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
+        }
+        topSearchInput.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_GO ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER)
+            ) {
+                submitTopSearch()
+                true
+            } else false
+        }
+        topSearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString().orEmpty().trim()
+                if (query.isEmpty()) {
+                    topSuggestJob?.cancel()
+                    topSuggestionPopup?.dismiss()
+                    return
+                }
+                topSuggestionsSuppressed = false
+                topSuggestJob?.cancel()
+                topSuggestJob = scope.launch {
+                    kotlinx.coroutines.delay(300)
+                    if (topSuggestionsSuppressed) return@launch
+                    onSuggest(query) { items ->
+                        if (topSuggestionsSuppressed) return@onSuggest
+                        if (topSearchInput.text.toString().trim() == query) {
+                            showTopSuggestions(items)
+                        }
+                    }
+                }
+            }
+        })
+        if (!previewMode) {
+            searchInput.setOnTouchListener { _, event ->
+                if (event.actionMasked == MotionEvent.ACTION_DOWN && topSearchVisible()) {
+                    focusTopSearch()
+                    true
+                } else false
+            }
+        }
+    }
+
+    private fun topSearchVisible(): Boolean = topSearchBox.visibility == View.VISIBLE
+
+    private fun focusTopSearch() {
+        topSearchInput.requestFocus()
+        topSearchInput.setSelection(topSearchInput.text.length)
+        topSearchInput.post {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE)
+                as? android.view.inputmethod.InputMethodManager ?: return@post
+            imm.showSoftInput(topSearchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
+    private fun submitTopSearch() {
+        topSuggestionsSuppressed = true
+        hideKeyboard(topSearchInput)
+        topSearchInput.clearFocus()
+        topSuggestionPopup?.dismiss()
+        val text = topSearchInput.text.toString().trim()
+        if (text.isNotEmpty()) onSearch(text)
+    }
+
+    private fun showTopSuggestions(items: List<Suggestion>) {
+        if (items.isEmpty()) {
+            topSuggestionPopup?.dismiss()
+            return
+        }
+        val count = AppServices.settings.suggestionCount().coerceIn(3, 10)
+        val sorted = sortSuggestions(items, AppServices.settings.suggestOrder(), count)
+        if (sorted.isEmpty()) {
+            topSuggestionPopup?.dismiss()
+            return
+        }
+        val popup = topSuggestionPopup ?: SuggestionPopup(
+            context, topSearchBox
+        ) { item -> pickTopSuggestion(item) }.also { topSuggestionPopup = it }
+        popup.show(sorted)
+    }
+
+    private fun pickTopSuggestion(item: Suggestion) {
+        topSearchInput.setText(item.value)
+        topSearchInput.setSelection(item.value.length)
+        submitTopSearch()
     }
 
     /** 顶部搜索入口只控制主页的快捷入口，底部地址栏不受影响。 */
     private fun applyTopSearchVisibility() {
         val top = view.findViewById<View>(R.id.home_top_search) ?: return
-        top.visibility = if (AppServices.settings.homeTopAddress()) View.VISIBLE else View.GONE
+        val show = !previewMode && AppServices.settings.homeTopAddress()
+        top.visibility = if (show) View.VISIBLE else View.GONE
+        if (!show) {
+            topSearchInput.clearFocus()
+            topSuggestionPopup?.dismiss(false)
+        }
     }
 
     /** 主页下拉进入搜索：仅在顶部且向下拉动超过阈值时触发一次。 */
@@ -217,6 +349,10 @@ class HomePanel(
     }
 
     private fun focusSearch() {
+        if (topSearchVisible()) {
+            focusTopSearch()
+            return
+        }
         searchInput.requestFocus()
         searchInput.setSelection(searchInput.text.length)
         searchInput.post {
@@ -558,8 +694,10 @@ class HomePanel(
 
     fun exitSearchInput() {
         searchInput.clearFocus()
+        topSearchInput.clearFocus()
         hideKeyboard()
         hideSuggestions()
+        topSuggestionPopup?.dismiss()
     }
 
     /** 主页搜索框是否持有焦点。 */
@@ -580,7 +718,9 @@ class HomePanel(
                 // 下拉/滚动也会收到 UP，只有位移很小的点击才当作“点击搜索框外部”。
                 val moved = kotlin.math.abs(event.rawX - touchDownX) > dp(8) ||
                     kotlin.math.abs(event.rawY - touchDownY) > dp(8)
-                if (!touchStartedInSearch && !moved && searchInput.hasFocus()) {
+                if (!touchStartedInSearch && !moved &&
+                    (searchInput.hasFocus() || topSearchInput.hasFocus())
+                ) {
                     exitSearchInput()
                 }
             }
@@ -588,24 +728,34 @@ class HomePanel(
     }
 
     private fun isInsideSearch(rawX: Float, rawY: Float): Boolean {
-        if (searchBox.width <= 0 || searchBox.height <= 0) return false
-        val location = IntArray(2)
-        searchBox.getLocationOnScreen(location)
-        return rawX >= location[0] && rawX <= location[0] + searchBox.width &&
-            rawY >= location[1] && rawY <= location[1] + searchBox.height
+        if (isInsideView(searchBox, rawX, rawY)) return true
+        return topSearchVisible() && isInsideView(topSearchBox, rawX, rawY)
     }
 
-    private fun hideKeyboard() {
+    private fun isInsideView(target: View, rawX: Float, rawY: Float): Boolean {
+        if (target.width <= 0 || target.height <= 0) return false
+        val location = IntArray(2)
+        target.getLocationOnScreen(location)
+        return rawX >= location[0] && rawX <= location[0] + target.width &&
+            rawY >= location[1] && rawY <= location[1] + target.height
+    }
+
+    private fun hideKeyboard(input: EditText = searchInput) {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE)
             as? android.view.inputmethod.InputMethodManager ?: return
-        imm.hideSoftInputFromWindow(searchInput.windowToken, 0)
+        imm.hideSoftInputFromWindow(input.windowToken, 0)
     }
 
     /** 返回主页时清掉上一次搜索留下的网址。 */
     fun clearSearch() {
         suggestionsSuppressed = true
+        topSuggestionsSuppressed = true
         hideSuggestions()
+        topSuggestJob?.cancel()
+        topSuggestionPopup?.dismiss(false)
         searchInput.setText("")
+        topSearchInput.setText("")
+        topSearchInput.clearFocus()
     }
 
     private fun showSuggestions(items: List<Suggestion>, preferAbove: Boolean = false) {
@@ -686,6 +836,9 @@ class HomePanel(
     /** View 销毁时释放浮层、背景解码任务与图片引用。 */
     fun release() {
         hideSuggestions()
+        topSuggestJob?.cancel()
+        topSuggestionPopup?.dismiss(false)
+        topSuggestionPopup = null
         stopClock()
         bgJob?.cancel()
         bgJob = null

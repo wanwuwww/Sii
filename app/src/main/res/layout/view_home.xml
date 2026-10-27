@@ -25,13 +25,20 @@
             android:src="@drawable/ic_m_find"
             android:tint="@color/text_secondary" />
 
-        <TextView
+        <EditText
+            android:id="@+id/home_top_search_input"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/home_search_hint"
-            android:textColor="@color/text_secondary"
+            android:background="@null"
+            android:hint="@string/home_search_hint"
+            android:imeOptions="actionGo"
+            android:inputType="textUri"
+            android:maxLines="1"
+            android:paddingVertical="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
             android:textSize="14sp" />
     </LinearLayout>
 
