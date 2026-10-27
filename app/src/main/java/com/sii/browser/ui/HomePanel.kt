@@ -87,6 +87,7 @@ class HomePanel(
     private var othersDimmed = false
     private var dimmedMainSearch = false
     private var homeOriginalHeight = Int.MIN_VALUE
+    private var lockScreenY = Int.MIN_VALUE
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -223,6 +224,7 @@ class HomePanel(
         searchFocusActive = true
         pendingFocusMove = true
         lockHomeHeight()
+        lockScreenPosition()
         lockContentHeight()
         setOthersDimmed(true)
         if (lastImeVisible) moveContentForFocus()
@@ -257,6 +259,38 @@ class HomePanel(
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
         }
+    }
+
+    /**
+     * 聚焦期间把主页钉在屏幕上的固定位置。父容器因键盘缩小、重力变化时，
+     * 通过 translationY 抵消位移，内容不会再向上跑。
+     */
+    private val keepScreenPosition = android.view.ViewTreeObserver.OnPreDrawListener {
+        if (!searchFocusActive || lockScreenY == Int.MIN_VALUE) {
+            true
+        } else {
+            val loc = IntArray(2)
+            view.getLocationOnScreen(loc)
+            val layoutY = loc[1] - view.translationY.toInt()
+            val dy = lockScreenY - layoutY
+            if (kotlin.math.abs(dy) > 1) view.translationY = dy.toFloat()
+            true
+        }
+    }
+
+    private fun lockScreenPosition() {
+        if (previewMode || lockScreenY != Int.MIN_VALUE) return
+        val loc = IntArray(2)
+        view.getLocationOnScreen(loc)
+        lockScreenY = loc[1] - view.translationY.toInt()
+        view.viewTreeObserver.addOnPreDrawListener(keepScreenPosition)
+    }
+
+    private fun unlockScreenPosition() {
+        if (lockScreenY == Int.MIN_VALUE) return
+        view.viewTreeObserver.removeOnPreDrawListener(keepScreenPosition)
+        lockScreenY = Int.MIN_VALUE
+        view.translationY = 0f
     }
 
     /**
@@ -327,6 +361,7 @@ class HomePanel(
         if (!searchFocusActive) return
         searchFocusActive = false
         setImeSuspend(false)
+        unlockScreenPosition()
         unlockHomeHeight()
         pendingFocusMove = false
         val content = view.findViewById<View>(R.id.home_content)
@@ -348,10 +383,12 @@ class HomePanel(
             if (hasFocus) {
                 setImeSuspend(true)
                 lockHomeHeight()
+                lockScreenPosition()
                 lockContentHeight()
                 setOthersDimmed(true, includeMainSearch = true)
             } else if (!searchFocusActive) {
                 setImeSuspend(false)
+                unlockScreenPosition()
                 unlockHomeHeight()
                 restoreContentHeight()
                 setOthersDimmed(false)
