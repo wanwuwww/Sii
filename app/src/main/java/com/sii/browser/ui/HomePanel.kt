@@ -85,6 +85,7 @@ class HomePanel(
     private var searchFocusActive = false
     private var pendingFocusMove = false
     private var searchScrollParams: LinearLayout.LayoutParams? = null
+    private var othersDimmed = false
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -220,7 +221,28 @@ class HomePanel(
         searchFocusActive = true
         pendingFocusMove = true
         lockScrollHeight()
+        setOthersDimmed(true)
         if (lastImeHeight > 0) moveContentForFocus()
+    }
+
+    /** 聚焦时把 Logo / 常用网站淡化，形成轻微变暗的层次。 */
+    private fun setOthersDimmed(dim: Boolean) {
+        if (othersDimmed == dim) return
+        othersDimmed = dim
+        val alpha = if (dim) 0.4f else 1f
+        listOfNotNull(
+            view.findViewById<View>(R.id.home_logo),
+            view.findViewById<View>(R.id.home_logo_icon),
+            view.findViewById<View>(R.id.home_clock),
+            view.findViewById<View>(R.id.home_sites_card)
+        ).forEach { target ->
+            target.animate().cancel()
+            target.animate()
+                .alpha(alpha)
+                .setDuration(160L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
     }
 
     /** 聚焦时把滚动区高度停在当前值，键盘弹出不再触发整页重排。 */
@@ -261,6 +283,7 @@ class HomePanel(
         if (!searchFocusActive) return
         searchFocusActive = false
         pendingFocusMove = false
+        setOthersDimmed(false)
         val content = view.findViewById<View>(R.id.home_content)
         content?.animate()?.cancel()
         content?.animate()?.translationY(0f)?.setDuration(160L)
@@ -274,8 +297,10 @@ class HomePanel(
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
             if (hasFocus) {
                 lockScrollHeight()
+                setOthersDimmed(true)
             } else if (!searchFocusActive) {
                 restoreScrollParams()
+                setOthersDimmed(false)
             }
         }
         topSearchInput.setOnEditorActionListener { _, actionId, event ->
@@ -367,7 +392,8 @@ class HomePanel(
     /** 顶部搜索入口只控制主页的快捷入口，底部地址栏不受影响。 */
     private fun applyTopSearchVisibility() {
         val top = view.findViewById<View>(R.id.home_top_search) ?: return
-        val show = !previewMode && AppServices.settings.homeTopAddress()
+        val show = !previewMode && AppServices.settings.homeTopAddress() &&
+            AppServices.settings.homeLayoutPos() != 0
         top.visibility = if (show) View.VISIBLE else View.GONE
         if (!show) {
             topSearchInput.clearFocus()
@@ -463,6 +489,23 @@ class HomePanel(
             if (content.indexOfChild(sites) != 1) {
                 content.removeView(sites)
                 content.addView(sites, 1)
+            }
+            return
+        }
+        if (pos == 2) {
+            // 底部布局：常用网站先移到 Logo 组之后，再把搜索框放到最底部。
+            val logoEnd = listOfNotNull(
+                view.findViewById<View>(R.id.home_logo),
+                view.findViewById<View>(R.id.home_logo_icon),
+                view.findViewById<View>(R.id.home_clock)
+            ).maxOfOrNull { content.indexOfChild(it) } ?: 0
+            if (content.indexOfChild(sites) != logoEnd + 1) {
+                content.removeView(sites)
+                content.addView(sites, (logoEnd + 1).coerceAtMost(content.childCount))
+            }
+            if (content.indexOfChild(box) != content.childCount - 1) {
+                content.removeView(box)
+                content.addView(box)
             }
             return
         }

@@ -526,9 +526,14 @@ class HomeCustomizeFragment : Fragment() {
     }
 
     private fun searchRows(): List<View> = listOf(
-        switchRow("主页顶部显示搜索框", settings.homeTopAddress()) { on ->
+        switchRow(
+            "主页顶部显示搜索框",
+            settings.homeTopAddress() && settings.homeLayoutPos() != 0,
+            enabled = settings.homeLayoutPos() != 0
+        ) { on ->
             settings.setHomeTopAddress(on)
             refreshPreview()
+            view?.post { buildControls() }
         },
         choiceRow(
             "主页风格",
@@ -546,6 +551,7 @@ class HomeCustomizeFragment : Fragment() {
         ) { index ->
             settings.setHomeLayoutPos(index)
             refreshPreview()
+            view?.post { buildControls() }
         },
         choiceRow(
             getString(R.string.settings_home_search_radius),
@@ -1486,12 +1492,19 @@ class HomeCustomizeFragment : Fragment() {
         }
     }
 
-    private fun switchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit): View {
+    private fun switchRow(
+        title: String,
+        checked: Boolean,
+        enabled: Boolean = true,
+        onChange: (Boolean) -> Unit
+    ): View {
         val sw = Switch(requireContext()).apply {
             isChecked = checked
+            isEnabled = enabled
             setOnCheckedChangeListener { _, value -> onChange(value) }
         }
         return CardList.row(requireContext()).apply {
+            alpha = if (enabled) 1f else 0.5f
             addView(titleView(title), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(sw)
         }

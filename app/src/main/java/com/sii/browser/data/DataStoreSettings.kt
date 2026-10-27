@@ -601,8 +601,11 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun homeLayoutPos(): Int =
         int(SettingsKeys.HOME_LAYOUT_POS, 1)
 
-    override fun setHomeLayoutPos(value: Int) =
+    override fun setHomeLayoutPos(value: Int) {
         putInt(SettingsKeys.HOME_LAYOUT_POS, value)
+        // 搜索框已在顶部时，不再叠加主页顶部搜索入口。
+        if (value == 0) putBool(SettingsKeys.HOME_TOP_ADDRESS, false)
+    }
 
     override fun homeLogoText(): String =
         str(SettingsKeys.HOME_LOGO_TEXT, null) ?: SettingsDefaults.HOME_LOGO_TEXT
@@ -637,8 +640,13 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun homeTopAddress(): Boolean =
         bool(SettingsKeys.HOME_TOP_ADDRESS, SettingsDefaults.HOME_TOP_ADDRESS)
 
-    override fun setHomeTopAddress(value: Boolean) =
+    override fun setHomeTopAddress(value: Boolean) {
         putBool(SettingsKeys.HOME_TOP_ADDRESS, value)
+        // 开启顶部搜索入口时，把主页搜索框从顶部挪回居中，两者互斥。
+        if (value && homeLayoutPos() == 0) {
+            putInt(SettingsKeys.HOME_LAYOUT_POS, 1)
+        }
+    }
 
     override fun homeIconRadius(): Int =
         int(SettingsKeys.HOME_ICON_RADIUS, SettingsDefaults.HOME_ICON_RADIUS)
