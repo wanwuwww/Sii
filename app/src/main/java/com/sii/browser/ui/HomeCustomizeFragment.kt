@@ -526,7 +526,7 @@ class HomeCustomizeFragment : Fragment() {
     }
 
     private fun searchRows(): List<View> = listOf(
-        switchRow("主页顶部显示地址栏", settings.homeTopAddress()) { on ->
+        switchRow("主页顶部显示搜索框", settings.homeTopAddress()) { on ->
             settings.setHomeTopAddress(on)
             refreshPreview()
         },

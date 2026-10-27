@@ -73,6 +73,8 @@ class HomePanel(
     private var touchStartedInSearch = false
     private var pullStartY = 0f
     private var pullTriggered = false
+    private var touchDownX = 0f
+    private var touchDownY = 0f
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -180,7 +182,14 @@ class HomePanel(
             render()
         }
         setupPullToSearch()
+        view.findViewById<View>(R.id.home_top_search)?.setOnClickListener { focusSearch() }
         applyHomeStyle()
+    }
+
+    /** 顶部搜索入口只控制主页的快捷入口，底部地址栏不受影响。 */
+    private fun applyTopSearchVisibility() {
+        val top = view.findViewById<View>(R.id.home_top_search) ?: return
+        top.visibility = if (AppServices.settings.homeTopAddress()) View.VISIBLE else View.GONE
     }
 
     /** 主页下拉进入搜索：仅在顶部且向下拉动超过阈值时触发一次。 */
@@ -277,6 +286,7 @@ class HomePanel(
 
     /** 应用主页样式：位置、Logo、列数、图标、搜索框、背景与名称。 */
     fun applyHomeStyle() {
+        applyTopSearchVisibility()
         applyLayoutPos()
         val modern = AppServices.settings.uiStyle() == 1
         view.findViewById<View>(R.id.home_content)?.setPadding(
@@ -563,9 +573,16 @@ class HomePanel(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 touchStartedInSearch = isInsideSearch(event.rawX, event.rawY)
+                touchDownX = event.rawX
+                touchDownY = event.rawY
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                if (!touchStartedInSearch && searchInput.hasFocus()) exitSearchInput()
+                // 下拉/滚动也会收到 UP，只有位移很小的点击才当作“点击搜索框外部”。
+                val moved = kotlin.math.abs(event.rawX - touchDownX) > dp(8) ||
+                    kotlin.math.abs(event.rawY - touchDownY) > dp(8)
+                if (!touchStartedInSearch && !moved && searchInput.hasFocus()) {
+                    exitSearchInput()
+                }
             }
         }
     }

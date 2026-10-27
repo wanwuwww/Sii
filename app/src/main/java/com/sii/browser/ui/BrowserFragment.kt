@@ -2071,117 +2071,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         renderMenuSheet()
     }
 
-    private fun homeTopAddressActive(): Boolean =
-        AppServices.settings.uiStyle() == 1 && AppServices.settings.homeTopAddress() &&
-            homeContainer?.visibility == View.VISIBLE
-
-    /**
-     * 新版悬浮风格下主页可把地址栏放回顶部（搜索框），离开主页后再回到胶囊。
-     * 主页顶部模式下胶囊只留工具行，地址区隐藏。
-     */
-    private fun applyHomeTopAddress() {
-        if (!::tabManager.isInitialized) return
-        if (AppServices.settings.uiStyle() != 1) return
-        val root = view ?: return
-        val content = root.findViewById<LinearLayout>(R.id.browser_content) ?: return
-        val address = root.findViewById<View>(R.id.address_bar) ?: return
-        val addressHost = root.findViewById<FrameLayout>(R.id.modern_address_host) ?: return
-        val toolRow = root.findViewById<LinearLayout>(R.id.modern_tool_row) ?: return
-        val wantTop = homeTopAddressActive()
-        if (wantTop) {
-            if (address.parent !== content) {
-                (address.parent as? ViewGroup)?.removeView(address)
-                content.addView(
-                    address,
-                    0,
-                    LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                )
-            }
-            applyTopAddressStyle(address)
-            addressHost.visibility = View.GONE
-            toolRow.layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
-            )
-            toolRow.gravity = android.view.Gravity.CENTER
-        } else {
-            if (address.parent !== addressHost) {
-                (address.parent as? ViewGroup)?.removeView(address)
-                addressHost.addView(
-                    address,
-                    FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        dp(44),
-                        android.view.Gravity.CENTER_VERTICAL
-                    )
-                )
-            }
-            addressHost.visibility = View.VISIBLE
-            applyDockAddressStyle(address)
-            toolRow.layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)
-            )
-            toolRow.gravity = android.view.Gravity.NO_GRAVITY
-        }
-    }
-
-    private fun applyTopAddressStyle(address: View) {
-        val context = requireContext()
-        address.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        address.setPadding(dp(8), dp(6), dp(8), dp(6))
-        address.setBackgroundColor(context.getColor(R.color.toolbar_bg))
-        address.elevation = 0f
-        addressIconColor = null
-        addressInput?.setTextColor(context.getColor(R.color.text_primary))
-        addressInput?.setHintTextColor(context.getColor(R.color.text_secondary))
-        val tint = android.content.res.ColorStateList.valueOf(context.getColor(R.color.icon_primary))
-        view?.findViewById<ImageView>(R.id.refresh_button)?.imageTintList = tint
-        view?.findViewById<ImageView>(R.id.site_info_button)?.imageTintList = tint
-        updateSiteInfoIcon()
-        view?.findViewById<View>(R.id.modern_cancel)?.visibility = View.GONE
-        updateSiteInfoVisibility()
-        view?.findViewById<View>(R.id.refresh_button)?.visibility = View.VISIBLE
-    }
-
-    private fun applyDockAddressStyle(address: View) {
-        val night = AppServices.settings.isNightMode()
-        val primary = if (night) android.graphics.Color.WHITE
-        else requireContext().getColor(R.color.text_primary)
-        val secondary = if (night) 0x99FFFFFF.toInt()
-        else requireContext().getColor(R.color.text_secondary)
-        address.layoutParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(44),
-            android.view.Gravity.CENTER_VERTICAL
-        )
-        address.setPadding(dp(8), 0, dp(6), 0)
-        address.background = null
-        address.elevation = 0f
-        addressIconColor = primary
-        addressInput?.setTextColor(primary)
-        addressInput?.setHintTextColor(secondary)
-        val tint = android.content.res.ColorStateList.valueOf(primary)
-        view?.findViewById<ImageView>(R.id.refresh_button)?.imageTintList = tint
-        view?.findViewById<ImageView>(R.id.site_info_button)?.imageTintList = tint
-        updateSiteInfoIcon()
-        view?.findViewById<TextView>(R.id.modern_cancel)?.let { cancel ->
-            cancel.setTextColor(ThemeAccent.color(requireContext()))
-            cancel.visibility = if (addressEditing) View.VISIBLE else View.GONE
-        }
-        if (addressEditing) {
-            view?.findViewById<View>(R.id.site_info_button)?.visibility = View.GONE
-        } else {
-            updateSiteInfoVisibility()
-        }
-        view?.findViewById<View>(R.id.refresh_button)?.visibility =
-            if (addressEditing) View.GONE else View.VISIBLE
-    }
-
     /** 网页自己铺满视口的全屏（不走 WebChromeClient）也要收起悬浮底栏。 */
     private fun applyPageFullscreenChrome() {
         if (AppServices.settings.uiStyle() != 1) return
@@ -4067,7 +3956,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateNavigationState()
         pageFullscreenStates.remove(tabManager.currentWebView)
         applyPageFullscreenChrome()
-        applyHomeTopAddress()
         if (AppServices.settings.uiStyle() != 1) renderTabs()
         // 同步启动，避免先画出一帧完整内容再重置透明导致的闪一下。
         if (wasWebVisible) homePanel?.playIntro()
@@ -4088,7 +3976,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateAddressBarForCurrent()
         updateNavigationState()
         applyPageFullscreenChrome()
-        applyHomeTopAddress()
         if (AppServices.settings.uiStyle() != 1) renderTabs()
     }
 
@@ -9019,25 +8906,16 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val addressHost = root.findViewById<FrameLayout>(R.id.modern_address_host) ?: return
         val toolRow = root.findViewById<LinearLayout>(R.id.modern_tool_row) ?: return
         val modernStyle = AppServices.settings.uiStyle() == 1
-        val topHome = modernStyle && homeTopAddressActive()
-        val already = if (modernStyle) {
-            if (topHome) address.parent === content else address.parent === addressHost
-        } else address.parent === content
+        val already = if (modernStyle) address.parent === addressHost else address.parent === content
         if (already) {
             if (modernStyle) {
-                if (topHome) {
-                    applyTopAddressStyle(address)
-                    addressHost.visibility = View.GONE
-                } else {
-                    applyModernChrome(root, address, bottom, progress, dock, addressHost, toolRow)
-                }
+                applyModernChrome(root, address, bottom, progress, dock, addressHost, toolRow)
             } else {
                 applyClassicChrome(root, address, bottom, progress, dock)
             }
             applyQuickEnginePosition()
             root.post { applyFloatingBarLift() }
             applyPageFullscreenChrome()
-            applyHomeTopAddress()
             return
         }
         (address.parent as? ViewGroup)?.removeView(address)
@@ -9106,7 +8984,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyQuickEnginePosition()
         root.post { applyFloatingBarLift() }
         applyPageFullscreenChrome()
-        applyHomeTopAddress()
     }
 
     /**
@@ -9115,11 +8992,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
      */
     private fun setModernEditing(editing: Boolean) {
         if (AppServices.settings.uiStyle() != 1) return
-        if (homeTopAddressActive()) {
-            addressEditing = editing
-            applyDockImeOffset()
-            return
-        }
         if (addressEditing == editing) return
         addressEditing = editing
         val root = view ?: return
