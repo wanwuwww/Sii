@@ -81,6 +81,7 @@ class HomePanel(
     private var touchDownX = 0f
     private var touchDownY = 0f
     private var lastImeHeight = 0
+    private var lastImeVisible = false
     private var searchFocusActive = false
     private var pendingFocusMove = false
     private var searchScrollParams: LinearLayout.LayoutParams? = null
@@ -197,6 +198,13 @@ class HomePanel(
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             lastImeHeight = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
             val imeVisible = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
+            if (lastImeVisible && !imeVisible &&
+                (searchFocusActive || topSearchInput.hasFocus())
+            ) {
+                // 键盘被系统收起（返回键/收起按钮）等同于取消搜索。
+                exitSearchInput()
+            }
+            lastImeVisible = imeVisible
             if (imeVisible && pendingFocusMove) moveContentForIme(lastImeHeight)
             insets
         }
@@ -211,17 +219,28 @@ class HomePanel(
         if (previewMode) return
         searchFocusActive = true
         pendingFocusMove = true
-        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
-        if (searchScrollParams == null) {
-            val lp = scroll.layoutParams as? LinearLayout.LayoutParams ?: return
-            searchScrollParams = LinearLayout.LayoutParams(lp.width, lp.height, lp.weight)
-            if (scroll.height > 0) {
-                lp.height = scroll.height
-                lp.weight = 0f
-                scroll.layoutParams = lp
-            }
-        }
+        lockScrollHeight()
         if (lastImeHeight > 0) moveContentForIme(lastImeHeight)
+    }
+
+    /** 聚焦时把滚动区高度停在当前值，键盘弹出不再触发整页重排。 */
+    private fun lockScrollHeight() {
+        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
+        if (searchScrollParams != null) return
+        val lp = scroll.layoutParams as? LinearLayout.LayoutParams ?: return
+        searchScrollParams = LinearLayout.LayoutParams(lp.width, lp.height, lp.weight)
+        if (scroll.height > 0) {
+            lp.height = scroll.height
+            lp.weight = 0f
+            scroll.layoutParams = lp
+        }
+    }
+
+    private fun restoreScrollParams() {
+        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
+        val saved = searchScrollParams ?: return
+        scroll.layoutParams = saved
+        searchScrollParams = null
     }
 
     private fun moveContentForIme(imeHeight: Int) {
@@ -230,7 +249,7 @@ class HomePanel(
         val content = view.findViewById<View>(R.id.home_content) ?: return
         content.animate().cancel()
         content.animate()
-            .translationY(-(imeHeight / 2).toFloat())
+            .translationY(-(imeHeight / 3).toFloat())
             .setDuration(200L)
             .setInterpolator(android.view.animation.DecelerateInterpolator())
             .start()
@@ -243,12 +262,7 @@ class HomePanel(
         val content = view.findViewById<View>(R.id.home_content)
         content?.animate()?.cancel()
         content?.animate()?.translationY(0f)?.setDuration(160L)
-            ?.withEndAction {
-                val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll)
-                val saved = searchScrollParams
-                if (scroll != null && saved != null) scroll.layoutParams = saved
-                searchScrollParams = null
-            }?.start()
+            ?.withEndAction { restoreScrollParams() }?.start()
     }
 
     /** 顶部搜索框：可独立输入；中间搜索框在它显示时只负责把焦点转过去。 */
@@ -256,6 +270,11 @@ class HomePanel(
         topSearchBox.setOnClickListener { focusTopSearch() }
         topSearchInput.setOnFocusChangeListener { _, hasFocus ->
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
+            if (hasFocus) {
+                lockScrollHeight()
+            } else if (!searchFocusActive) {
+                restoreScrollParams()
+            }
         }
         topSearchInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_GO ||
