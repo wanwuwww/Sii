@@ -650,19 +650,16 @@ class HomePanel(
         val raw = AppServices.settings.homeLayoutPos()
         val pos = if (AppServices.settings.uiStyle() == 1 && raw == 2) 1 else raw
         // 常用网站关闭后内容变短，居中对齐不会导致遮挡：聚焦时由 moveContentForFocus() 补位。
-        root.gravity = when (pos) {
-            0 -> android.view.Gravity.TOP
-            2 -> android.view.Gravity.BOTTOM
-            else -> android.view.Gravity.CENTER_VERTICAL
-        }
+        // 居中位置固定为顶部偏移：常用网站显示或隐藏都不移动时钟与搜索框。
+        root.gravity = if (pos == 2) android.view.Gravity.BOTTOM else android.view.Gravity.TOP
         val logo = view.findViewById<TextView>(R.id.home_logo) ?: return
         val modern = AppServices.settings.uiStyle() == 1
         val baseTop = when (pos) {
             0 -> dp(36)
             2 -> dp(0)
-            else -> dp(72)
+            else -> (context.resources.displayMetrics.heightPixels * 0.18f).toInt()
         }
-        val top = (baseTop - if (modern) dp(20) else 0).coerceAtLeast(0)
+        val top = (baseTop - if (modern && pos == 0) dp(20) else 0).coerceAtLeast(0)
         (logo.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
             lp.topMargin = top
             logo.layoutParams = lp
@@ -823,18 +820,23 @@ class HomePanel(
         card.elevation = if (on && style == 0) dp(2).toFloat() else 0f
     }
 
-    /** 搜索框圆角与高度（高度用上下内边距实现，不挤压内部按钮）。 */
-    private fun applySearchStyle(focused: Boolean = false) {
-        val box = view.findViewById<LinearLayout>(R.id.home_search_box) ?: return
-        val modern = AppServices.settings.uiStyle() == 1
-        val dark = modern && AppServices.settings.isNightMode()
-        val baseRadius = when (AppServices.settings.homeSearchRadius()) {
+    /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
+    private fun searchCornerRadiusDp(): Int {
+        val base = when (AppServices.settings.homeSearchRadius()) {
             0 -> 8
             2 -> 16
             3 -> AppServices.settings.homeSearchRadiusCustom().coerceIn(0, 48)
             else -> 12
         }
-        val radius = if (modern) baseRadius.coerceAtLeast(22) else baseRadius
+        return if (AppServices.settings.uiStyle() == 1) base.coerceAtLeast(22) else base
+    }
+
+    /** 应用搜索框圆角、高度、颜色与图标色。 */
+    private fun applySearchStyle(focused: Boolean = false) {
+        val box = view.findViewById<LinearLayout>(R.id.home_search_box) ?: return
+        val modern = AppServices.settings.uiStyle() == 1
+        val dark = modern && AppServices.settings.isNightMode()
+        val radius = searchCornerRadiusDp()
         val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
         val alpha = (AppServices.settings.homeSearchAlpha().coerceIn(0, 100) * 255 / 100)
         val color = (alpha shl 24) or (baseColor and 0x00FFFFFF)
@@ -1089,7 +1091,10 @@ class HomePanel(
             return
         }
         val popup = suggestionPopup ?: SuggestionPopup(
-            context, searchBox
+            context,
+            searchBox,
+            minWidthDp = 0,
+            cornerRadiusDp = { searchCornerRadiusDp() }
         ) { item ->
             pickSuggestion(item)
         }.also { suggestionPopup = it }

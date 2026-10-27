@@ -22,6 +22,8 @@ import kotlin.math.min
 class SuggestionPopup(
     private val context: Context,
     private val anchor: View,
+    private val minWidthDp: Int = 280,
+    private val cornerRadiusDp: (() -> Int)? = null,
     private val onPick: (Suggestion) -> Unit
 ) {
     private var popup: PopupWindow? = null
@@ -81,9 +83,9 @@ class SuggestionPopup(
             dismiss(false)
             return
         }
-        // 弹层宽度跟随锚点，但不低于 280dp：悬浮地址栏只有 180dp 左右，纯等宽会把剪贴板内容截断。
+        // 弹层宽度跟随锚点，但不低于 minWidthDp：悬浮地址栏只有 180dp 左右。
         val maxWidth = context.resources.displayMetrics.widthPixels - dp(16)
-        val minWidth = dp(280).coerceAtMost(maxWidth)
+        val minWidth = dp(minWidthDp).coerceAtMost(maxWidth)
         val width = (anchor.width.takeIf { it > 0 }
             ?: (context.resources.displayMetrics.widthPixels - dp(32)))
             .coerceIn(minWidth, maxWidth)
@@ -119,7 +121,8 @@ class SuggestionPopup(
 
         val view = ScrollView(context).apply {
             isVerticalScrollBarEnabled = true
-            setBackgroundResource(R.drawable.bg_suggestion_panel)
+            if (cornerRadiusDp != null) background = panelBackground()
+            else setBackgroundResource(R.drawable.bg_suggestion_panel)
             clipToOutline = true
             addView(
                 column,
@@ -267,12 +270,22 @@ class SuggestionPopup(
         } else if (anchorX < frame.left + margin) {
             frame.left + margin - anchorX
         } else 0
+        // 弹层比锚点窄时居中，否则会看起来整体偏左。
+        val centeredOffset = if (width < anchor.width) xOffset + (anchor.width - width) / 2 else xOffset
         val yOffset = if (above) {
             -(anchor.height + margin + height)
         } else {
             margin
         }
-        return Placement(above, xOffset, yOffset, width, height, measured)
+        return Placement(above, centeredOffset, yOffset, width, height, measured)
+    }
+
+    /** 主页搜索框的建议弹层跟随其圆角设置。 */
+    private fun panelBackground(): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = dp(cornerRadiusDp?.invoke() ?: 22).toFloat()
+        setColor(ContextCompat.getColor(context, R.color.card))
+        setStroke(dp(1), ContextCompat.getColor(context, R.color.line))
     }
 
     private fun buildColumn(items: List<Suggestion>): LinearLayout {

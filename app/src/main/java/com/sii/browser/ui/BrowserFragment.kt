@@ -5728,7 +5728,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         val popup = suggestionPopup ?: SuggestionPopup(
             requireContext(),
-            view?.findViewById<View>(R.id.address_bar) ?: input
+            view?.findViewById<View>(R.id.address_bar) ?: input,
+            minWidthDp = 320
         ) { item ->
             pickSuggestion(item)
         }.also { suggestionPopup = it }
