@@ -52,7 +52,28 @@ Sii 是一款从零实现的 Android 浏览器，使用 Kotlin 与原生 XML 布
 
 ## 截图
 
-<!-- 待补充：主页、标签面板、设置页、夜间模式 -->
+<p align="center">
+  <img src="docs/screenshots/home-day.jpg" width="270" alt="主页" />
+  <img src="docs/screenshots/tabs.jpg" width="270" alt="标签面板" />
+</p>
+<p align="center"><sub>主页 · 标签面板</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/menu.jpg" width="270" alt="菜单" />
+  <img src="docs/screenshots/browse.jpg" width="270" alt="网页浏览" />
+</p>
+<p align="center"><sub>菜单 · 网页浏览</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/diy.jpg" width="270" alt="界面DIY" />
+  <img src="docs/screenshots/mcp.jpg" width="270" alt="MCP 服务" />
+</p>
+<p align="center"><sub>界面DIY · MCP 服务</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/home-night.jpg" width="270" alt="夜间模式" />
+</p>
+<p align="center"><sub>夜间模式</sub></p>
 
 ## 快速开始
 
