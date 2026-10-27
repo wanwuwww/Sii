@@ -80,7 +80,10 @@ class HomePanel(
     private var pullTriggered = false
     private var touchDownX = 0f
     private var touchDownY = 0f
-    private var lastImeVisible = false
+    private var lastImeHeight = 0
+    private var searchFocusActive = false
+    private var pendingFocusMove = false
+    private var searchScrollParams: LinearLayout.LayoutParams? = null
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -163,6 +166,7 @@ class HomePanel(
                     ThemeAccent.color(context)
                 )
                 if (searchInput.text.isEmpty()) showClipboardSuggestion()
+                enterSearchFocus()
             } else {
                 searchBox.animate()
                     .scaleX(1f)
@@ -175,6 +179,7 @@ class HomePanel(
                 applySearchStyle()
                 hideKeyboard()
                 hideSuggestions()
+                exitSearchFocus()
             }
         }
         view.isClickable = true
@@ -190,35 +195,60 @@ class HomePanel(
         setupPullToSearch()
         setupTopSearchInput()
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            lastImeHeight = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
             val imeVisible = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
-            if (imeVisible != lastImeVisible) {
-                lastImeVisible = imeVisible
-                animateContentForIme()
-            }
+            if (imeVisible && pendingFocusMove) moveContentForIme(lastImeHeight)
             insets
         }
         applyHomeStyle()
     }
 
-    /** 键盘弹出/收起时主页内容会重新居中，位置是跳变的；这里给整体做一次位移补偿动画。 */
-    private fun animateContentForIme() {
-        if (!view.isShown) return
-        val content = view.findViewById<View>(R.id.home_content) ?: return
-        val before = IntArray(2)
-        content.getLocationOnScreen(before)
-        view.post {
-            val after = IntArray(2)
-            content.getLocationOnScreen(after)
-            val dy = before[1] - after[1]
-            if (dy == 0) return@post
-            content.animate().cancel()
-            content.translationY = dy.toFloat()
-            content.animate()
-                .translationY(0f)
-                .setDuration(220L)
-                .setInterpolator(android.view.animation.DecelerateInterpolator())
-                .start()
+    /**
+     * 聚焦主页搜索框时固定滚动区高度，避免键盘弹出触发整页重排（常用网站会闪）。
+     * 内容只用 translationY 平滑上移半个键盘高度。
+     */
+    private fun enterSearchFocus() {
+        if (previewMode) return
+        searchFocusActive = true
+        pendingFocusMove = true
+        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
+        if (searchScrollParams == null) {
+            val lp = scroll.layoutParams as? LinearLayout.LayoutParams ?: return
+            searchScrollParams = LinearLayout.LayoutParams(lp.width, lp.height, lp.weight)
+            if (scroll.height > 0) {
+                lp.height = scroll.height
+                lp.weight = 0f
+                scroll.layoutParams = lp
+            }
         }
+        if (lastImeHeight > 0) moveContentForIme(lastImeHeight)
+    }
+
+    private fun moveContentForIme(imeHeight: Int) {
+        if (!searchFocusActive) return
+        pendingFocusMove = false
+        val content = view.findViewById<View>(R.id.home_content) ?: return
+        content.animate().cancel()
+        content.animate()
+            .translationY(-(imeHeight / 2).toFloat())
+            .setDuration(200L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
+    }
+
+    private fun exitSearchFocus() {
+        if (!searchFocusActive) return
+        searchFocusActive = false
+        pendingFocusMove = false
+        val content = view.findViewById<View>(R.id.home_content)
+        content?.animate()?.cancel()
+        content?.animate()?.translationY(0f)?.setDuration(160L)
+            ?.withEndAction {
+                val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll)
+                val saved = searchScrollParams
+                if (scroll != null && saved != null) scroll.layoutParams = saved
+                searchScrollParams = null
+            }?.start()
     }
 
     /** 顶部搜索框：可独立输入；中间搜索框在它显示时只负责把焦点转过去。 */
