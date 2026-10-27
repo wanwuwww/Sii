@@ -364,7 +364,7 @@
             </LinearLayout>
         </FrameLayout>
 
-        <LinearLayout
+        <com.sii.browser.ui.SwipeBarLayout
             android:id="@+id/bottom_bar"
             android:layout_width="match_parent"
             android:layout_height="52dp"
@@ -444,7 +444,7 @@
                     android:src="@drawable/ic_tb_menu" />
                 <TextView style="@style/ToolbarLabel" android:text="@string/menu" />
             </LinearLayout>
-        </LinearLayout>
+        </com.sii.browser.ui.SwipeBarLayout>
     </LinearLayout>
 
     <!-- 夜间滤镜：覆盖网页区域的轻量遮罩 -->

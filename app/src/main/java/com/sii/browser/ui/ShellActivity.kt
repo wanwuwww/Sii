@@ -351,6 +351,13 @@ class ShellActivity : AppCompatActivity() {
         }
     }
 
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        val handled = super.dispatchTouchEvent(ev)
+        // 事件先交给视图树，控制器层只用同一份事件做“点击搜索框外部收起焦点”的判定。
+        notifyFragments<GlobalTouchAware>().forEach { it.onGlobalTouch(ev) }
+        return handled
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val fragment = supportFragmentManager.findFragmentById(R.id.shell_root)
         if (fragment is KeyEventSink && fragment.dispatchKeyEventInternal(event)) {

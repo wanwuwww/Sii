@@ -12,6 +12,7 @@ import android.text.TextWatcher
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -68,6 +69,7 @@ class HomePanel(
     private var siteDragStartX = 0f
     private var siteDragStartY = 0f
     private var siteDragMode = false
+    private var touchStartedInSearch = false
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -506,10 +508,36 @@ class HomePanel(
         if (text.isNotEmpty()) onSearch(text)
     }
 
-    private fun exitSearchInput() {
+    fun exitSearchInput() {
         searchInput.clearFocus()
         hideKeyboard()
         hideSuggestions()
+    }
+
+    /** 主页搜索框是否持有焦点。 */
+    fun isSearchActive(): Boolean = searchInput.hasFocus()
+
+    /**
+     * 全局触摸兜底：主页内容被 ScrollView 消费、底栏/工具栏又不在本视图内，
+     * 点击这些区域时只能由窗口层把事件转进来取消搜索焦点。
+     */
+    fun onGlobalTouch(event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                touchStartedInSearch = isInsideSearch(event.rawX, event.rawY)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (!touchStartedInSearch && searchInput.hasFocus()) exitSearchInput()
+            }
+        }
+    }
+
+    private fun isInsideSearch(rawX: Float, rawY: Float): Boolean {
+        if (searchBox.width <= 0 || searchBox.height <= 0) return false
+        val location = IntArray(2)
+        searchBox.getLocationOnScreen(location)
+        return rawX >= location[0] && rawX <= location[0] + searchBox.width &&
+            rawY >= location[1] && rawY <= location[1] + searchBox.height
     }
 
     private fun hideKeyboard() {

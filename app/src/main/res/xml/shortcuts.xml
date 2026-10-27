@@ -9,7 +9,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetClass="com.sii.browser.ui.ShellActivity"
-            android:targetPackage="com.sii.browser">
+            android:targetPackage="@string/app_package_name">
             <extra
                 android:name="sii_action"
                 android:value="new_tab" />
@@ -24,7 +24,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetClass="com.sii.browser.ui.ShellActivity"
-            android:targetPackage="com.sii.browser">
+            android:targetPackage="@string/app_package_name">
             <extra
                 android:name="sii_action"
                 android:value="search" />

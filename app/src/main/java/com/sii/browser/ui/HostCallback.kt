@@ -28,6 +28,11 @@ interface FocusAware {
     fun onWindowFocusGained(hasFocus: Boolean)
 }
 
+interface GlobalTouchAware {
+    /** 窗口层触摸（含被浮层与子视图消费的事件），用于收起主页搜索焦点。 */
+    fun onGlobalTouch(event: android.view.MotionEvent)
+}
+
 interface KeyEventSink {
     /** 拦截物理按键（音量键翻页等）。 */
     fun dispatchKeyEventInternal(event: android.view.KeyEvent): Boolean

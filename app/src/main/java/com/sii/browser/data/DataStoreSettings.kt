@@ -1016,7 +1016,7 @@ class DataStoreSettings(private val context: Context) : Settings {
         putInt(SettingsKeys.FAB, value)
     }
 
-    override fun keyAction(key: String): Int = int(key, 0)
+    override fun keyAction(key: String): Int = int(key, SettingsDefaults.keyAction(key))
 
     override fun setKeyAction(key: String, value: Int) {
         putInt(key, value)

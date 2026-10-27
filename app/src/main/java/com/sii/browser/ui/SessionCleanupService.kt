@@ -19,6 +19,8 @@ class SessionCleanupService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         ExitCleanup.clearNow()
+        // 从最近任务划掉才算彻底清除后台；进程被系统回收时保留缩略图。
+        com.sii.browser.data.TabThumbStore.clear(applicationContext)
         com.sii.browser.data.StartupExit.markClean(applicationContext)
         stopSelf()
         super.onTaskRemoved(rootIntent)

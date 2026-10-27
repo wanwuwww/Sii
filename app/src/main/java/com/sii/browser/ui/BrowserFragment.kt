@@ -73,7 +73,7 @@ import org.json.JSONObject
  * 本模块实现：多标签管理（TabManager + 标签栏 UI）、WebView 挂载与桥接、
  * 地址栏导航、进度/标题回显、返回键回退。工具栏菜单、手势等在后续模块扩展。
  */
-class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, FocusAware, KeyEventSink, AppServices.UiActions {
+class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, FocusAware, GlobalTouchAware, KeyEventSink, AppServices.UiActions {
 
     private lateinit var tabManager: TabManager
     private var addressInput: EditText? = null
@@ -204,6 +204,34 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         tabStrip = view.findViewById(R.id.tab_strip)
         tabBar = view.findViewById(R.id.tab_bar)
         applyUiStyle()
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            imeInsetVisible = insets.isVisible(
+                androidx.core.view.WindowInsetsCompat.Type.ime()
+            )
+            applyDockImeOffset()
+            insets
+        }
+        // API 30+ 键盘带动画，逐帧同步底栏位移；低版本沿用上面的 insets 回调。
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            androidx.core.view.ViewCompat.setWindowInsetsAnimationCallback(
+                view,
+                object : androidx.core.view.WindowInsetsAnimationCompat.Callback(
+                    androidx.core.view.WindowInsetsAnimationCompat.Callback
+                        .DISPATCH_MODE_CONTINUE_ON_SUBTREE
+                ) {
+                    override fun onProgress(
+                        insets: androidx.core.view.WindowInsetsCompat,
+                        runningAnimations: MutableList<androidx.core.view.WindowInsetsAnimationCompat>
+                    ): androidx.core.view.WindowInsetsCompat {
+                        imeInsetVisible = insets.isVisible(
+                            androidx.core.view.WindowInsetsCompat.Type.ime()
+                        )
+                        applyDockImeOffset()
+                        return insets
+                    }
+                }
+            )
+        }
         view.findViewById<View>(R.id.modern_chrome)?.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) applyFloatingBarLift()
         }
@@ -439,6 +467,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             hideFindBar()
             return true
         }
+        if (homeContainer?.visibility == View.VISIBLE && homePanel?.isSearchActive() == true) {
+            homePanel?.exitSearchInput()
+            return true
+        }
         if (homeContainer?.visibility == View.VISIBLE) {
             val webView = tabManager.currentWebView
             if (homeOverlayActive) {
@@ -546,15 +578,21 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         saved: List<com.sii.browser.data.db.TabEntity>,
         preferHome: Boolean = AppServices.lastHomeVisible
     ) {
+        val restoredTabs = mutableListOf<Tab>()
         saved.forEach { entity ->
             if (entity.url == ABOUT_HOME) {
-                tabManager.newTab(ABOUT_HOME)
-                tabManager.currentWebView?.loadUrl("about:blank")
+                tabManager.newTab(ABOUT_HOME).also {
+                    restoredTabs.add(it)
+                    tabManager.currentWebView?.loadUrl("about:blank")
+                }
             } else {
-                tabManager.newTab(entity.url)
-                tabManager.currentWebView?.loadUrl(entity.url)
+                tabManager.newTab(entity.url).also {
+                    restoredTabs.add(it)
+                    tabManager.currentWebView?.loadUrl(entity.url)
+                }
             }
         }
+        loadSavedThumbnails(restoredTabs)
         val webIndex = tabManager.tabs.indexOfFirst { it.url != ABOUT_HOME }
         if (!preferHome && webIndex >= 0) {
             // 用户点了「恢复」：直接切到恢复出来的网页标签。
@@ -566,6 +604,26 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             showWeb()
         }
         updateAddressBarForCurrent()
+    }
+
+    /** 启动恢复标签后从磁盘读回缩略图，不阻塞界面。 */
+    private fun loadSavedThumbnails(tabs: List<Tab>) {
+        if (tabs.isEmpty()) return
+        val context = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            tabs.forEach { tab ->
+                if (tab.url == ABOUT_HOME) return@forEach
+                val url = tab.url
+                val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.sii.browser.data.TabThumbStore.load(context, url)
+                }
+                if (bitmap != null && tab.thumbnail == null) {
+                    tab.thumbnail = bitmap
+                    tab.thumbnailUrl = url
+                    if (tabsOverlay?.visibility == View.VISIBLE) renderTabCards()
+                }
+            }
+        }
     }
 
     /** 上次非正常退出：底部低调提示，5 秒自动消失。 */
@@ -1170,11 +1228,19 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .setMessage(R.string.close_all_tabs_confirm)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 tabManager.closeAll()
+                clearThumbnailCache()
                 openNewTab(ABOUT_HOME)
                 renderTabs()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun clearThumbnailCache() {
+        val context = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.sii.browser.data.TabThumbStore.clear(context)
+        }
     }
 
     /** 朗读网页：提取正文交给系统 TTS，再点一次停止。 */
@@ -1912,11 +1978,16 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var toolbarPosBeforeGame: Int? = null
     private var gameExitArmed = false
     private var immersiveFullscreen = false
+    /** IME 是否可见，用于悬浮底栏与键盘同步下移。 */
+    private var imeInsetVisible = false
     private var translatePolling: kotlinx.coroutines.Job? = null
     private var translateStatus: android.widget.TextView? = null
     private var translateStatusFade: Runnable? = null
     private var translateToggle: android.widget.TextView? = null
     private var translateFabState = 0
+    /** 翻译按钮自动隐藏计时与已隐藏过的页面，避免同一页面反复弹。 */
+    private var translateFabAutoHide: Runnable? = null
+    private var translateFabMutedUrl: String? = null
     private var translateShowOriginal = false
     private var translateJob: kotlinx.coroutines.Job? = null
     /** 已翻译完成的页面 URL：刷新/返回时重新套用译文，避免变回原文。 */
@@ -1954,6 +2025,36 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         immersiveFullscreen = !immersiveFullscreen
         applyFullscreen()
         renderMenuSheet()
+    }
+
+    /** 网页全屏时收起浏览器控件，退出时恢复。 */
+    private fun setBrowserChromeVisible(visible: Boolean) {
+        val root = view ?: return
+        val modern = AppServices.settings.uiStyle() == 1
+        root.findViewById<View>(R.id.modern_chrome)?.visibility =
+            if (modern && visible) View.VISIBLE else View.GONE
+        root.findViewById<View>(R.id.address_bar)?.visibility =
+            if (visible) View.VISIBLE else View.GONE
+        root.findViewById<View>(R.id.bottom_bar)?.visibility =
+            if (visible) View.VISIBLE else View.GONE
+        root.findViewById<View>(R.id.progress_bar)?.visibility = View.GONE
+        if (visible) {
+            updateQuickEngineVisibility()
+            updateTranslateFab()
+        }
+    }
+
+    /** 网页全屏视频隐藏状态栏与导航栏，让播放控件不被系统栏压住。 */
+    private fun setVideoFullscreenSystemBars(hide: Boolean) {
+        val window = activity?.window ?: return
+        val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+        if (hide) {
+            controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     private fun applyFullscreen() {
@@ -2414,6 +2515,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             return
         }
         if (!AppServices.settings.translateDetect()) return
+        if (url == translateFabMutedUrl) return
         webView.evaluateJavascript(TRANSLATE_DETECT_JS) { raw ->
             val obj = parseJsonObject(raw) ?: return@evaluateJavascript
             if (obj.optBoolean("needRetry")) {
@@ -2451,6 +2553,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     /** 整页翻译：合并文本批量翻译，新增内容由 Kotlin 定时扫描补翻。 */
     private fun translatePage() {
+        translateFabMutedUrl = null
         if (AppServices.settings.translateMode() == 0) {
             showTranslateStatus(getString(R.string.translate_disabled), autoHide = true)
             return
@@ -2954,22 +3057,29 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun updateTranslateFab() {
         val fab = translateToggle ?: return
         if (AppServices.settings.translateMode() == 0) {
+            cancelTranslateFabAutoHide()
             fab.visibility = View.GONE
             return
         }
         when (translateFabState) {
-            0 -> fab.visibility = View.GONE
+            0 -> {
+                cancelTranslateFabAutoHide()
+                fab.visibility = View.GONE
+            }
             1 -> {
                 fab.visibility = View.VISIBLE
                 fab.alpha = 1f
                 fab.text = getString(R.string.translate_fab_start)
+                scheduleTranslateFabAutoHide()
             }
             2 -> {
+                cancelTranslateFabAutoHide()
                 fab.visibility = View.VISIBLE
                 fab.alpha = 1f
                 fab.text = getString(R.string.translate_fab_loading)
             }
             else -> {
+                cancelTranslateFabAutoHide()
                 fab.visibility = View.VISIBLE
                 fab.alpha = 0.5f
                 fab.text = getString(
@@ -2978,6 +3088,27 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 )
             }
         }
+    }
+
+    /** 翻译按钮长时间不操作就收起，本次页面不再自动出现。 */
+    private fun scheduleTranslateFabAutoHide() {
+        val fab = translateToggle ?: return
+        translateFabAutoHide?.let { fab.removeCallbacks(it) }
+        val runnable = Runnable {
+            if (translateFabState != 1) return@Runnable
+            translateFabState = 0
+            translateFabMutedUrl = tabManager.current?.url
+            updateTranslateFab()
+            saveTranslateTabState(tabManager.currentWebView)
+        }
+        translateFabAutoHide = runnable
+        fab.postDelayed(runnable, TRANSLATE_FAB_IDLE_MS)
+    }
+
+    private fun cancelTranslateFabAutoHide() {
+        val fab = translateToggle
+        translateFabAutoHide?.let { fab?.removeCallbacks(it) }
+        translateFabAutoHide = null
     }
 
     /** 按设置摆放翻译按钮：左下/右下/底部居中/左上/右上。 */
@@ -3182,26 +3313,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     /** 工具栏水平滑动：左滑/右滑可分别绑定动作，不拦截按钮点击。 */
     private fun setupToolbarSwipeActions() {
-        val bar = view?.findViewById<View>(R.id.bottom_bar) ?: return
-        val threshold = dpToPx(56).toFloat()
-        var downX = 0f
-        var downY = 0f
-        bar.setOnTouchListener { _, event ->
-            when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    downX = event.rawX
-                    downY = event.rawY
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    val dx = event.rawX - downX
-                    val dy = event.rawY - downY
-                    if (Math.abs(dx) > threshold && Math.abs(dy) < threshold / 2) {
-                        val key = if (dx < 0) "toolbar_swipe_left" else "toolbar_swipe_right"
-                        performToolbarAction(AppServices.settings.keyAction(key))
-                    }
-                }
-            }
-            false
+        val bar = view?.findViewById<SwipeBarLayout>(R.id.bottom_bar) ?: return
+        bar.onSwipeLeft = {
+            performToolbarAction(AppServices.settings.keyAction("toolbar_swipe_left"))
+        }
+        bar.onSwipeRight = {
+            performToolbarAction(AppServices.settings.keyAction("toolbar_swipe_right"))
         }
     }
 
@@ -3229,6 +3346,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /** 所有用户主动关闭标签的入口共用提示。 */
     private fun closeTabAndHint(index: Int) {
         if (index !in 0 until tabManager.size) return
+        val closingTab = tabManager.tabs[index]
+        val closingUrl = closingTab.url
+        val closingThumbUrl = closingTab.thumbnailUrl
         val wasCurrent = index == tabManager.currentIndex
         if (wasCurrent) {
             saveTranslateTabState(tabManager.currentWebView)
@@ -3238,8 +3358,21 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             translatePolling = null
         }
         tabManager.closeTab(index)
+        deleteThumbnail(closingUrl)
+        if (!closingThumbUrl.isNullOrBlank() && closingThumbUrl != closingUrl) {
+            deleteThumbnail(closingThumbUrl)
+        }
         showCloseTabHint()
         if (wasCurrent) applyTranslateTabState(tabManager.currentWebView)
+    }
+
+    /** 关闭标签后删掉对应的磁盘缩略图，避免缓存文件越积越多。 */
+    private fun deleteThumbnail(url: String) {
+        if (url.isBlank()) return
+        val context = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.sii.browser.data.TabThumbStore.delete(context, url)
+        }
     }
 
     private fun showCloseTabHint() {
@@ -3774,7 +3907,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private fun showWeb() {
         AppServices.lastHomeVisible = false
-        homePanel?.dismissSuggestions()
+        homePanel?.exitSearchInput()
         homeContainer?.visibility = View.GONE
         attachCurrentWebView()
         tabManager.currentWebView?.visibility = View.VISIBLE
@@ -4318,9 +4451,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                         android.graphics.Rect(x, y, x + width, y + height),
                         windowBitmap,
                         { result ->
-                            if (result == android.view.PixelCopy.SUCCESS) {
-                                tab.thumbnail?.recycle()
-                                tab.thumbnail = windowBitmap
+                            if (result == android.view.PixelCopy.SUCCESS && isAdded) {
+                                adoptThumbnail(tab, windowBitmap)
                             } else {
                                 windowBitmap.recycle()
                             }
@@ -4350,8 +4482,30 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             width, height, android.graphics.Bitmap.Config.ARGB_8888
         )
         webView.draw(android.graphics.Canvas(bitmap))
-        tab.thumbnail?.recycle()
-        tab.thumbnail = bitmap
+        adoptThumbnail(tab, bitmap)
+    }
+
+    /** 缩略图缩到卡片需要的宽度，同时写入磁盘供进程重启后恢复。 */
+    private fun adoptThumbnail(tab: Tab, bitmap: android.graphics.Bitmap) {
+        val small = if (bitmap.width > THUMB_MAX_WIDTH) {
+            val height = (bitmap.height * THUMB_MAX_WIDTH / bitmap.width).coerceAtLeast(1)
+            android.graphics.Bitmap.createScaledBitmap(bitmap, THUMB_MAX_WIDTH, height, true)
+        } else bitmap
+        if (small !== bitmap) bitmap.recycle()
+        tab.thumbnail = small
+        if (AppServices.privacyManager.isIncognito) return
+        if (view == null) return
+        val url = tab.url
+        if (url.isBlank()) return
+        val previous = tab.thumbnailUrl
+        tab.thumbnailUrl = url
+        val context = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            if (!previous.isNullOrBlank() && previous != url) {
+                com.sii.browser.data.TabThumbStore.delete(context, previous)
+            }
+            com.sii.browser.data.TabThumbStore.save(context, url, small)
+        }
     }
 
     /** 拖动落点对应的标签索引（按卡片上下边界判断）。 */
@@ -7169,8 +7323,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
             container.removeAllViews()
             container.addView(view)
+            // 全屏视频要盖住所有带 elevation 的浮层，否则底栏会压在播放器进度条上。
+            container.elevation = dp(200).toFloat()
             container.visibility = View.VISIBLE
-            this@BrowserFragment.view?.findViewById<View>(R.id.modern_chrome)?.visibility = View.GONE
+            setBrowserChromeVisible(false)
+            setVideoFullscreenSystemBars(true)
             setupVideoGesture(container)
             activity?.requestedOrientation =
                 android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -7180,10 +7337,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             fullscreenContainer?.removeAllViews()
             fullscreenContainer?.setOnTouchListener(null)
             fullscreenContainer?.visibility = View.GONE
-            if (AppServices.settings.uiStyle() == 1) {
-                this@BrowserFragment.view?.findViewById<View>(R.id.modern_chrome)?.visibility =
-                    View.VISIBLE
-            }
+            fullscreenContainer?.elevation = 0f
+            setBrowserChromeVisible(true)
+            setVideoFullscreenSystemBars(false)
             (activity as? ShellActivity)?.applyOrientation()
             return true
         }
@@ -8776,6 +8932,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val dock = root.findViewById<View>(R.id.modern_chrome)
         dock?.animate()?.cancel()
         dock?.translationY = 0f
+        applyDockImeOffset()
         if (editing) {
             toolbarHidden = false
             tools.animate().alpha(0f).translationY(dp(10).toFloat()).setDuration(140)
@@ -9386,6 +9543,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         progressAnimator?.cancel()
         progressAnimator = null
         cancelProgressFinish()
+        cancelTranslateFabAutoHide()
         homePanel?.release()
         homePanel = null
         // 只断开父容器，不销毁 WebView：TabManager 仍需复用页面状态。
@@ -9477,18 +9635,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     override fun onSoftInputChanged(visible: Boolean) {
         if (AppServices.settings.uiStyle() != 1) return
+        applyDockImeOffset()
+    }
+
+    /** 悬浮底栏跟随 IME：直接赋值而不补动画，避免键盘先上滑、底栏再慢慢沉下去。 */
+    private fun applyDockImeOffset() {
+        if (AppServices.settings.uiStyle() != 1) return
         val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
         dock.animate().cancel()
-        if (addressEditing) {
-            dock.animate().translationY(0f).setDuration(160).start()
-            return
-        }
         val hidden = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(12)
-        dock.animate()
-            .translationY(if (visible || toolbarHidden) hidden.toFloat() else 0f)
-            .setDuration(180)
-            .setInterpolator(android.view.animation.DecelerateInterpolator())
-            .start()
+        val hide = !addressEditing && (imeInsetVisible || toolbarHidden)
+        dock.translationY = if (hide) hidden.toFloat() else 0f
     }
 
     private fun isSafeExternalUrl(url: String?): Boolean {
@@ -9550,6 +9707,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     override fun onWindowFocusGained(hasFocus: Boolean) = Unit
 
+    override fun onGlobalTouch(event: android.view.MotionEvent) {
+        if (homeContainer?.visibility != View.VISIBLE) return
+        homePanel?.onGlobalTouch(event)
+    }
+
     override fun dispatchKeyEventInternal(event: KeyEvent): Boolean {
         if (!::tabManager.isInitialized) return false
         if (event.action == KeyEvent.ACTION_DOWN && homeContainer?.visibility != View.VISIBLE &&
@@ -9598,6 +9760,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         const val ABOUT_CATALOG = "about:catalog"
         const val ABOUT_SAVE = "about:save"
         const val ABOUT_BLANK = "about:blank"
+        const val TRANSLATE_FAB_IDLE_MS = 8_000L
+        const val THUMB_MAX_WIDTH = 360
         const val ABOUT_RES = "about:res"
         const val ABOUT_IMAGES = "about:images"
 
@@ -9644,20 +9808,20 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             "}}catch(e){}" +
             "})();"
 
-        /** 本地判断页面语言：lang 优先，无 lang 时统计前 500 字符。 */
+        /** 本地判断页面语言：以可见文本统计为主，声明语言只作兜底。 */
         val TRANSLATE_DETECT_JS = """
             (function(){
               try{
-                var lang=(document.documentElement.lang||'').toLowerCase();
-                if(lang) return JSON.stringify({lang:lang,script:'',needRetry:false});
-                var han=0,kana=0,hangul=0,cyr=0,latin=0,total=0;
+                var declared=(document.documentElement.lang||'').toLowerCase();
+                var han=0,kana=0,hangul=0,cyr=0,latin=0,total=0,scanned=0;
                 var walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
                 var node;
-                while((node=walker.nextNode()) && total<500){
+                while((node=walker.nextNode()) && scanned<4000 && total<1500){
+                  scanned++;
                   var p=node.parentElement;
                   if(!p) continue;
                   var tag=p.tagName;
-                  if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT'||tag==='TEXTAREA') continue;
+                  if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT'||tag==='TEXTAREA'||tag==='CODE'||tag==='PRE') continue;
                   var r=p.getBoundingClientRect();
                   if(r.width<=0||r.height<=0) continue;
                   var t=node.nodeValue||'';
@@ -9670,11 +9834,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
                 if(total<20) return JSON.stringify({lang:'',script:'',needRetry:true});
                 var script='';
-                if(kana>total*0.1) script='ja';
-                else if(hangul>total*0.3) script='ko';
-                else if(han>total*0.3) script='zh';
-                else if(cyr>total*0.3) script='ru';
-                else if(latin>total*0.3) script='latin';
+                if(kana/total>=0.05) script='ja';
+                else if(hangul/total>=0.2) script='ko';
+                else if(han/total>=0.1 && han>=latin) script='zh';
+                else if(cyr/total>=0.2) script='ru';
+                else if(latin/total>=0.6) script='latin';
+                if(!script) script=declared;
                 return JSON.stringify({lang:'',script:script,needRetry:false});
               }catch(e){return '{}';}
             })();

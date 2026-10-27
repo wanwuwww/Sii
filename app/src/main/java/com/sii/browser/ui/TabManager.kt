@@ -18,6 +18,9 @@ class Tab(
 
     /** 标签卡片缩略图，仅内存保留。 */
     var thumbnail: android.graphics.Bitmap? = null
+
+    /** 缩略图对应的页面地址，用于删除过期磁盘缓存。 */
+    var thumbnailUrl: String? = null
 }
 
 enum class SiteSecurity {
@@ -81,7 +84,6 @@ class TabManager(private val webViewFactory: () -> SiiWebView) {
     fun closeTab(index: Int): Tab? {
         if (index !in _tabs.indices) return null
         val removed = _tabs.removeAt(index)
-        removed.thumbnail?.recycle()
         removed.thumbnail = null
         closedTabs.addLast(ClosedTab(removed.url, removed.title))
         while (closedTabs.size > 10) closedTabs.removeFirst()
@@ -101,7 +103,6 @@ class TabManager(private val webViewFactory: () -> SiiWebView) {
     fun closeAll() {
         while (_tabs.isNotEmpty()) {
             _tabs.removeAt(0).let { removed ->
-                removed.thumbnail?.recycle()
                 removed.thumbnail = null
                 removed.webView.let { wv ->
                     (wv.parent as? android.view.ViewGroup)?.removeView(wv)
@@ -117,7 +118,7 @@ class TabManager(private val webViewFactory: () -> SiiWebView) {
     fun trimThumbnails(keepCurrent: Boolean = true) {
         _tabs.forEach { tab ->
             if (!keepCurrent || tab !== current) {
-                tab.thumbnail?.recycle()
+                // 不主动 recycle：卡片 ImageView 可能还持有同一张图。
                 tab.thumbnail = null
             }
         }

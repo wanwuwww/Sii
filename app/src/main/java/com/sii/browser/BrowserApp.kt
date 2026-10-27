@@ -89,10 +89,14 @@ class BrowserApp : Application() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_LOW) {
+        // 缩略图只在进程真的要结束时释放，RUNNING_LOW 在前台也会频繁触发。
+        if (level >= TRIM_MEMORY_COMPLETE) {
             com.sii.browser.data.SiteIconCache.trim()
             com.sii.browser.core.webview.SniffStore.trim()
             com.sii.browser.di.AppServices.trimThumbnails?.invoke()
+        } else if (level >= TRIM_MEMORY_RUNNING_LOW) {
+            com.sii.browser.data.SiteIconCache.trim()
+            com.sii.browser.core.webview.SniffStore.trim()
         }
     }
 

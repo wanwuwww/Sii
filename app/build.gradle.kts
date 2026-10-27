@@ -26,6 +26,7 @@ android {
             abiFilters += listOf("arm64-v8a")
         }
         resourceConfigurations += listOf("zh", "en")
+        resValue("string", "app_package_name", "com.sii.browser")
     }
 
     compileOptions {
@@ -49,6 +50,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 调试包与正式版共存，互不覆盖。
+            applicationIdSuffix = ".debug"
+            resValue("string", "app_package_name", "com.sii.browser.debug")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

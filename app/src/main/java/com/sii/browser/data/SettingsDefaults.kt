@@ -216,4 +216,19 @@ object SettingsDefaults {
     const val MCP_ALLOW_INCOGNITO = false
     const val MCP_ALLOW_CAPTURE = false
     const val MCP_CAPTURE_BODY = false
+
+    /**
+     * 工具栏长按/滑动默认动作：0 无 / 1 刷新 / 2 主页 / 3 新建标签 / 4 菜单 / 5 后退 / 6 前进。
+     * 只在用户没有单独设置过该项时生效。
+     */
+    fun keyAction(key: String): Int = when (key) {
+        "toolbar_hold_refresh" -> 1
+        "toolbar_hold_home" -> 2
+        "toolbar_hold_tab" -> 3
+        "toolbar_hold_menu" -> 4
+        "toolbar_hold_back" -> 5
+        "toolbar_swipe_left" -> 5
+        "toolbar_swipe_right" -> 6
+        else -> 0
+    }
 }
