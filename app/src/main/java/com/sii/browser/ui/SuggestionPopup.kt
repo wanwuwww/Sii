@@ -81,12 +81,12 @@ class SuggestionPopup(
             dismiss(false)
             return
         }
-        // 弹层与锚点（地址栏或搜索框）等宽；悬浮地址区很窄，不能再被旧的最小宽度撑开。
+        // 弹层宽度跟随锚点，但不低于 280dp：悬浮地址栏只有 180dp 左右，纯等宽会把剪贴板内容截断。
         val maxWidth = context.resources.displayMetrics.widthPixels - dp(16)
+        val minWidth = dp(280).coerceAtMost(maxWidth)
         val width = (anchor.width.takeIf { it > 0 }
             ?: (context.resources.displayMetrics.widthPixels - dp(32)))
-            .coerceAtMost(maxWidth)
-            .coerceAtLeast(dp(120).coerceAtMost(maxWidth))
+            .coerceIn(minWidth, maxWidth)
         if (width <= 0) return
         val signature = items.joinToString("|") { it.kind.name + ":" + it.value } +
             ":" + preferAbove

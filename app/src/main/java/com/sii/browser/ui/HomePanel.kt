@@ -335,11 +335,14 @@ class HomePanel(
         if (!searchFocusActive) return
         pendingFocusMove = false
         val box = view.findViewById<View>(R.id.home_search_box) ?: return
-        // 居中/顶部布局不移动；悬浮胶囊不支持底部，也不移动。
-        if (AppServices.settings.uiStyle() == 1 ||
-            AppServices.settings.homeLayoutPos() != 2
-        ) {
-            box.translationY = 0f
+        val pos = AppServices.settings.homeLayoutPos()
+        // 居中布局且关闭常用网站时，只按键盘实际遮挡量上移搜索框，其余布局不动。
+        if (pos != 2) {
+            if (pos == 1 && !AppServices.settings.showSites() && lastImeHeight > 0) {
+                liftSearchBoxAboveIme(box)
+            } else {
+                box.translationY = 0f
+            }
             return
         }
         val lift = if (lastImeHeight > 0) lastImeHeight + dp(12) else dp(120)
@@ -349,6 +352,29 @@ class HomePanel(
             .setDuration(180L)
             .setInterpolator(android.view.animation.DecelerateInterpolator())
             .start()
+    }
+
+    /** 按键盘顶边算搜索框需要上移的距离，只移动到刚好露出为止。 */
+    private fun liftSearchBoxAboveIme(box: View) {
+        val root = view.rootView
+        val rootLocation = IntArray(2)
+        root.getLocationOnScreen(rootLocation)
+        val visibleBottom = rootLocation[1] + root.height - lastImeHeight - dp(8)
+        val boxLocation = IntArray(2)
+        box.getLocationOnScreen(boxLocation)
+        // 屏幕坐标已包含当前 translationY，先扣除得到布局位置再算重叠量。
+        val boxBottom = boxLocation[1] + box.height - box.translationY
+        val overlap = boxBottom - visibleBottom
+        box.animate().cancel()
+        if (overlap > 0) {
+            box.animate()
+                .translationY(-overlap.toFloat())
+                .setDuration(180L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        } else {
+            box.translationY = 0f
+        }
     }
 
     private fun exitSearchFocus() {
@@ -623,13 +649,11 @@ class HomePanel(
         val root = view.findViewById<LinearLayout>(R.id.home_content) ?: return
         val raw = AppServices.settings.homeLayoutPos()
         val pos = if (AppServices.settings.uiStyle() == 1 && raw == 2) 1 else raw
-        // 常用网站关闭后内容变短，居中对齐会把搜索框压进键盘区域，改为顶部固定。
-        val topAligned = pos == 1 && !AppServices.settings.showSites()
+        // 常用网站关闭后内容变短，居中对齐不会导致遮挡：聚焦时由 moveContentForFocus() 补位。
         root.gravity = when (pos) {
             0 -> android.view.Gravity.TOP
             2 -> android.view.Gravity.BOTTOM
-            else -> if (topAligned) android.view.Gravity.TOP
-            else android.view.Gravity.CENTER_VERTICAL
+            else -> android.view.Gravity.CENTER_VERTICAL
         }
         val logo = view.findViewById<TextView>(R.id.home_logo) ?: return
         val modern = AppServices.settings.uiStyle() == 1
@@ -854,10 +878,10 @@ class HomePanel(
             searchInput.setTextColor(context.getColor(R.color.text_primary))
             searchInput.setHintTextColor(context.getColor(R.color.text_secondary))
         }
-        // 极简 / 杂志：改为细边框，去掉胶囊与阴影。
+        // 极简 / 杂志：改为细边框，去掉胶囊与阴影；圆角仍按设置的档位。
         if (AppServices.settings.homeStyle() != 0) {
             box.background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
+                cornerRadius = dp(radius).toFloat()
                 setColor(0x00000000)
                 setStroke(dp(1), if (dark) 0x33FFFFFF else 0x26000000)
             }
