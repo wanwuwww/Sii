@@ -59,8 +59,8 @@ object SettingsDefaults {
     /** 搜索框高度：0 小 / 1 中 / 2 大。 */
     const val HOME_SEARCH_HEIGHT = 1
 
-    /** 新版悬浮风格下，主页顶部默认显示地址栏。 */
-    const val HOME_TOP_ADDRESS = true
+    /** 主页顶部地址栏入口，默认关闭（由界面风格预设控制）。 */
+    const val HOME_TOP_ADDRESS = false
 
     /** 主页背景色：0 跟随主题。 */
     const val HOME_BG_COLOR = 0
@@ -194,10 +194,10 @@ object SettingsDefaults {
     const val SETTINGS_CARD_ALPHA = 100
 
     /** 玻璃质感强度：0 不透明 → 100 最通透。 */
-    const val GLASS_STRENGTH = 60
+    const val GLASS_STRENGTH = 100
 
     /** 实时模糊（Android 12+）。 */
-    const val GLASS_BLUR = false
+    const val GLASS_BLUR = true
 
     /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
     const val HOME_STYLE = 0

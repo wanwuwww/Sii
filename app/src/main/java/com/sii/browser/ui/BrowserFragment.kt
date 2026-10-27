@@ -658,7 +658,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             setPadding(dp(16), dp(10), dp(6), dp(10))
             background = GlassStyle.background(
                 context, dark, dp(22).toFloat(),
-                AppServices.settings.glassStrength(), minAlpha = 220
+                AppServices.settings.glassStrength(), minAlpha = 165
             )
             elevation = dp(8).toFloat()
             alpha = 0f
@@ -4172,7 +4172,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
-        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 210)
+        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 165)
         else requireContext().getColor(R.color.bg)
         val mergedAlpha = ((((fill ushr 24) and 0xFF) * alpha) / 255).coerceIn(0, 255)
         val radius = dp(28).toFloat()
@@ -4195,7 +4195,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (modern) {
                     background = android.graphics.drawable.GradientDrawable().apply {
                         cornerRadius = dp(22).toFloat()
-                        setColor(GlassStyle.fill(requireContext(), dark, strength, 200))
+                        setColor(GlassStyle.fill(requireContext(), dark, strength, 155))
                         setStroke(dp(1), GlassStyle.stroke(dark, strength))
                     }
                 } else {
@@ -4926,7 +4926,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (modern) {
                 background = GlassStyle.background(
                     requireContext(), dark, dp(28).toFloat(),
-                    AppServices.settings.glassStrength(), topOnly = true, minAlpha = 225
+                    AppServices.settings.glassStrength(), topOnly = true, minAlpha = 170
                 )
                 backgroundTintList = null
             } else {
@@ -9882,7 +9882,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private companion object {
         /** 胶囊底栏不透明度下限：强度再高也要压住网页原文，否则透出的色块与文字会被读成渲染异常。 */
-        const val DOCK_GLASS_MIN_ALPHA = 225
+        const val DOCK_GLASS_MIN_ALPHA = 170
         const val KEY_URL = "sii_browser_url"
         const val KEY_TABS = "sii_browser_tabs"
         /** 固定栏默认项：夜间/隐身/无图/电脑模式。 */

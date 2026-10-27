@@ -1352,6 +1352,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setGlassBlur(false)
                 settings.setTabCardGrid(true)
                 settings.setMenuScrollStyle(0)
+                settings.setHomeTopAddress(false)
                 settings.setNightMode(2)
             }
             1 -> {
@@ -1361,6 +1362,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setGlassBlur(true)
                 settings.setTabCardGrid(true)
                 settings.setMenuScrollStyle(0)
+                settings.setHomeTopAddress(false)
                 settings.setNightMode(2)
             }
             2 -> {
@@ -1370,6 +1372,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setGlassBlur(false)
                 settings.setTabCardGrid(true)
                 settings.setMenuScrollStyle(0)
+                settings.setHomeTopAddress(false)
                 settings.setNightMode(2)
             }
             else -> {
@@ -1379,6 +1382,7 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setGlassBlur(true)
                 settings.setTabCardGrid(false)
                 settings.setMenuScrollStyle(1)
+                settings.setHomeTopAddress(false)
                 settings.setNightMode(2)
             }
         }

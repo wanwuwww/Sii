@@ -18,8 +18,8 @@ object GlassStyle {
 
     fun fill(context: Context, dark: Boolean, strength: Int, minAlpha: Int = 150): Int {
         val s = strength.coerceIn(0, 100)
-        // 强度越高越通透；minAlpha 保证文字可读（菜单/面板用高下限）。
-        val alpha = (255 - s * 150 / 100).coerceIn(minAlpha.coerceIn(0, 255), 255)
+        // 强度越高越通透：0 完全不透明，100 减 100 个 alpha，再由 minAlpha 保底。
+        val alpha = (255 - s).coerceIn(minAlpha.coerceIn(0, 255), 255)
         val base = if (dark) 0x1B1E23 else 0xFFFFFF
         return (alpha shl 24) or base
     }
