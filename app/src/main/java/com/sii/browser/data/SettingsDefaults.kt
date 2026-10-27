@@ -201,6 +201,7 @@ object SettingsDefaults {
 
     /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
     const val HOME_STYLE = 0
+    const val HOME_SEARCH_SHOW = true
     const val CARD_BORDER = true
 
     /** MCP 服务默认关闭；只监听本机回环。 */

@@ -260,6 +260,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeStyle(value: Int) =
         putInt(SettingsKeys.HOME_STYLE, value.coerceIn(0, 2))
 
+    override fun homeSearchShow(): Boolean =
+        bool(SettingsKeys.HOME_SEARCH_SHOW, SettingsDefaults.HOME_SEARCH_SHOW)
+
+    override fun setHomeSearchShow(value: Boolean) =
+        putBool(SettingsKeys.HOME_SEARCH_SHOW, value)
+
     override fun tabsPanelTransparency(): Int =
         int(SettingsKeys.TABS_PANEL_TRANSPARENCY, SettingsDefaults.TABS_PANEL_TRANSPARENCY)
             .coerceIn(0, 100)
@@ -1610,7 +1616,8 @@ class DataStoreSettings(private val context: Context) : Settings {
         SettingsKeys.CARD_BORDER,
         SettingsKeys.HLS_TO_MP4,
         SettingsKeys.JS_CONSOLE_LOG,
-        SettingsKeys.UI_STYLE
+        SettingsKeys.UI_STYLE,
+        SettingsKeys.HOME_SEARCH_SHOW
     )
 
     private fun intKeys() = arrayOf(

@@ -152,12 +152,7 @@ class HomePanel(
         })
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                searchBox.animate()
-                    .scaleX(1.01f)
-                    .scaleY(1.01f)
-                    .setDuration(140L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator())
-                    .start()
+                animateSearchFocus(true)
                 if (AppServices.settings.uiStyle() == 1) {
                     applySearchStyle(focused = true)
                 } else {
@@ -172,12 +167,7 @@ class HomePanel(
                 if (searchInput.text.isEmpty()) showClipboardSuggestion()
                 enterSearchFocus()
             } else {
-                searchBox.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(140L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator())
-                    .start()
+                animateSearchFocus(false)
                 searchBox.elevation = searchBoxElevation
                 searchBox.backgroundTintList = null
                 applySearchStyle()
@@ -246,10 +236,10 @@ class HomePanel(
             view.findViewById<View>(id)?.let { targets.add(it) }
         }
         // 顶部搜索聚焦时，中间搜索框也要一起退到后面；失焦时总是恢复。
-        if (includeMainSearch || !dim) {
-            view.findViewById<View>(R.id.home_search_box)?.let { targets.add(it) }
+        if ((includeMainSearch || !dim) && searchBox.visibility == View.VISIBLE) {
+            targets.add(searchBox)
         } else {
-            view.findViewById<View>(R.id.home_search_box)?.alpha = 1f
+            searchBox.alpha = 1f
         }
         targets.forEach { target ->
             target.animate().cancel()
@@ -379,7 +369,9 @@ class HomePanel(
     private fun setupTopSearchInput() {
         topSearchBox.setOnClickListener { focusTopSearch() }
         topSearchInput.setOnFocusChangeListener { _, hasFocus ->
+            animateTopSearchFocus(hasFocus)
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
+            topSearchIconTint(hasFocus)
             if (hasFocus) {
                 setImeSuspend(true)
                 lockHomeHeight()
@@ -500,6 +492,79 @@ class HomePanel(
         }
     }
 
+    /** 搜索框聚焦动画：轻微放大并回弹，图标同步缩放；失焦反向恢复。 */
+    private fun animateSearchFocus(active: Boolean) {
+        if (previewMode) return
+        val duration = if (active) 220L else 160L
+        val interpolator = if (active) {
+            android.view.animation.OvershootInterpolator(1.1f)
+        } else {
+            android.view.animation.DecelerateInterpolator()
+        }
+        val scale = if (active) 1.035f else 1f
+        searchBox.animate().cancel()
+        searchBox.animate()
+            .alpha(1f)
+            .scaleX(scale)
+            .scaleY(scale)
+            .setDuration(duration)
+            .setInterpolator(interpolator)
+            .start()
+        listOfNotNull(searchScan, view.findViewById<View>(R.id.home_search_go)).forEach { icon ->
+            if (icon.visibility != View.VISIBLE) return@forEach
+            icon.animate().cancel()
+            if (active) {
+                icon.animate().scaleX(1.08f).scaleY(1.08f).setDuration(120L)
+                    .withEndAction {
+                        icon.animate().scaleX(1f).scaleY(1f).setDuration(140L).start()
+                    }
+                    .start()
+            } else {
+                icon.animate().scaleX(1f).scaleY(1f).setDuration(120L).start()
+            }
+        }
+    }
+
+    /** 顶部搜索框同款聚焦动画（框内只有图标与输入框）。 */
+    private fun animateTopSearchFocus(active: Boolean) {
+        if (previewMode) return
+        val scale = if (active) 1.02f else 1f
+        topSearchBox.animate().cancel()
+        topSearchBox.animate()
+            .scaleX(scale)
+            .scaleY(scale)
+            .setDuration(if (active) 220L else 160L)
+            .setInterpolator(
+                if (active) android.view.animation.OvershootInterpolator(1.1f)
+                else android.view.animation.DecelerateInterpolator()
+            )
+            .start()
+    }
+
+    /** 顶部搜索框左侧图标聚焦时用主题色。 */
+    private fun topSearchIconTint(focused: Boolean) {
+        val icon = (topSearchBox as? android.view.ViewGroup)?.getChildAt(0) as? ImageView ?: return
+        icon.imageTintList = android.content.res.ColorStateList.valueOf(
+            if (focused) ThemeAccent.color(context)
+            else context.getColor(R.color.text_secondary)
+        )
+    }
+
+    /** 主页搜索框显示开关：关闭后直接不占位，下拉手势与聚焦逻辑也一并停用。 */
+    private fun applySearchVisibility() {
+        val show = AppServices.settings.homeSearchShow()
+        searchBox.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) return
+        if (searchInput.hasFocus()) searchInput.clearFocus()
+        searchBox.animate().cancel()
+        searchBox.alpha = 1f
+        searchBox.scaleX = 1f
+        searchBox.scaleY = 1f
+        searchBox.translationY = 0f
+        exitSearchFocus()
+        hideSuggestions()
+    }
+
     /** 主页下拉进入搜索：仅在顶部且向下拉动超过阈值时触发一次。 */
     private fun setupPullToSearch() {
         val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
@@ -535,6 +600,7 @@ class HomePanel(
             focusTopSearch()
             return
         }
+        if (!AppServices.settings.homeSearchShow()) return
         searchInput.requestFocus()
         searchInput.setSelection(searchInput.text.length)
         searchInput.post {
@@ -586,9 +652,10 @@ class HomePanel(
         val content = view.findViewById<LinearLayout>(R.id.home_content) ?: return
         val box = view.findViewById<View>(R.id.home_search_box) ?: return
         val sites = view.findViewById<View>(R.id.home_sites_card) ?: return
+        val show = box.visibility == View.VISIBLE
         box.translationY = 0f
         if (pos == 0) {
-            if (content.indexOfChild(box) != 0) {
+            if (show && content.indexOfChild(box) != 0) {
                 content.removeView(box)
                 content.addView(box, 0)
             }
@@ -610,7 +677,7 @@ class HomePanel(
                 content.removeView(sites)
                 content.addView(sites, (logoEnd + 1).coerceAtMost(content.childCount))
             }
-            if (content.indexOfChild(box) != content.childCount - 1) {
+            if (show && content.indexOfChild(box) != content.childCount - 1) {
                 content.removeView(box)
                 content.addView(box)
             }
@@ -621,7 +688,7 @@ class HomePanel(
             view.findViewById<View>(R.id.home_logo_icon),
             view.findViewById<View>(R.id.home_clock)
         ).maxOfOrNull { content.indexOfChild(it) } ?: return
-        if (content.indexOfChild(box) != anchor + 1) {
+        if (show && content.indexOfChild(box) != anchor + 1) {
             content.removeView(box)
             content.addView(box, (anchor + 1).coerceAtMost(content.childCount))
         }
@@ -634,6 +701,7 @@ class HomePanel(
     /** 应用主页样式：位置、Logo、列数、图标、搜索框、背景与名称。 */
     fun applyHomeStyle() {
         applyTopSearchVisibility()
+        applySearchVisibility()
         applyLayoutPos()
         val modern = AppServices.settings.uiStyle() == 1
         view.findViewById<View>(R.id.home_content)?.setPadding(
@@ -1118,7 +1186,8 @@ class HomePanel(
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
         val logoView: View? = if (logoIcon?.visibility == View.VISIBLE) logoIcon else logoText
         val card = view.findViewById<View>(R.id.home_sites_card)
-        val targets = listOfNotNull(logoView, searchBox, card)
+        val showSearch = searchBox.visibility == View.VISIBLE
+        val targets = listOfNotNull(logoView, searchBox.takeIf { showSearch }, card)
         targets.forEach { it.animate().cancel() }
         val cells = (0 until grid.childCount).map { grid.getChildAt(it) }
         if (!android.animation.ValueAnimator.areAnimatorsEnabled()) {
@@ -1130,10 +1199,12 @@ class HomePanel(
         }
         logoView?.alpha = 0f
         logoView?.translationY = -dp(14).toFloat()
-        searchBox.alpha = 0f
-        searchBox.translationY = dp(10).toFloat()
-        searchBox.scaleX = 0.97f
-        searchBox.scaleY = 0.97f
+        if (showSearch) {
+            searchBox.alpha = 0f
+            searchBox.translationY = dp(10).toFloat()
+            searchBox.scaleX = 0.97f
+            searchBox.scaleY = 0.97f
+        }
         card?.alpha = 0f
         card?.translationY = dp(18).toFloat()
         cells.forEach { it.alpha = 0f; it.translationY = dp(10).toFloat() }
@@ -1141,8 +1212,9 @@ class HomePanel(
         val interpolator = android.view.animation.DecelerateInterpolator()
         logoView?.animate()?.alpha(1f)?.translationY(0f)?.setDuration(320L)
             ?.setInterpolator(interpolator)?.start()
-        searchBox.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
-            .setDuration(320L).setStartDelay(70L).setInterpolator(interpolator).start()
+        searchBox.takeIf { showSearch }?.animate()?.alpha(1f)?.translationY(0f)
+            ?.scaleX(1f)?.scaleY(1f)
+            ?.setDuration(320L)?.setStartDelay(70L)?.setInterpolator(interpolator)?.start()
         card?.animate()?.alpha(1f)?.translationY(0f)?.setDuration(320L)
             ?.setStartDelay(140L)?.setInterpolator(interpolator)?.start()
         cells.forEachIndexed { index, cell ->

@@ -293,13 +293,13 @@ class BookmarkFragment : Fragment() {
     private fun cardRow(): LinearLayout = LinearLayout(requireContext()).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setBackgroundResource(R.drawable.bg_page_card)
         clipToOutline = true
         setPadding(dp(14), rowPadding(), dp(10), rowPadding())
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(10) }
+        CardList.stylePageCard(this)
     }
 
     private fun selectionCircle(selected: Boolean): View = View(requireContext()).apply {

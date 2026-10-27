@@ -43,7 +43,6 @@
     <string name="settings_home_icon_size">Site icon size</string>
     <string name="settings_home_icon_shape">Site icon shape</string>
     <string name="settings_home_show_labels">Show site names</string>
-    <string name="settings_home_style">Home style</string>
     <string name="settings_home_icon_radius">Site icon corner radius</string>
     <string name="settings_home_search_radius">Search box corner radius</string>
     <string name="settings_home_search_height">Search box height</string>

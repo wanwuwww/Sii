@@ -43,7 +43,6 @@
     <string name="settings_home_icon_size">网站图标大小</string>
     <string name="settings_home_icon_shape">网站图标形状</string>
     <string name="settings_home_show_labels">显示网站名称</string>
-    <string name="settings_home_style">主页样式</string>
     <string name="settings_home_icon_radius">网站图标圆角</string>
     <string name="settings_home_search_radius">搜索框圆角</string>
     <string name="settings_home_search_height">搜索框高度</string>

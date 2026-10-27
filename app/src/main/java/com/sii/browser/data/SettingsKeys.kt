@@ -256,6 +256,7 @@ object SettingsKeys {
     const val GLASS_STRENGTH = "glassstrength"
     const val GLASS_BLUR = "glassblur"
     const val HOME_STYLE = "home_style"
+    const val HOME_SEARCH_SHOW = "home_search_show"
     const val CARD_BORDER = "card_border"
     const val BG_HOME = "bghome"
     const val BG_INFO = "bginfo"

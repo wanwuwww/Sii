@@ -117,6 +117,11 @@ interface Settings :
 
     fun setHomeStyle(value: Int)
 
+    /** 主页搜索框是否显示。 */
+    fun homeSearchShow(): Boolean
+
+    fun setHomeSearchShow(value: Boolean)
+
     /** 标签页背景透明度，0 = 不透明，100 = 全透明。 */
     fun tabsPanelTransparency(): Int
 

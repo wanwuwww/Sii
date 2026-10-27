@@ -125,7 +125,6 @@ class SettingsDetailFragment : Fragment() {
         VIEW_PRIVACY -> getString(R.string.settings_privacy)
         VIEW_APPEARANCE -> getString(R.string.settings_appearance)
         VIEW_HOME_SET -> getString(R.string.settings_home)
-        VIEW_HOME_STYLE -> getString(R.string.settings_home_style)
         VIEW_UI -> getString(R.string.settings_ui_layout)
         VIEW_MENU_CUSTOM -> getString(R.string.settings_menu_custom)
         VIEW_TOOLBAR_CUSTOM -> getString(R.string.settings_toolbar_custom)
@@ -189,7 +188,6 @@ class SettingsDetailFragment : Fragment() {
             VIEW_PRIVACY -> buildPrivacy()
             VIEW_APPEARANCE -> buildAppearance()
             VIEW_HOME_SET -> buildHomeSet()
-            VIEW_HOME_STYLE -> buildHomeStyle()
             VIEW_UI -> buildUi()
             VIEW_MENU_CUSTOM -> buildMenuCustom()
             VIEW_TOOLBAR_CUSTOM -> buildToolbarCustom()
@@ -2352,172 +2350,6 @@ class SettingsDetailFragment : Fragment() {
         card(*rows.toTypedArray())
     }
 
-    /** 主页样式：文字、网格、图标、搜索框与背景。 */
-    private fun buildHomeStyle() {
-        card(
-            textRow(getString(R.string.settings_home_logo), settings.homeLogoText()) {
-                settings.setHomeLogoText(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_logo_size),
-                LOGO_SIZE_NAMES,
-                presetIndex(settings.homeLogoSize(), LOGO_SIZE_VALUES)
-            ) { index ->
-                if (index < LOGO_SIZE_VALUES.size) {
-                    settings.setHomeLogoSize(LOGO_SIZE_VALUES[index])
-                } else {
-                    promptNumber(
-                        getString(R.string.settings_home_logo_size),
-                        settings.homeLogoSize().takeIf { it > 0 } ?: 34,
-                        16, 64
-                    ) { settings.setHomeLogoSize(it) }
-                }
-            },
-            choiceRow(
-                getString(R.string.settings_home_logo_weight),
-                LOGO_WEIGHT_NAMES,
-                settings.homeLogoWeight().coerceIn(0, 1)
-            ) {
-                settings.setHomeLogoWeight(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_logo_color),
-                LOGO_COLOR_NAMES,
-                logoColorIndex(settings.homeLogoColor())
-            ) { index ->
-                when (index) {
-                    0 -> settings.setHomeLogoColor(null)
-                    1 -> settings.setHomeLogoColor("accent")
-                    else -> promptColor(getString(R.string.settings_home_logo_color)) {
-                        settings.setHomeLogoColor(it)
-                    }
-                }
-            }
-        )
-        card(
-            choiceRow(
-                getString(R.string.settings_home_grid_columns),
-                HOME_GRID_COLUMNS_NAMES,
-                settings.homeGridColumns().coerceIn(4, 6) - 4
-            ) {
-                settings.setHomeGridColumns(it + 4)
-            },
-            choiceRow(
-                getString(R.string.settings_home_icon_size),
-                HOME_ICON_SIZE_NAMES,
-                settings.homeIconSize().coerceIn(0, 2)
-            ) {
-                settings.setHomeIconSize(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_icon_radius),
-                HOME_ICON_RADIUS_NAMES,
-                settings.homeIconRadius().coerceIn(0, 3)
-            ) {
-                settings.setHomeIconRadius(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_icon_shape),
-                HOME_ICON_SHAPE_NAMES,
-                settings.homeIconShape().coerceIn(0, 1)
-            ) {
-                settings.setHomeIconShape(it)
-            },
-            switchRow(
-                getString(R.string.settings_home_icon_accent),
-                settings.homeIconAccent()
-            ) {
-                settings.setHomeIconAccent(it)
-            },
-            switchRow(
-                getString(R.string.settings_home_show_labels),
-                settings.homeShowLabels()
-            ) {
-                settings.setHomeShowLabels(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_label_size),
-                LABEL_SIZE_NAMES,
-                presetIndex(settings.homeLabelSize(), LABEL_SIZE_VALUES)
-            ) { index ->
-                if (index < LABEL_SIZE_VALUES.size) {
-                    settings.setHomeLabelSize(LABEL_SIZE_VALUES[index])
-                } else {
-                    promptNumber(
-                        getString(R.string.settings_home_label_size),
-                        settings.homeLabelSize().takeIf { it > 0 } ?: 12,
-                        8, 20
-                    ) { settings.setHomeLabelSize(it) }
-                }
-            },
-            choiceRow(
-                getString(R.string.settings_home_cell_gap),
-                CELL_GAP_NAMES,
-                presetIndex(settings.homeCellGap(), CELL_GAP_VALUES)
-            ) { index ->
-                if (index < CELL_GAP_VALUES.size) {
-                    settings.setHomeCellGap(CELL_GAP_VALUES[index])
-                } else {
-                    promptNumber(
-                        getString(R.string.settings_home_cell_gap),
-                        settings.homeCellGap().takeIf { it >= 0 } ?: 8,
-                        0, 24
-                    ) { settings.setHomeCellGap(it) }
-                }
-            },
-            switchRow(
-                getString(R.string.settings_home_sites_title),
-                settings.homeShowSitesTitle()
-            ) {
-                settings.setHomeShowSitesTitle(it)
-            }
-        )
-        card(
-            choiceRow(
-                getString(R.string.settings_home_layout),
-                HOME_LAYOUT_NAMES,
-                settings.homeLayoutPos().coerceIn(0, 2)
-            ) {
-                settings.setHomeLayoutPos(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_search_radius),
-                HOME_SEARCH_RADIUS_NAMES,
-                settings.homeSearchRadius().coerceIn(0, 2)
-            ) {
-                settings.setHomeSearchRadius(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_search_height),
-                HOME_SEARCH_HEIGHT_NAMES,
-                settings.homeSearchHeight().coerceIn(0, 2)
-            ) {
-                settings.setHomeSearchHeight(it)
-            }
-        )
-        card(
-            choiceRow(
-                getString(R.string.settings_home_bg_color),
-                HOME_BG_COLOR_NAMES,
-                settings.homeBgColor().coerceIn(0, 6)
-            ) {
-                settings.setHomeBgColor(it)
-            },
-            choiceRow(
-                getString(R.string.settings_home_bg_blur),
-                HOME_BG_BLUR_NAMES,
-                settings.homeBgBlur().coerceIn(0, 3),
-                enabled = settings.homeBackground() != null
-            ) {
-                settings.setHomeBgBlur(it)
-            },
-            sliderRow(
-                getString(R.string.settings_home_bg_overlay),
-                settings.homeBgOverlay(), 0, 100, 5
-            ) { settings.setHomeBgOverlay(it) }
-        )
-    }
-
     private fun buildV2HomeBgColor() {
         card(
             choiceRow(
@@ -2971,7 +2803,6 @@ class SettingsDetailFragment : Fragment() {
         const val VIEW_PRIVACY = "privacy"
         const val VIEW_APPEARANCE = "appearance"
         const val VIEW_HOME_SET = "homeSet"
-        const val VIEW_HOME_STYLE = "homeStyle"
         const val VIEW_UI = "ui"
         const val VIEW_MENU_CUSTOM = "menuCustom"
         const val VIEW_TOOLBAR_CUSTOM = "toolbarCustom"

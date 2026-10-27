@@ -522,70 +522,77 @@ class HomeCustomizeFragment : Fragment() {
     private fun disabledRow(view: View): View {
         view.alpha = 0.4f
         view.setOnClickListener {}
+        // 行内的 Switch / SeekBar 也要一并禁用，否则点开关仍能改值。
+        (view as? ViewGroup)?.let { row ->
+            for (i in 0 until row.childCount) row.getChildAt(i).isEnabled = false
+        }
         return view
     }
 
-    private fun searchRows(): List<View> = listOf(
-        switchRow(
-            "主页顶部显示搜索框",
-            settings.homeTopAddress() && settings.homeLayoutPos() != 0,
-            enabled = settings.homeLayoutPos() != 0
-        ) { on ->
-            settings.setHomeTopAddress(on)
-            refreshPreview()
-            view?.post { buildControls() }
-        },
-        choiceRow(
-            "主页风格",
-            arrayOf("玻璃", "极简", "杂志"),
-            settings.homeStyle().coerceIn(0, 2)
-        ) { index ->
-            settings.setHomeStyle(index)
-            refreshPreview()
-            view?.post { buildControls() }
-        },
-        choiceRow(
-            getString(R.string.settings_home_layout),
-            if (settings.uiStyle() == 1) arrayOf("顶部", "居中")
-            else arrayOf("顶部", "居中", "底部"),
-            settings.homeLayoutPos().coerceIn(0, if (settings.uiStyle() == 1) 1 else 2)
-        ) { index ->
-            settings.setHomeLayoutPos(index)
-            refreshPreview()
-            view?.post { buildControls() }
-        },
-        choiceRow(
-            getString(R.string.settings_home_search_radius),
-            arrayOf("小", "中", "大", "自定义"),
-            settings.homeSearchRadius().coerceIn(0, 3)
-        ) { index ->
-            settings.setHomeSearchRadius(index)
-            if (index == 3) {
-                numberDialog(
-                    getString(R.string.settings_home_search_radius),
-                    settings.homeSearchRadiusCustom(), 0, 48
-                ) { value ->
-                    settings.setHomeSearchRadiusCustom(value)
-                    refreshPreview()
-                }
-            } else refreshPreview()
-        },
-        choiceRow(
-            getString(R.string.settings_home_search_height),
-            arrayOf("小", "中", "大"),
-            settings.homeSearchHeight().coerceIn(0, 2)
-        ) { index ->
-            settings.setHomeSearchHeight(index)
-            refreshPreview()
-        },
-        sliderRow(
-            getString(R.string.settings_home_search_alpha),
-            settings.homeSearchAlpha().coerceIn(0, 100), 0, 100
-        ) { value ->
-            settings.setHomeSearchAlpha(value)
-            refreshPreview()
-        }
-    )
+    private fun searchRows(): List<View> {
+        val show = settings.homeSearchShow()
+        val rows = mutableListOf<View>(
+            switchRow("显示主页搜索框", show) { on ->
+                settings.setHomeSearchShow(on)
+                refreshPreview()
+                view?.post { buildControls() }
+            }
+        )
+        val details = listOf(
+            switchRow(
+                "主页顶部显示搜索框",
+                settings.homeTopAddress() && settings.homeLayoutPos() != 0,
+                enabled = settings.homeLayoutPos() != 0
+            ) { on ->
+                settings.setHomeTopAddress(on)
+                refreshPreview()
+                view?.post { buildControls() }
+            },
+            choiceRow(
+                getString(R.string.settings_home_layout),
+                if (settings.uiStyle() == 1) arrayOf("顶部", "居中")
+                else arrayOf("顶部", "居中", "底部"),
+                settings.homeLayoutPos().coerceIn(0, if (settings.uiStyle() == 1) 1 else 2)
+            ) { index ->
+                settings.setHomeLayoutPos(index)
+                refreshPreview()
+                view?.post { buildControls() }
+            },
+            choiceRow(
+                getString(R.string.settings_home_search_radius),
+                arrayOf("小", "中", "大", "自定义"),
+                settings.homeSearchRadius().coerceIn(0, 3)
+            ) { index ->
+                settings.setHomeSearchRadius(index)
+                if (index == 3) {
+                    numberDialog(
+                        getString(R.string.settings_home_search_radius),
+                        settings.homeSearchRadiusCustom(), 0, 48
+                    ) { value ->
+                        settings.setHomeSearchRadiusCustom(value)
+                        refreshPreview()
+                    }
+                } else refreshPreview()
+            },
+            choiceRow(
+                getString(R.string.settings_home_search_height),
+                arrayOf("小", "中", "大"),
+                settings.homeSearchHeight().coerceIn(0, 2)
+            ) { index ->
+                settings.setHomeSearchHeight(index)
+                refreshPreview()
+            },
+            sliderRow(
+                getString(R.string.settings_home_search_alpha),
+                settings.homeSearchAlpha().coerceIn(0, 100), 0, 100
+            ) { value ->
+                settings.setHomeSearchAlpha(value)
+                refreshPreview()
+            }
+        )
+        rows.addAll(if (show) details else details.map { disabledRow(it) })
+        return rows
+    }
 
     private fun backgroundRows(): List<View> {
         val rows = mutableListOf<View>()

@@ -68,7 +68,6 @@ class HistoryFragment : Fragment() {
         val searchCard = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundResource(R.drawable.bg_page_card)
             setPadding(dp(12), 0, dp(12), 0)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -79,6 +78,7 @@ class HistoryFragment : Fragment() {
                 topMargin = dp(8)
                 bottomMargin = dp(8)
             }
+            CardList.stylePageCard(this)
         }
         searchCard.addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_m_find)

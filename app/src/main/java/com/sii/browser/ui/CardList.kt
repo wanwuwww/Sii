@@ -25,11 +25,17 @@ object CardList {
 
     private data class SurfaceTag(val page: Boolean)
 
-    /** 卡片容器：白底、14dp 圆角、1px 边框，外边距 0 14dp 8dp（对齐 .set-group）。 */
-    fun card(context: Context): LinearLayout = cardWith(context, R.drawable.bg_card)
+    /** 卡片容器：透明度与外框跟随设置（同 [styledCard]）。 */
+    fun card(context: Context): LinearLayout = styledCard(context, page = false)
 
-    /** 纯白页面上的卡片：底色略暗于页面背景，用于设置页与书签页。 */
-    fun pageCard(context: Context): LinearLayout = cardWith(context, R.drawable.bg_page_card)
+    /** 页面卡片：透明度与外框跟随设置（同 [styledCard]）。 */
+    fun pageCard(context: Context): LinearLayout = styledCard(context, page = true)
+
+    /** 给外部自建的页面卡片（如书签行、历史搜索行）套用统一的透明度与边框设置。 */
+    fun stylePageCard(view: View) {
+        view.tag = SurfaceTag(true)
+        applySurface(view, true)
+    }
 
     /** 统一卡片：填充透明度与边框/分隔线开关由设置决定。 */
     fun styledCard(context: Context, page: Boolean): LinearLayout =
