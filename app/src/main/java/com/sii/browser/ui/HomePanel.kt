@@ -220,6 +220,7 @@ class HomePanel(
      */
     private fun enterSearchFocus() {
         if (previewMode) return
+        android.util.Log.d("SiiDebug", "enterSearchFocus imeH=$lastImeHeight imeVisible=$lastImeVisible h=${view.height}")
         setImeSuspend(true)
         searchFocusActive = true
         pendingFocusMove = true
@@ -273,7 +274,10 @@ class HomePanel(
             view.getLocationOnScreen(loc)
             val layoutY = loc[1] - view.translationY.toInt()
             val dy = lockScreenY - layoutY
-            if (kotlin.math.abs(dy) > 1) view.translationY = dy.toFloat()
+            if (kotlin.math.abs(dy) > 1) {
+                view.translationY = dy.toFloat()
+                android.util.Log.d("SiiDebug", "keepPos dy=$dy layoutY=$layoutY lock=$lockScreenY")
+            }
             true
         }
     }
@@ -284,6 +288,7 @@ class HomePanel(
         view.getLocationOnScreen(loc)
         lockScreenY = loc[1] - view.translationY.toInt()
         view.viewTreeObserver.addOnPreDrawListener(keepScreenPosition)
+        android.util.Log.d("SiiDebug", "lockScreenY=$lockScreenY")
     }
 
     private fun unlockScreenPosition() {
@@ -304,6 +309,7 @@ class HomePanel(
         homeOriginalHeight = lp.height
         lp.height = view.height
         view.layoutParams = lp
+        android.util.Log.d("SiiDebug", "lockHomeHeight h=${view.height} old=${homeOriginalHeight}")
     }
 
     private fun unlockHomeHeight() {
@@ -332,6 +338,7 @@ class HomePanel(
     /** 主页搜索聚焦时让键盘直接覆盖悬浮工具栏，不为键盘预留窗口高度。 */
     private fun setImeSuspend(suspend: Boolean) {
         if (previewMode) return
+        android.util.Log.d("SiiDebug", "setImeSuspend=$suspend current=${AppServices.homeSearchImeSuspend}")
         if (AppServices.homeSearchImeSuspend == suspend) return
         AppServices.homeSearchImeSuspend = suspend
         (context as? ShellActivity)?.refreshImeInsets()
@@ -359,6 +366,7 @@ class HomePanel(
 
     private fun exitSearchFocus() {
         if (!searchFocusActive) return
+        android.util.Log.d("SiiDebug", "exitSearchFocus")
         searchFocusActive = false
         setImeSuspend(false)
         unlockScreenPosition()
@@ -524,7 +532,10 @@ class HomePanel(
         }
         scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             // 聚焦时系统可能为让输入框可见主动滚动，这里把它拉回顶部。
-            if (searchFocusActive && scrollY != 0) scroll.scrollTo(0, 0)
+            if (searchFocusActive && scrollY != 0) {
+                android.util.Log.d("SiiDebug", "homeScroll scrollY=$scrollY -> reset")
+                scroll.scrollTo(0, 0)
+            }
         }
     }
 

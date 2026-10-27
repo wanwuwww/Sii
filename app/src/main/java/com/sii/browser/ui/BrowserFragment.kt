@@ -2001,6 +2001,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var immersiveFullscreen = false
     /** IME 是否可见，用于悬浮底栏与键盘同步下移。 */
     private var imeInsetVisible = false
+    private var lastDockDebugTarget = Float.MIN_VALUE
     /** 每个标签的网页自绘全屏状态。 */
     private val pageFullscreenStates = java.util.WeakHashMap<SiiWebView, Boolean>()
     private var translatePolling: kotlinx.coroutines.Job? = null
@@ -9723,6 +9724,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val hidden = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(12)
         val hide = !addressEditing && (imeInsetVisible || toolbarHidden)
         val target = if (hide) hidden.toFloat() else 0f
+        if (target != lastDockDebugTarget) {
+            lastDockDebugTarget = target
+            android.util.Log.d(
+                "SiiDebug",
+                "dock imeVisible=$imeInsetVisible edit=$addressEditing " +
+                    "suspend=${AppServices.homeSearchImeSuspend} target=$target transY=${dock.translationY}"
+            )
+        }
         if (dock.translationY == target) return
         dock.animate().cancel()
         dock.animate()
