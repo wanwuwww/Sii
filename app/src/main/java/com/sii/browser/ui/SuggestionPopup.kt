@@ -81,11 +81,12 @@ class SuggestionPopup(
             dismiss(false)
             return
         }
-        val width = maxOf(
-            anchor.width.takeIf { it > 0 }
-                ?: (context.resources.displayMetrics.widthPixels - dp(32)),
-            dp(300)
-        ).coerceAtMost(context.resources.displayMetrics.widthPixels - dp(16))
+        // 弹层与锚点（地址栏或搜索框）等宽；悬浮地址区很窄，不能再被旧的最小宽度撑开。
+        val maxWidth = context.resources.displayMetrics.widthPixels - dp(16)
+        val width = (anchor.width.takeIf { it > 0 }
+            ?: (context.resources.displayMetrics.widthPixels - dp(32)))
+            .coerceAtMost(maxWidth)
+            .coerceAtLeast(dp(120).coerceAtMost(maxWidth))
         if (width <= 0) return
         val signature = items.joinToString("|") { it.kind.name + ":" + it.value } +
             ":" + preferAbove

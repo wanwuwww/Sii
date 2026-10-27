@@ -623,10 +623,13 @@ class HomePanel(
         val root = view.findViewById<LinearLayout>(R.id.home_content) ?: return
         val raw = AppServices.settings.homeLayoutPos()
         val pos = if (AppServices.settings.uiStyle() == 1 && raw == 2) 1 else raw
+        // 常用网站关闭后内容变短，居中对齐会把搜索框压进键盘区域，改为顶部固定。
+        val topAligned = pos == 1 && !AppServices.settings.showSites()
         root.gravity = when (pos) {
             0 -> android.view.Gravity.TOP
             2 -> android.view.Gravity.BOTTOM
-            else -> android.view.Gravity.CENTER_VERTICAL
+            else -> if (topAligned) android.view.Gravity.TOP
+            else android.view.Gravity.CENTER_VERTICAL
         }
         val logo = view.findViewById<TextView>(R.id.home_logo) ?: return
         val modern = AppServices.settings.uiStyle() == 1
