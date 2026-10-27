@@ -33,6 +33,46 @@ class SuggestionPopup(
     private var lastWidth = 0
     private var lastHeight = 0
     private var resizeAnimator: android.animation.ValueAnimator? = null
+    private var followAnchor: View? = null
+    private var lastAnchorX = Int.MIN_VALUE
+    private var lastAnchorY = Int.MIN_VALUE
+
+    /** 键盘弹出、主页内容上移或页面滚动时，让弹层跟着锚点走，而不是停在原位。 */
+    private val followPreDraw = android.view.ViewTreeObserver.OnPreDrawListener {
+        val window = popup
+        if (window == null || !window.isShowing) {
+            detachFollow()
+        } else if (resizeAnimator?.isRunning != true) {
+            val location = IntArray(2)
+            anchor.getLocationOnScreen(location)
+            if (location[0] != lastAnchorX || location[1] != lastAnchorY) {
+                lastAnchorX = location[0]
+                lastAnchorY = location[1]
+                window.update(anchor, lastXOffset, lastYOffset, lastWidth, lastHeight)
+            }
+        }
+        true
+    }
+
+    private fun attachFollow() {
+        if (followAnchor === anchor) return
+        detachFollow()
+        val location = IntArray(2)
+        anchor.getLocationOnScreen(location)
+        lastAnchorX = location[0]
+        lastAnchorY = location[1]
+        anchor.viewTreeObserver.addOnPreDrawListener(followPreDraw)
+        followAnchor = anchor
+    }
+
+    private fun detachFollow() {
+        followAnchor?.let { view ->
+            if (view.viewTreeObserver.isAlive) {
+                view.viewTreeObserver.removeOnPreDrawListener(followPreDraw)
+            }
+        }
+        followAnchor = null
+    }
 
     val isShowing: Boolean get() = popup?.isShowing == true
 
@@ -110,6 +150,7 @@ class SuggestionPopup(
         lastWidth = placement.width
         lastHeight = placement.height
         window.showAsDropDown(anchor, placement.xOffset, placement.yOffset)
+        attachFollow()
         view.animate()
             .alpha(1f)
             .translationY(0f)
@@ -160,6 +201,7 @@ class SuggestionPopup(
         popup = null
         scroll = null
         lastSignature = null
+        detachFollow()
         if (!animated || !window.isShowing) {
             window.dismiss()
             return

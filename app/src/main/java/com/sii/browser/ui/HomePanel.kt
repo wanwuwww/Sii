@@ -592,6 +592,9 @@ class HomePanel(
                 hideSuggestions()
                 return@launch
             }
+            // 等键盘动画把主页布局推到最终位置再弹出，避免先出现在旧位置再跳。
+            kotlinx.coroutines.delay(180)
+            if (!searchInput.hasFocus() || searchInput.text.isNotEmpty()) return@launch
             showSuggestions(clips, preferAbove = true)
         }
     }
