@@ -50,7 +50,10 @@ class SuggestionPopup(
             if (location[0] != lastAnchorX || location[1] != lastAnchorY) {
                 lastAnchorX = location[0]
                 lastAnchorY = location[1]
-                window.update(anchor, lastXOffset, lastYOffset, lastWidth, lastHeight)
+                // 导航/隐藏主页时锚点可能已脱离窗口，更新失败不能往外抛。
+                runCatching {
+                    window.update(anchor, lastXOffset, lastYOffset, lastWidth, lastHeight)
+                }
             }
         }
         true
@@ -59,6 +62,7 @@ class SuggestionPopup(
     private fun attachFollow() {
         if (followAnchor === anchor) return
         detachFollow()
+        if (!anchor.isAttachedToWindow || !anchor.viewTreeObserver.isAlive) return
         val location = IntArray(2)
         anchor.getLocationOnScreen(location)
         lastAnchorX = location[0]
@@ -80,6 +84,11 @@ class SuggestionPopup(
 
     fun show(items: List<Suggestion>, preferAbove: Boolean = false) {
         if (items.isEmpty()) {
+            dismiss(false)
+            return
+        }
+        // 锚点已脱离窗口时 showAsDropDown 会抛 BadTokenException，直接放弃。
+        if (!anchor.isAttachedToWindow) {
             dismiss(false)
             return
         }
@@ -153,7 +162,16 @@ class SuggestionPopup(
         lastYOffset = placement.yOffset
         lastWidth = placement.width
         lastHeight = placement.height
-        window.showAsDropDown(anchor, placement.xOffset, placement.yOffset)
+        val shown = runCatching {
+            window.showAsDropDown(anchor, placement.xOffset, placement.yOffset)
+        }.isSuccess
+        if (!shown) {
+            popup = null
+            scroll = null
+            lastSignature = null
+            detachFollow()
+            return
+        }
         attachFollow()
         view.animate()
             .alpha(1f)
