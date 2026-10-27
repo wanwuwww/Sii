@@ -442,7 +442,7 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setSuggestOrder(value: String) =
         putStr(SettingsKeys.SUGGEST_ORDER, value)
 
-    override fun themeColorEnabled(): Boolean = bool(SettingsKeys.THEME_COLOR, true)
+    override fun themeColorEnabled(): Boolean = bool(SettingsKeys.THEME_COLOR, false)
 
     override fun setThemeColorEnabled(value: Boolean) = putBool(SettingsKeys.THEME_COLOR, value)
 

@@ -83,13 +83,12 @@ class SuggestionPopup(
             dismiss(false)
             return
         }
-        // 弹层宽度与锚点的视觉宽度一致：主页搜索框聚焦时会放大，按 scale 换算后才真正等长。
+        // 宽度取锚点布局宽度（不乘聚焦缩放，否则动画期间对不齐）。
         val maxWidth = context.resources.displayMetrics.widthPixels - dp(16)
         val minWidth = dp(minWidthDp).coerceAtMost(maxWidth)
-        val anchorScale = anchor.scaleX.takeIf { it > 0f } ?: 1f
-        val visualWidth = (anchor.width.takeIf { it > 0 }?.let { (it * anchorScale).toInt() }
+        val width = (anchor.width.takeIf { it > 0 }
             ?: (context.resources.displayMetrics.widthPixels - dp(32)))
-        val width = visualWidth.coerceIn(minWidth, maxWidth)
+            .coerceIn(minWidth, maxWidth)
         if (width <= 0) return
         val signature = items.joinToString("|") { it.kind.name + ":" + it.value } +
             ":" + preferAbove
@@ -266,13 +265,9 @@ class SuggestionPopup(
         }
         val available = if (above) spaceAbove else spaceBelow
         val height = min(desired.coerceAtLeast(dp(48)), available.coerceAtLeast(dp(48)))
-        // 弹层与锚点的视觉边界对齐：缩放后的搜索框左侧已外扩半个增量。
-        val anchorScale = anchor.scaleX.takeIf { it > 0f } ?: 1f
-        val visualWidth = if (anchor.width > 0) (anchor.width * anchorScale).toInt() else 0
-        val visualLeftShift = ((anchor.width * (anchorScale - 1f)) / 2f).toInt()
-        var xOffset = -visualLeftShift +
-            if (visualWidth > 0) (visualWidth - width) / 2 else 0
-        if (anchorX + xOffset + width > frame.right - margin) {
+        // 与锚点左边界对齐（略右于缩放后的视觉边界），超出屏幕再回收。
+        var xOffset = 0
+        if (anchorX + width > frame.right - margin) {
             xOffset = frame.right - margin - width - anchorX
         }
         if (anchorX + xOffset < frame.left + margin) {

@@ -163,7 +163,7 @@ object SettingsDefaults {
 
     /** 标签页使用卡片网格；false = 当前简约列表。 */
     const val TAB_CARD_GRID = true
-    const val TAB_GRID_COLUMNS = 2
+    const val TAB_GRID_COLUMNS = 3
     const val TAB_SHOW_THUMB = true
 
     /** 广告拦截总开关。 */
@@ -179,7 +179,7 @@ object SettingsDefaults {
     const val UI_STYLE = 1
 
     /** 标签页背景透明度，0 = 不透明，100 = 全透明。 */
-    const val TABS_PANEL_TRANSPARENCY = 15
+    const val TABS_PANEL_TRANSPARENCY = 0
 
     /** 非正常退出后是否提醒恢复标签。 */
     const val EXIT_RESTORE_PROMPT = true
@@ -191,10 +191,10 @@ object SettingsDefaults {
     const val JS_CONSOLE_LOG = false
 
     /** 设置页卡片背景透明度，100 = 不透明。 */
-    const val SETTINGS_CARD_ALPHA = 100
+    const val SETTINGS_CARD_ALPHA = 0
 
     /** 玻璃质感强度：0 不透明 → 100 最通透。 */
-    const val GLASS_STRENGTH = 100
+    const val GLASS_STRENGTH = 40
 
     /** 实时模糊（Android 12+）。 */
     const val GLASS_BLUR = true
