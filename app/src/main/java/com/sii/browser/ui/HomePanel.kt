@@ -89,6 +89,8 @@ class HomePanel(
     private var homeOriginalHeight = Int.MIN_VALUE
     private var lockScreenY = Int.MIN_VALUE
 
+    private var searchFocusAnimator: android.animation.ValueAnimator? = null
+
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
         override fun run() {
@@ -152,7 +154,6 @@ class HomePanel(
         })
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                animateSearchFocus(true)
                 if (AppServices.settings.uiStyle() == 1) {
                     applySearchStyle(focused = true)
                 } else {
@@ -166,14 +167,17 @@ class HomePanel(
                 )
                 if (searchInput.text.isEmpty()) showClipboardSuggestion()
                 enterSearchFocus()
+                // 放在 enterSearchFocus 之后：它内部的 cancel() 会杀掉刚启动的缩放动画。
+                animateSearchFocus(true)
             } else {
-                animateSearchFocus(false)
                 searchBox.elevation = searchBoxElevation
                 searchBox.backgroundTintList = null
                 applySearchStyle()
                 hideKeyboard()
                 hideSuggestions()
                 exitSearchFocus()
+                // 同上：exitSearchFocus 会取消搜索框动画，回收动画必须放在它后面。
+                animateSearchFocus(false)
             }
         }
         view.isClickable = true
@@ -495,21 +499,24 @@ class HomePanel(
     /** 搜索框聚焦动画：轻微放大并回弹，图标同步缩放；失焦反向恢复。 */
     private fun animateSearchFocus(active: Boolean) {
         if (previewMode) return
-        val duration = if (active) 220L else 160L
-        val interpolator = if (active) {
+        // 用独立 ValueAnimator 而不是 ViewPropertyAnimator：后者与聚焦时的
+        // translationY 抬升共用一个实例，互相 cancel 会把缩放留在中间值。
+        searchFocusAnimator?.cancel()
+        val target = if (active) 1.035f else 1f
+        val animator = android.animation.ValueAnimator.ofFloat(searchBox.scaleX, target)
+        animator.duration = if (active) 220L else 160L
+        animator.interpolator = if (active) {
             android.view.animation.OvershootInterpolator(1.1f)
         } else {
             android.view.animation.DecelerateInterpolator()
         }
-        val scale = if (active) 1.035f else 1f
-        searchBox.animate().cancel()
-        searchBox.animate()
-            .alpha(1f)
-            .scaleX(scale)
-            .scaleY(scale)
-            .setDuration(duration)
-            .setInterpolator(interpolator)
-            .start()
+        animator.addUpdateListener { animation ->
+            val value = animation.animatedValue as Float
+            searchBox.scaleX = value
+            searchBox.scaleY = value
+        }
+        animator.start()
+        searchFocusAnimator = animator
         listOfNotNull(searchScan, view.findViewById<View>(R.id.home_search_go)).forEach { icon ->
             if (icon.visibility != View.VISIBLE) return@forEach
             icon.animate().cancel()
@@ -556,6 +563,7 @@ class HomePanel(
         searchBox.visibility = if (show) View.VISIBLE else View.GONE
         if (show) return
         if (searchInput.hasFocus()) searchInput.clearFocus()
+        searchFocusAnimator?.cancel()
         searchBox.animate().cancel()
         searchBox.alpha = 1f
         searchBox.scaleX = 1f
@@ -1117,6 +1125,8 @@ class HomePanel(
     fun release() {
         setImeSuspend(false)
         hideSuggestions()
+        searchFocusAnimator?.cancel()
+        searchFocusAnimator = null
         topSuggestJob?.cancel()
         topSuggestionPopup?.dismiss(false)
         topSuggestionPopup = null
