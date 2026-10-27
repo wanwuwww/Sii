@@ -6802,6 +6802,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     }
                 }
             }.also { registerJsBridge("SiiFullscreen", it) }
+            val scrollWebView = this
+            com.sii.browser.core.webview.ScrollWatchJsBridge { dy ->
+                view?.post {
+                    if (scrollWebView === tabManager.currentWebView) handleToolbarAutoHide(dy)
+                }
+            }.also { registerJsBridge("SiiScroll", it) }
             onLongPressHit = { result ->
                 if (!AppServices.settings.gameMode()) showLongPressMenu(result)
             }
@@ -7194,6 +7200,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 webView?.injectJavaScript(com.sii.browser.core.webview.ThemeColorJsBridge.SCRIPT)
             }
             webView?.injectJavaScript(com.sii.browser.core.webview.FullscreenJsBridge.SCRIPT)
+            // 内层滚动容器不会触发原生 scroll 回调，尽早挂上页内滚动监听。
+            webView?.injectJavaScript(com.sii.browser.core.webview.ScrollWatchJsBridge.SCRIPT)
             // 暗色样式尽早注入；原生暗色开启时不再叠加 CSS。
             applyNightCss(webView)
             injectWebTextAccent(webView)
@@ -7215,6 +7223,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     )
                 )
             }
+            webView?.injectJavaScript(com.sii.browser.core.webview.ScrollWatchJsBridge.SCRIPT)
             if (webView === tabManager.currentWebView) scheduleProgressFinish()
             if (webView != null && errorPageLoading[webView] == true) return
             if (webView != null && webView === tabManager.currentWebView &&
