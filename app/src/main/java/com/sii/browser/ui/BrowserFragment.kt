@@ -5742,6 +5742,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         addressInput?.clearFocus()
         hideKeyboard()
         hideSuggestions()
+        if (AppServices.settings.uiStyle() == 1) {
+            // 取消编辑时键盘还在收起，底栏先复位；等键盘完全收起再校正一次。
+            val dock = view?.findViewById<View>(R.id.modern_chrome)
+            if (dock != null) {
+                dock.animate().cancel()
+                dock.translationY = 0f
+                view?.postDelayed({ if (isAdded) applyDockImeOffset() }, 260L)
+            }
+        }
     }
 
     private fun hideSuggestions() {

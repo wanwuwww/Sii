@@ -365,10 +365,18 @@ class HomePanel(
         })
         if (!previewMode) {
             searchInput.setOnTouchListener { _, event ->
-                if (event.actionMasked == MotionEvent.ACTION_DOWN && topSearchVisible()) {
-                    focusTopSearch()
-                    true
-                } else false
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    setImeSuspend(true)
+                    if (topSearchVisible()) {
+                        focusTopSearch()
+                        return@setOnTouchListener true
+                    }
+                }
+                false
+            }
+            topSearchInput.setOnTouchListener { _, event ->
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) setImeSuspend(true)
+                false
             }
         }
     }
@@ -450,6 +458,10 @@ class HomePanel(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> pullTriggered = false
             }
             false
+        }
+        scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            // 聚焦时系统可能为让输入框可见主动滚动，这里把它拉回顶部。
+            if (searchFocusActive && scrollY != 0) scroll.scrollTo(0, 0)
         }
     }
 
@@ -827,6 +839,7 @@ class HomePanel(
     }
 
     fun exitSearchInput() {
+        setImeSuspend(false)
         searchInput.clearFocus()
         topSearchInput.clearFocus()
         hideKeyboard()
