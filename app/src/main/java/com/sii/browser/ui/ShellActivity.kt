@@ -78,7 +78,6 @@ class ShellActivity : AppCompatActivity() {
     private var chromeImageUri: String? = null
     private var chromeImageDrawable: android.graphics.drawable.BitmapDrawable? = null
     private var appliedDialogTheme = 0
-    private var lastDebugBottom = -1
 
     override fun attachBaseContext(newBase: Context) {
         printBaseRef = java.lang.ref.WeakReference(newBase)
@@ -336,14 +335,6 @@ class ShellActivity : AppCompatActivity() {
                 maxOf(bars.bottom, ime.bottom)
             } else {
                 bars.bottom
-            }
-            if (bottom != lastDebugBottom) {
-                lastDebugBottom = bottom
-                android.util.Log.d(
-                    "SiiDebug",
-                    "insets ui=${settings.uiStyle()} suspend=${com.sii.browser.di.AppServices.homeSearchImeSuspend} " +
-                        "bars=${bars.bottom} ime=${ime.bottom} bottom=$bottom"
-                )
             }
             view.setPadding(
                 bars.left,
