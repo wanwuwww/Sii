@@ -54,7 +54,8 @@ class SuggestionPopup(
 
         val placement = measurePlacement(items, preferAbove, width)
         val displayItems = if (placement.above) items.reversed() else items
-        val column = buildColumn(displayItems)
+        // 向下展开时测量用的列可以直接复用，避免重复构建整排控件。
+        val column = if (placement.above) buildColumn(displayItems) else placement.column
 
         val currentPopup = popup
         val currentScroll = scroll
@@ -181,7 +182,8 @@ class SuggestionPopup(
         val xOffset: Int,
         val yOffset: Int,
         val width: Int,
-        val height: Int
+        val height: Int,
+        val column: LinearLayout
     )
 
     private fun measurePlacement(
@@ -227,7 +229,7 @@ class SuggestionPopup(
         } else {
             margin
         }
-        return Placement(above, xOffset, yOffset, width, height)
+        return Placement(above, xOffset, yOffset, width, height, measured)
     }
 
     private fun buildColumn(items: List<Suggestion>): LinearLayout {

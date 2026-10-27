@@ -8,6 +8,7 @@ import android.content.Context
 /** 剪贴板建议的解析：纯文字、纯链接、文字+链接三种。 */
 object ClipboardSuggestion {
     private val urlPattern = Regex("""https?://[^\s<>"']+""", RegexOption.IGNORE_CASE)
+    private val whitespace = Regex("\\s+")
 
     fun readAll(context: Context): List<Suggestion> {
         val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -25,7 +26,7 @@ object ClipboardSuggestion {
         if (links.isEmpty()) {
             return listOf(
                 Suggestion(
-                    title = raw.replace(Regex("\\s+"), " ").take(500),
+                    title = raw.replace(whitespace, " ").take(500),
                     value = raw,
                     kind = SuggestionKind.CLIPBOARD_TEXT
                 )
@@ -33,7 +34,7 @@ object ClipboardSuggestion {
         }
 
         val textPart = urlPattern.replace(raw, " ")
-            .replace(Regex("\\s+"), " ")
+            .replace(whitespace, " ")
             .trim()
             .take(500)
         val result = mutableListOf<Suggestion>()

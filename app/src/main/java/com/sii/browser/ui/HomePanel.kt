@@ -64,6 +64,7 @@ class HomePanel(
     private var bgJob: Job? = null
     private var bgKey: String? = null
     private var suggestJob: Job? = null
+    private var clipboardJob: Job? = null
     private var siteDragItem: FavoriteItem? = null
     private var siteDragView: View? = null
     private var siteDragStartX = 0f
@@ -580,12 +581,19 @@ class HomePanel(
             hideSuggestions()
             return
         }
-        val clips = ClipboardSuggestion.readAll(context)
-        if (clips.isEmpty()) {
-            hideSuggestions()
-            return
+        clipboardJob?.cancel()
+        clipboardJob = scope.launch {
+            // 读剪贴板和正则解析都放后台，避免与键盘动画抢主线程。
+            val clips = withContext(Dispatchers.IO) {
+                ClipboardSuggestion.readAll(context.applicationContext)
+            }
+            if (!searchInput.hasFocus() || searchInput.text.isNotEmpty()) return@launch
+            if (clips.isEmpty()) {
+                hideSuggestions()
+                return@launch
+            }
+            showSuggestions(clips, preferAbove = true)
         }
-        showSuggestions(clips, preferAbove = true)
     }
 
     private fun pickSuggestion(item: Suggestion) {

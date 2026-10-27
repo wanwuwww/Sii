@@ -1980,6 +1980,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var immersiveFullscreen = false
     /** IME 是否可见，用于悬浮底栏与键盘同步下移。 */
     private var imeInsetVisible = false
+    /** 每个标签的网页自绘全屏状态。 */
+    private val pageFullscreenStates = java.util.WeakHashMap<SiiWebView, Boolean>()
     private var translatePolling: kotlinx.coroutines.Job? = null
     private var translateStatus: android.widget.TextView? = null
     private var translateStatusFade: Runnable? = null
@@ -2025,6 +2027,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         immersiveFullscreen = !immersiveFullscreen
         applyFullscreen()
         renderMenuSheet()
+    }
+
+    /** 网页自己铺满视口的全屏（不走 WebChromeClient）也要收起悬浮底栏。 */
+    private fun applyPageFullscreenChrome() {
+        if (AppServices.settings.uiStyle() != 1) return
+        if (fullscreenContainer?.visibility == View.VISIBLE) return
+        val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
+        val active = pageFullscreenStates[tabManager.currentWebView] == true
+        dock.visibility = if (active) View.GONE else View.VISIBLE
     }
 
     /** 网页全屏时收起浏览器控件，退出时恢复。 */
@@ -3901,6 +3912,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyHomeChromeTint()
         updateToolbarActiveState()
         updateNavigationState()
+        pageFullscreenStates.remove(tabManager.currentWebView)
+        applyPageFullscreenChrome()
         // 同步启动，避免先画出一帧完整内容再重置透明导致的闪一下。
         if (wasWebVisible) homePanel?.playIntro()
     }
@@ -3919,6 +3932,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateToolbarActiveState()
         updateAddressBarForCurrent()
         updateNavigationState()
+        applyPageFullscreenChrome()
     }
 
     /** 主页背景图铺到浏览器外框；网页页恢复纯色工具栏。 */
@@ -6717,6 +6731,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     }
                 }
             }.also { registerJsBridge("SiiThemeColor", it) }
+            val fullscreenWebView = this
+            com.sii.browser.core.webview.FullscreenJsBridge { active ->
+                view?.post {
+                    pageFullscreenStates[fullscreenWebView] = active
+                    if (fullscreenWebView === tabManager.currentWebView) {
+                        applyPageFullscreenChrome()
+                    }
+                }
+            }.also { registerJsBridge("SiiFullscreen", it) }
             onLongPressHit = { result ->
                 if (!AppServices.settings.gameMode()) showLongPressMenu(result)
             }
@@ -7092,6 +7115,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (!AppServices.settings.isNightMode()) {
                 webView?.injectJavaScript(com.sii.browser.core.webview.ThemeColorJsBridge.SCRIPT)
             }
+            webView?.injectJavaScript(com.sii.browser.core.webview.FullscreenJsBridge.SCRIPT)
             // 暗色样式尽早注入；原生暗色开启时不再叠加 CSS。
             applyNightCss(webView)
             injectWebTextAccent(webView)
@@ -7157,6 +7181,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     webView?.let { injectThemeBackground(it, cached) }
                 }
             }
+            webView?.injectJavaScript(com.sii.browser.core.webview.FullscreenJsBridge.SCRIPT)
             // 电脑模式：去掉页面 viewport 的缩放锁（user-scalable=no / maximum-scale），恢复双指缩放。
             if (isDesktopForUrl(url)) {
                 webView?.injectJavaScript(VIEWPORT_DESKTOP_JS)
@@ -7340,6 +7365,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             fullscreenContainer?.elevation = 0f
             setBrowserChromeVisible(true)
             setVideoFullscreenSystemBars(false)
+            applyPageFullscreenChrome()
             (activity as? ShellActivity)?.applyOrientation()
             return true
         }
@@ -8835,6 +8861,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
             applyQuickEnginePosition()
             root.post { applyFloatingBarLift() }
+            applyPageFullscreenChrome()
             return
         }
         (address.parent as? ViewGroup)?.removeView(address)
@@ -8902,6 +8929,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateNavigationState()
         applyQuickEnginePosition()
         root.post { applyFloatingBarLift() }
+        applyPageFullscreenChrome()
     }
 
     /**
@@ -9642,10 +9670,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun applyDockImeOffset() {
         if (AppServices.settings.uiStyle() != 1) return
         val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
-        dock.animate().cancel()
         val hidden = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(12)
         val hide = !addressEditing && (imeInsetVisible || toolbarHidden)
-        dock.translationY = if (hide) hidden.toFloat() else 0f
+        val target = if (hide) hidden.toFloat() else 0f
+        // 键盘动画会逐帧回调，值没变就不再重复 cancel/invalidate。
+        if (dock.translationY == target) return
+        dock.animate().cancel()
+        dock.translationY = target
     }
 
     private fun isSafeExternalUrl(url: String?): Boolean {
