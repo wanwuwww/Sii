@@ -35,6 +35,7 @@ class HomeCustomizeFragment : Fragment() {
 
     companion object {
         const val ARG_TAB = "tab"
+        private const val PREVIEW_REFRESH_INTERVAL_MS = 80L
     }
 
     private lateinit var previewHost: FrameLayout
@@ -47,6 +48,7 @@ class HomeCustomizeFragment : Fragment() {
     private var activeTab = 0
     private var previewWeb = false
     private var previewRefreshPosted = false
+    private var previewRefreshAt = 0L
     private var menuExpanded = false
     private var fullscreen = false
     private var savedPreviewHeight = 0
@@ -1522,12 +1524,16 @@ class HomeCustomizeFragment : Fragment() {
     private fun refreshPreview() {
         if (previewRefreshPosted) return
         previewRefreshPosted = true
-        view?.post {
+        // 拖动滑块时每帧重建预览外壳开销很大，合并到 ~80ms 一次。
+        val wait = (PREVIEW_REFRESH_INTERVAL_MS -
+            (android.os.SystemClock.uptimeMillis() - previewRefreshAt)).coerceAtLeast(0L)
+        view?.postDelayed({
             previewRefreshPosted = false
-            if (!isAdded) return@post
+            if (!isAdded) return@postDelayed
+            previewRefreshAt = android.os.SystemClock.uptimeMillis()
             preview?.applyHomeStyle()
             previewShell?.render()
-        }
+        }, wait)
     }
 
     // ---- 通用控制行 ----

@@ -59,6 +59,7 @@ class HomePanel(
     private val editButton = view.findViewById<TextView>(R.id.home_edit)
 
     private var editing = false
+    private var lastSiteStyle: String? = null
     private var sites: List<FavoriteItem> = emptyList()
     private var suggestionPopup: SuggestionPopup? = null
     private var topSuggestionPopup: SuggestionPopup? = null
@@ -775,16 +776,24 @@ class HomePanel(
             !colorValue.isNullOrBlank() -> parseColorValue(colorValue)?.let { logo?.setTextColor(it) }
             else -> logo?.setTextColor(context.getColor(R.color.text_primary))
         }
-        grid.removeAllViews()
-        grid.columnCount = when (s.homeStyle()) {
+        val columns = when (s.homeStyle()) {
             1 -> 4
             2 -> 2
             else -> s.homeGridColumns().coerceIn(4, 6)
         }
+        if (grid.columnCount != columns) grid.columnCount = columns
         applySearchStyle()
         applyBackground()
         applySitesVisibility()
-        render()
+        // 只有站点格子样式变化才重建，拖动无关滑块时不再每帧重建网格。
+        val siteStyle = listOf(
+            s.homeIconSize(), s.homeIconRadius(), s.homeIconShape(),
+            s.homeShowLabels(), s.homeLabelSize(), s.homeCellGap()
+        ).joinToString(",")
+        if (siteStyle != lastSiteStyle) {
+            lastSiteStyle = siteStyle
+            render()
+        }
     }
 
     private fun parseColorValue(value: String?): Int? {
