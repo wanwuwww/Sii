@@ -303,8 +303,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
                 return@setOnClickListener
             }
-            tabManager.currentWebView?.goBack()
-            updateNavigationState()
+            tabManager.currentWebView?.let { webView ->
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                    updateNavigationState()
+                } else {
+                    backToHomeWithoutHistory()
+                }
+            }
         }
         forwardButton?.setOnClickListener {
             blurAddressInput()
@@ -315,8 +321,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 return@setOnClickListener
             }
             if (homeContainer?.visibility == View.VISIBLE) return@setOnClickListener
-            tabManager.currentWebView?.goForward()
-            updateNavigationState()
+            val webView = tabManager.currentWebView
+            if (webView?.canGoForward() == true) {
+                webView.goForward()
+                updateNavigationState()
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.nav_forward_unavailable,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
         homeButton.setOnClickListener { loadUrlFor(AppServices.settings.homeUrl()) }
         tabCountButton.setOnClickListener {
@@ -501,13 +516,22 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             webView.goBack()
             return true
         }
-        if (tabManager.size > 1) {
-            closeTabAndHint(tabManager.currentIndex)
-            return true
-        }
-        // 单标签且不能后退：最小化到后台而非退出（对齐方案 A）。
-        requireActivity().moveTaskToBack(true)
+        // 网页没有历史（从主页直达）：先回主页，主页再按返回才退出/最小化。
+        backToHomeWithoutHistory()
         return true
+    }
+
+    /** 无历史可退时把当前网页收成主页起点，避免按返回直接退出应用。 */
+    private fun backToHomeWithoutHistory() {
+        homeOverlayActive = false
+        homeForwardAvailable = false
+        tabManager.current?.let { tab ->
+            if (tab.url != ABOUT_HOME) {
+                tab.url = ABOUT_HOME
+                tab.webView.loadUrl("about:blank")
+            }
+        }
+        showHome(createTab = false)
     }
 
     /** 保存当前标签列表（无痕时不保存）。 */
@@ -672,6 +696,35 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 restoreSavedTabs(saved, preferHome = false)
             }
         })
+        fun clearSnapshot() {
+            lifecycleScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    AppServices.tabRepository.clear()
+                }
+            }
+        }
+        val autoDismiss = Runnable {
+            if (bar.parent == null) return@Runnable
+            bar.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(180)
+                .withEndAction { root.removeView(bar) }
+                .start()
+            // 自动忽略：清空快照，主页保持可操作，避免下次启动重复提示。
+            clearSnapshot()
+        }
+        bar.addView(android.widget.TextView(context).apply {
+            text = "×"
+            setTextSize(18f)
+            setTextColor(
+                if (dark) 0x99FFFFFF.toInt()
+                else context.getColor(R.color.text_secondary)
+            )
+            setPadding(dp(10), dp(6), dp(10), dp(6))
+            setOnClickListener {
+                bar.removeCallbacks(autoDismiss)
+                root.removeView(bar)
+                clearSnapshot()
+            }
+        })
         root.addView(
             bar,
             android.widget.FrameLayout.LayoutParams(
@@ -685,18 +738,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
         )
         bar.animate().alpha(1f).translationY(0f).setDuration(180).start()
-        bar.postDelayed({
-            if (bar.parent == null) return@postDelayed
-            bar.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(180)
-                .withEndAction { root.removeView(bar) }
-                .start()
-            // 自动忽略：清空快照，主页保持可操作，避免下次启动重复提示。
-            lifecycleScope.launch {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    AppServices.tabRepository.clear()
-                }
-            }
-        }, 5000)
+        bar.postDelayed(autoDismiss, 5000)
     }
 
 
@@ -2027,6 +2069,117 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         immersiveFullscreen = !immersiveFullscreen
         applyFullscreen()
         renderMenuSheet()
+    }
+
+    private fun homeTopAddressActive(): Boolean =
+        AppServices.settings.uiStyle() == 1 && AppServices.settings.homeTopAddress() &&
+            homeContainer?.visibility == View.VISIBLE
+
+    /**
+     * 新版悬浮风格下主页可把地址栏放回顶部（搜索框），离开主页后再回到胶囊。
+     * 主页顶部模式下胶囊只留工具行，地址区隐藏。
+     */
+    private fun applyHomeTopAddress() {
+        if (!::tabManager.isInitialized) return
+        if (AppServices.settings.uiStyle() != 1) return
+        val root = view ?: return
+        val content = root.findViewById<LinearLayout>(R.id.browser_content) ?: return
+        val address = root.findViewById<View>(R.id.address_bar) ?: return
+        val addressHost = root.findViewById<FrameLayout>(R.id.modern_address_host) ?: return
+        val toolRow = root.findViewById<LinearLayout>(R.id.modern_tool_row) ?: return
+        val wantTop = homeTopAddressActive()
+        if (wantTop) {
+            if (address.parent !== content) {
+                (address.parent as? ViewGroup)?.removeView(address)
+                content.addView(
+                    address,
+                    0,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                )
+            }
+            applyTopAddressStyle(address)
+            addressHost.visibility = View.GONE
+            toolRow.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
+            )
+            toolRow.gravity = android.view.Gravity.CENTER
+        } else {
+            if (address.parent !== addressHost) {
+                (address.parent as? ViewGroup)?.removeView(address)
+                addressHost.addView(
+                    address,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(44),
+                        android.view.Gravity.CENTER_VERTICAL
+                    )
+                )
+            }
+            addressHost.visibility = View.VISIBLE
+            applyDockAddressStyle(address)
+            toolRow.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)
+            )
+            toolRow.gravity = android.view.Gravity.NO_GRAVITY
+        }
+    }
+
+    private fun applyTopAddressStyle(address: View) {
+        val context = requireContext()
+        address.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        address.setPadding(dp(8), dp(6), dp(8), dp(6))
+        address.setBackgroundColor(context.getColor(R.color.toolbar_bg))
+        address.elevation = 0f
+        addressIconColor = null
+        addressInput?.setTextColor(context.getColor(R.color.text_primary))
+        addressInput?.setHintTextColor(context.getColor(R.color.text_secondary))
+        val tint = android.content.res.ColorStateList.valueOf(context.getColor(R.color.icon_primary))
+        view?.findViewById<ImageView>(R.id.refresh_button)?.imageTintList = tint
+        view?.findViewById<ImageView>(R.id.site_info_button)?.imageTintList = tint
+        updateSiteInfoIcon()
+        view?.findViewById<View>(R.id.modern_cancel)?.visibility = View.GONE
+        updateSiteInfoVisibility()
+        view?.findViewById<View>(R.id.refresh_button)?.visibility = View.VISIBLE
+    }
+
+    private fun applyDockAddressStyle(address: View) {
+        val night = AppServices.settings.isNightMode()
+        val primary = if (night) android.graphics.Color.WHITE
+        else requireContext().getColor(R.color.text_primary)
+        val secondary = if (night) 0x99FFFFFF.toInt()
+        else requireContext().getColor(R.color.text_secondary)
+        address.layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dp(44),
+            android.view.Gravity.CENTER_VERTICAL
+        )
+        address.setPadding(dp(8), 0, dp(6), 0)
+        address.background = null
+        address.elevation = 0f
+        addressIconColor = primary
+        addressInput?.setTextColor(primary)
+        addressInput?.setHintTextColor(secondary)
+        val tint = android.content.res.ColorStateList.valueOf(primary)
+        view?.findViewById<ImageView>(R.id.refresh_button)?.imageTintList = tint
+        view?.findViewById<ImageView>(R.id.site_info_button)?.imageTintList = tint
+        updateSiteInfoIcon()
+        view?.findViewById<TextView>(R.id.modern_cancel)?.let { cancel ->
+            cancel.setTextColor(ThemeAccent.color(requireContext()))
+            cancel.visibility = if (addressEditing) View.VISIBLE else View.GONE
+        }
+        if (addressEditing) {
+            view?.findViewById<View>(R.id.site_info_button)?.visibility = View.GONE
+        } else {
+            updateSiteInfoVisibility()
+        }
+        view?.findViewById<View>(R.id.refresh_button)?.visibility =
+            if (addressEditing) View.GONE else View.VISIBLE
     }
 
     /** 网页自己铺满视口的全屏（不走 WebChromeClient）也要收起悬浮底栏。 */
@@ -3914,6 +4067,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateNavigationState()
         pageFullscreenStates.remove(tabManager.currentWebView)
         applyPageFullscreenChrome()
+        applyHomeTopAddress()
+        if (AppServices.settings.uiStyle() != 1) renderTabs()
         // 同步启动，避免先画出一帧完整内容再重置透明导致的闪一下。
         if (wasWebVisible) homePanel?.playIntro()
     }
@@ -3933,6 +4088,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         updateAddressBarForCurrent()
         updateNavigationState()
         applyPageFullscreenChrome()
+        applyHomeTopAddress()
+        if (AppServices.settings.uiStyle() != 1) renderTabs()
     }
 
     /** 主页背景图铺到浏览器外框；网页页恢复纯色工具栏。 */
@@ -4551,7 +4708,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 })
             } else {
                 addView(TextView(context).apply {
-                    text = (tab.title.ifEmpty { tab.url.ifEmpty { "?" } }).take(1).uppercase()
+                    text = tabDisplayTitle(tab).take(1).uppercase()
                     setTextSize(30f)
                     setTextColor(accent)
                     gravity = android.view.Gravity.CENTER
@@ -4572,7 +4729,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val title = TextView(context).apply {
-            text = tab.title.ifEmpty { tab.url.ifEmpty { getString(R.string.menu_new_tab) } }
+            text = tabDisplayTitle(tab)
             setTextSize(13f)
             setTextColor(
                 if (active) ThemeAccent.color(context)
@@ -4700,7 +4857,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     })
                 } else {
                     addView(TextView(context).apply {
-                        text = tab.url.substringAfter("://").substringBefore('/').ifEmpty { "主页" }
+                        text = tabDisplayTitle(tab)
                         setTextSize(11f)
                         setTextColor(context.getColor(R.color.text_secondary))
                         gravity = android.view.Gravity.CENTER
@@ -6576,7 +6733,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /** 标签列表：点击切换，提供新建入口。 */
     private fun showTabsDialog() {
         val titles = tabManager.tabs.mapIndexed { index, tab ->
-            val name = tab.title.ifEmpty { tab.url.ifEmpty { getString(R.string.menu_new_tab) } }
+            val name = tabDisplayTitle(tab)
             if (index == tabManager.currentIndex) "· $name" else name
         }.toTypedArray()
         android.app.AlertDialog.Builder(requireContext())
@@ -6821,6 +6978,16 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
     }
 
+    /** 主页覆盖在网页上时，标签卡显示“主页”而不是被覆盖的网站。 */
+    private fun tabDisplayTitle(tab: Tab): String {
+        if (homeOverlayActive && homeContainer?.visibility == View.VISIBLE &&
+            tab === tabManager.current
+        ) {
+            return getString(R.string.menu_home)
+        }
+        return tab.title.ifEmpty { tab.url.ifEmpty { getString(R.string.menu_new_tab) } }
+    }
+
     private fun buildTabView(tab: Tab, index: Int): View {
         val context = requireContext()
         return LinearLayout(context).apply {
@@ -6844,7 +7011,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             isClickable = true
             setOnClickListener { switchToTab(index) }
             addView(TextView(context).apply {
-                text = tab.title.ifEmpty { tab.url.ifEmpty { getString(R.string.menu_new_tab) } }
+                text = tabDisplayTitle(tab)
                 setTextSize(12f)
                 setTextColor(
                     if (index == tabManager.currentIndex) 0xFF1A73E8.toInt() else 0xFF5F6368.toInt()
@@ -8852,16 +9019,25 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val addressHost = root.findViewById<FrameLayout>(R.id.modern_address_host) ?: return
         val toolRow = root.findViewById<LinearLayout>(R.id.modern_tool_row) ?: return
         val modernStyle = AppServices.settings.uiStyle() == 1
-        val already = if (modernStyle) address.parent === addressHost else address.parent === content
+        val topHome = modernStyle && homeTopAddressActive()
+        val already = if (modernStyle) {
+            if (topHome) address.parent === content else address.parent === addressHost
+        } else address.parent === content
         if (already) {
             if (modernStyle) {
-                applyModernChrome(root, address, bottom, progress, dock, addressHost, toolRow)
+                if (topHome) {
+                    applyTopAddressStyle(address)
+                    addressHost.visibility = View.GONE
+                } else {
+                    applyModernChrome(root, address, bottom, progress, dock, addressHost, toolRow)
+                }
             } else {
                 applyClassicChrome(root, address, bottom, progress, dock)
             }
             applyQuickEnginePosition()
             root.post { applyFloatingBarLift() }
             applyPageFullscreenChrome()
+            applyHomeTopAddress()
             return
         }
         (address.parent as? ViewGroup)?.removeView(address)
@@ -8930,6 +9106,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyQuickEnginePosition()
         root.post { applyFloatingBarLift() }
         applyPageFullscreenChrome()
+        applyHomeTopAddress()
     }
 
     /**
@@ -8938,6 +9115,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
      */
     private fun setModernEditing(editing: Boolean) {
         if (AppServices.settings.uiStyle() != 1) return
+        if (homeTopAddressActive()) {
+            addressEditing = editing
+            applyDockImeOffset()
+            return
+        }
         if (addressEditing == editing) return
         addressEditing = editing
         val root = view ?: return

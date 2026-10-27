@@ -171,6 +171,8 @@ object SettingsKeys {
     const val HOME_LOGO_SHOW = "homelogoshow"
     const val HOME_SEARCH_RADIUS_CUSTOM = "homesearchradiuscustom"
     const val HOME_SEARCH_ALPHA = "homesearchalpha"
+    /** 新版悬浮风格下，主页是否把地址栏显示在顶部。 */
+    const val HOME_TOP_ADDRESS = "hometopaddress"
     const val HOME_BG_APPLY_TOOLBAR = "homebgapplytoolbar"
     const val HOME_BG_APPLY_STATUS = "homebgapplystatus"
     const val HOME_BG_APPLY_MENU = "homebgapplymenu"

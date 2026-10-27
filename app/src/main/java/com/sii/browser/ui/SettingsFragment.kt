@@ -66,6 +66,7 @@ class SettingsFragment : Fragment() {
         SearchEntry("开源仓库", "关于", "repository github"),
         SearchEntry("主页风格", "外观与主页", "首页 极简 杂志", diyTab = 1),
         SearchEntry("搜索框位置", "外观与主页", "主页布局", diyTab = 1),
+        SearchEntry("主页顶部搜索框", "外观与主页", "地址栏 顶部 搜索框", diyTab = 1),
         SearchEntry("Logo", "外观与主页", "显示内容 时间", diyTab = 0),
         SearchEntry("常用网站", "外观与主页", "主页图标", diyTab = 4),
         SearchEntry("地址栏", "外观与主页", "address", diyTab = 2),

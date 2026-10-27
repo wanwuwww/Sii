@@ -423,6 +423,11 @@ interface BehaviorSettings {
 
     fun setHomeShowLabels(value: Boolean)
 
+    /** 新版悬浮风格下，主页是否把地址栏显示在顶部。 */
+    fun homeTopAddress(): Boolean
+
+    fun setHomeTopAddress(value: Boolean)
+
     /** 网站图标圆角：0 无 / 1 小 / 2 中 / 3 大。 */
     fun homeIconRadius(): Int
 

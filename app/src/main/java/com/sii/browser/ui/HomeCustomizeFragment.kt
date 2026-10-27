@@ -526,6 +526,10 @@ class HomeCustomizeFragment : Fragment() {
     }
 
     private fun searchRows(): List<View> = listOf(
+        switchRow("主页顶部显示地址栏", settings.homeTopAddress()) { on ->
+            settings.setHomeTopAddress(on)
+            refreshPreview()
+        },
         choiceRow(
             "主页风格",
             arrayOf("玻璃", "极简", "杂志"),

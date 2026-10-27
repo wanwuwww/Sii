@@ -520,6 +520,7 @@
     <string name="find_no_result">No results</string>
     <string name="nav_back">Back</string>
     <string name="nav_forward">Forward</string>
+    <string name="nav_forward_unavailable">No page to go forward to</string>
     <string name="menu_home">Home</string>
     <string name="tabs_title">Tabs</string>
     <string name="tab_undo">Undo close</string>

@@ -520,6 +520,7 @@
     <string name="find_no_result">无结果</string>
     <string name="nav_back">后退</string>
     <string name="nav_forward">前进</string>
+    <string name="nav_forward_unavailable">没有可前进的页面</string>
     <string name="menu_home">主页</string>
     <string name="tabs_title">标签页</string>
     <string name="tab_undo">撤销关闭</string>

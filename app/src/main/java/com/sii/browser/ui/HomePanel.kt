@@ -71,6 +71,8 @@ class HomePanel(
     private var siteDragStartY = 0f
     private var siteDragMode = false
     private var touchStartedInSearch = false
+    private var pullStartY = 0f
+    private var pullTriggered = false
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -177,7 +179,42 @@ class HomePanel(
             )
             render()
         }
+        setupPullToSearch()
         applyHomeStyle()
+    }
+
+    /** 主页下拉进入搜索：仅在顶部且向下拉动超过阈值时触发一次。 */
+    private fun setupPullToSearch() {
+        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
+        scroll.setOnTouchListener { target, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    pullStartY = event.rawY
+                    pullTriggered = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (!pullTriggered && !searchInput.hasFocus() &&
+                        !target.canScrollVertically(-1) &&
+                        event.rawY - pullStartY > dp(64)
+                    ) {
+                        pullTriggered = true
+                        focusSearch()
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> pullTriggered = false
+            }
+            false
+        }
+    }
+
+    private fun focusSearch() {
+        searchInput.requestFocus()
+        searchInput.setSelection(searchInput.text.length)
+        searchInput.post {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE)
+                as? android.view.inputmethod.InputMethodManager ?: return@post
+            imm.showSoftInput(searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
     }
 
     /** 按设置调整主页搜索框（连同 logo）的垂直位置。 */

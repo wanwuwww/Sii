@@ -634,6 +634,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeShowLabels(value: Boolean) =
         putBool(SettingsKeys.HOME_SHOW_LABELS, value)
 
+    override fun homeTopAddress(): Boolean =
+        bool(SettingsKeys.HOME_TOP_ADDRESS, SettingsDefaults.HOME_TOP_ADDRESS)
+
+    override fun setHomeTopAddress(value: Boolean) =
+        putBool(SettingsKeys.HOME_TOP_ADDRESS, value)
+
     override fun homeIconRadius(): Int =
         int(SettingsKeys.HOME_ICON_RADIUS, SettingsDefaults.HOME_ICON_RADIUS)
 

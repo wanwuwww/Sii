@@ -59,6 +59,9 @@ object SettingsDefaults {
     /** 搜索框高度：0 小 / 1 中 / 2 大。 */
     const val HOME_SEARCH_HEIGHT = 1
 
+    /** 新版悬浮风格下，主页顶部默认显示地址栏。 */
+    const val HOME_TOP_ADDRESS = true
+
     /** 主页背景色：0 跟随主题。 */
     const val HOME_BG_COLOR = 0
 
