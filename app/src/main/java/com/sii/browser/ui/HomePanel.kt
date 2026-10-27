@@ -84,7 +84,7 @@ class HomePanel(
     private var lastImeVisible = false
     private var searchFocusActive = false
     private var pendingFocusMove = false
-    private var searchScrollParams: LinearLayout.LayoutParams? = null
+    private var contentLayoutParams: LinearLayout.LayoutParams? = null
     private var othersDimmed = false
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -213,16 +213,16 @@ class HomePanel(
     }
 
     /**
-     * 聚焦主页搜索框时固定滚动区高度，避免键盘弹出触发整页重排（常用网站会闪）。
-     * 内容只用 translationY 平滑上移半个键盘高度。
+     * 聚焦主页搜索框时锁定内容区高度（而不是滚动区），键盘弹出只缩小视口，
+     * 内容子视图不重新测量，常用网站不会闪。
      */
     private fun enterSearchFocus() {
         if (previewMode) return
         searchFocusActive = true
         pendingFocusMove = true
-        lockScrollHeight()
+        lockContentHeight()
         setOthersDimmed(true)
-        if (lastImeHeight > 0) moveContentForFocus()
+        if (lastImeVisible) moveContentForFocus()
     }
 
     /** 聚焦时把 Logo / 常用网站淡化，形成轻微变暗的层次。 */
@@ -246,23 +246,21 @@ class HomePanel(
     }
 
     /** 聚焦时把滚动区高度停在当前值，键盘弹出不再触发整页重排。 */
-    private fun lockScrollHeight() {
-        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
-        if (searchScrollParams != null) return
-        val lp = scroll.layoutParams as? LinearLayout.LayoutParams ?: return
-        searchScrollParams = LinearLayout.LayoutParams(lp.width, lp.height, lp.weight)
-        if (scroll.height > 0) {
-            lp.height = scroll.height
-            lp.weight = 0f
-            scroll.layoutParams = lp
-        }
+    private fun lockContentHeight() {
+        val content = view.findViewById<View>(R.id.home_content) ?: return
+        if (contentLayoutParams != null) return
+        val lp = content.layoutParams as? LinearLayout.LayoutParams ?: return
+        if (content.height <= 0) return
+        contentLayoutParams = LinearLayout.LayoutParams(lp.width, lp.height, lp.weight)
+        lp.height = content.height
+        content.layoutParams = lp
     }
 
-    private fun restoreScrollParams() {
-        val scroll = view.findViewById<android.widget.ScrollView>(R.id.home_scroll) ?: return
-        val saved = searchScrollParams ?: return
-        scroll.layoutParams = saved
-        searchScrollParams = null
+    private fun restoreContentHeight() {
+        val content = view.findViewById<View>(R.id.home_content) ?: return
+        val saved = contentLayoutParams ?: return
+        content.layoutParams = saved
+        contentLayoutParams = null
     }
 
     private fun moveContentForFocus() {
@@ -271,9 +269,10 @@ class HomePanel(
         // 居中/顶部布局不移动；只有底部布局需要避开键盘。
         if (AppServices.settings.homeLayoutPos() != 2) return
         val content = view.findViewById<View>(R.id.home_content) ?: return
+        val lift = if (lastImeHeight > 0) lastImeHeight + dp(12) else dp(120)
         content.animate().cancel()
         content.animate()
-            .translationY(-dp(120).toFloat())
+            .translationY(-lift.toFloat())
             .setDuration(180L)
             .setInterpolator(android.view.animation.DecelerateInterpolator())
             .start()
@@ -283,11 +282,12 @@ class HomePanel(
         if (!searchFocusActive) return
         searchFocusActive = false
         pendingFocusMove = false
-        setOthersDimmed(false)
         val content = view.findViewById<View>(R.id.home_content)
         content?.animate()?.cancel()
-        content?.animate()?.translationY(0f)?.setDuration(160L)
-            ?.withEndAction { restoreScrollParams() }?.start()
+        content?.translationY = 0f
+        // 立即恢复高度，不等动画回调；键盘中途收起时不会卡在半截布局。
+        restoreContentHeight()
+        setOthersDimmed(false)
     }
 
     /** 顶部搜索框：可独立输入；中间搜索框在它显示时只负责把焦点转过去。 */
@@ -296,10 +296,10 @@ class HomePanel(
         topSearchInput.setOnFocusChangeListener { _, hasFocus ->
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
             if (hasFocus) {
-                lockScrollHeight()
+                lockContentHeight()
                 setOthersDimmed(true)
             } else if (!searchFocusActive) {
-                restoreScrollParams()
+                restoreContentHeight()
                 setOthersDimmed(false)
             }
         }
