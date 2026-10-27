@@ -86,6 +86,7 @@ class HomePanel(
     private var pendingFocusMove = false
     private var contentLayoutParams: LinearLayout.LayoutParams? = null
     private var othersDimmed = false
+    private var dimmedMainSearch = false
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -226,16 +227,27 @@ class HomePanel(
     }
 
     /** 聚焦时把 Logo / 常用网站淡化，形成轻微变暗的层次。 */
-    private fun setOthersDimmed(dim: Boolean) {
-        if (othersDimmed == dim) return
+    private fun setOthersDimmed(dim: Boolean, includeMainSearch: Boolean = false) {
+        if (othersDimmed == dim && (!dim || dimmedMainSearch == includeMainSearch)) return
         othersDimmed = dim
+        dimmedMainSearch = includeMainSearch
         val alpha = if (dim) 0.4f else 1f
-        listOfNotNull(
-            view.findViewById<View>(R.id.home_logo),
-            view.findViewById<View>(R.id.home_logo_icon),
-            view.findViewById<View>(R.id.home_clock),
-            view.findViewById<View>(R.id.home_sites_card)
-        ).forEach { target ->
+        val targets = mutableListOf<View>()
+        listOf(
+            R.id.home_logo,
+            R.id.home_logo_icon,
+            R.id.home_clock,
+            R.id.home_sites_card
+        ).forEach { id ->
+            view.findViewById<View>(id)?.let { targets.add(it) }
+        }
+        // 顶部搜索聚焦时，中间搜索框也要一起退到后面；失焦时总是恢复。
+        if (includeMainSearch || !dim) {
+            view.findViewById<View>(R.id.home_search_box)?.let { targets.add(it) }
+        } else {
+            view.findViewById<View>(R.id.home_search_box)?.alpha = 1f
+        }
+        targets.forEach { target ->
             target.animate().cancel()
             target.animate()
                 .alpha(alpha)
@@ -266,12 +278,15 @@ class HomePanel(
     private fun moveContentForFocus() {
         if (!searchFocusActive) return
         pendingFocusMove = false
-        // 居中/顶部布局不移动；只有底部布局需要避开键盘。
-        if (AppServices.settings.homeLayoutPos() != 2) return
-        val content = view.findViewById<View>(R.id.home_content) ?: return
+        val box = view.findViewById<View>(R.id.home_search_box) ?: return
+        // 居中/顶部布局不移动；底部布局只把搜索框抬到键盘上方。
+        if (AppServices.settings.homeLayoutPos() != 2) {
+            box.translationY = 0f
+            return
+        }
         val lift = if (lastImeHeight > 0) lastImeHeight + dp(12) else dp(120)
-        content.animate().cancel()
-        content.animate()
+        box.animate().cancel()
+        box.animate()
             .translationY(-lift.toFloat())
             .setDuration(180L)
             .setInterpolator(android.view.animation.DecelerateInterpolator())
@@ -285,6 +300,9 @@ class HomePanel(
         val content = view.findViewById<View>(R.id.home_content)
         content?.animate()?.cancel()
         content?.translationY = 0f
+        val box = view.findViewById<View>(R.id.home_search_box)
+        box?.animate()?.cancel()
+        box?.translationY = 0f
         // 立即恢复高度，不等动画回调；键盘中途收起时不会卡在半截布局。
         restoreContentHeight()
         setOthersDimmed(false)
@@ -297,7 +315,7 @@ class HomePanel(
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
             if (hasFocus) {
                 lockContentHeight()
-                setOthersDimmed(true)
+                setOthersDimmed(true, includeMainSearch = true)
             } else if (!searchFocusActive) {
                 restoreContentHeight()
                 setOthersDimmed(false)
@@ -480,6 +498,7 @@ class HomePanel(
         val content = view.findViewById<LinearLayout>(R.id.home_content) ?: return
         val box = view.findViewById<View>(R.id.home_search_box) ?: return
         val sites = view.findViewById<View>(R.id.home_sites_card) ?: return
+        box.translationY = 0f
         if (pos == 0) {
             if (content.indexOfChild(box) != 0) {
                 content.removeView(box)
