@@ -84,7 +84,6 @@ class HomePanel(
     private var lastImeVisible = false
     private var searchFocusActive = false
     private var pendingFocusMove = false
-    private var contentLayoutParams: LinearLayout.LayoutParams? = null
     private var othersDimmed = false
     private var dimmedMainSearch = false
 
@@ -257,22 +256,19 @@ class HomePanel(
         }
     }
 
-    /** 聚焦时把滚动区高度停在当前值，键盘弹出不再触发整页重排。 */
+    /**
+     * 锁定内容区最小高度。home_content 的父级是 ScrollView，不是 LinearLayout，
+     * 不能改 LinearLayout.LayoutParams；用 minimumHeight 让 fillViewport 无法压缩它。
+     */
     private fun lockContentHeight() {
         val content = view.findViewById<View>(R.id.home_content) ?: return
-        if (contentLayoutParams != null) return
-        val lp = content.layoutParams as? LinearLayout.LayoutParams ?: return
-        if (content.height <= 0) return
-        contentLayoutParams = LinearLayout.LayoutParams(lp.width, lp.height, lp.weight)
-        lp.height = content.height
-        content.layoutParams = lp
+        if (content.height <= 0 || content.minimumHeight > 0) return
+        content.minimumHeight = content.height
     }
 
     private fun restoreContentHeight() {
         val content = view.findViewById<View>(R.id.home_content) ?: return
-        val saved = contentLayoutParams ?: return
-        content.layoutParams = saved
-        contentLayoutParams = null
+        content.minimumHeight = 0
     }
 
     private fun moveContentForFocus() {
