@@ -211,27 +211,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             applyDockImeOffset()
             insets
         }
-        // API 30+ 键盘带动画，逐帧同步底栏位移；低版本沿用上面的 insets 回调。
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            androidx.core.view.ViewCompat.setWindowInsetsAnimationCallback(
-                view,
-                object : androidx.core.view.WindowInsetsAnimationCompat.Callback(
-                    androidx.core.view.WindowInsetsAnimationCompat.Callback
-                        .DISPATCH_MODE_CONTINUE_ON_SUBTREE
-                ) {
-                    override fun onProgress(
-                        insets: androidx.core.view.WindowInsetsCompat,
-                        runningAnimations: MutableList<androidx.core.view.WindowInsetsAnimationCompat>
-                    ): androidx.core.view.WindowInsetsCompat {
-                        imeInsetVisible = insets.isVisible(
-                            androidx.core.view.WindowInsetsCompat.Type.ime()
-                        )
-                        applyDockImeOffset()
-                        return insets
-                    }
-                }
-            )
-        }
         view.findViewById<View>(R.id.modern_chrome)?.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) applyFloatingBarLift()
         }
@@ -9727,10 +9706,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val hidden = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(12)
         val hide = !addressEditing && (imeInsetVisible || toolbarHidden)
         val target = if (hide) hidden.toFloat() else 0f
-        // 键盘动画会逐帧回调，值没变就不再重复 cancel/invalidate。
         if (dock.translationY == target) return
         dock.animate().cancel()
-        dock.translationY = target
+        dock.animate()
+            .translationY(target)
+            .setDuration(140L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
     }
 
     private fun isSafeExternalUrl(url: String?): Boolean {
