@@ -265,19 +265,20 @@ class SuggestionPopup(
         }
         val available = if (above) spaceAbove else spaceBelow
         val height = min(desired.coerceAtLeast(dp(48)), available.coerceAtLeast(dp(48)))
-        val xOffset = if (anchorX + width > frame.right - margin) {
-            (frame.right - margin - width - anchorX).coerceAtMost(0)
-        } else if (anchorX < frame.left + margin) {
-            frame.left + margin - anchorX
-        } else 0
-        // 弹层比锚点窄时居中，否则会看起来整体偏左。
-        val centeredOffset = if (width < anchor.width) xOffset + (anchor.width - width) / 2 else xOffset
+        // 弹层始终与锚点居中对齐，再夹到可见区域内，避免整体偏左/偏右。
+        var xOffset = if (anchor.width > 0) (anchor.width - width) / 2 else 0
+        if (anchorX + xOffset + width > frame.right - margin) {
+            xOffset = frame.right - margin - width - anchorX
+        }
+        if (anchorX + xOffset < frame.left + margin) {
+            xOffset = frame.left + margin - anchorX
+        }
         val yOffset = if (above) {
             -(anchor.height + margin + height)
         } else {
             margin
         }
-        return Placement(above, centeredOffset, yOffset, width, height, measured)
+        return Placement(above, xOffset, yOffset, width, height, measured)
     }
 
     /** 主页搜索框的建议弹层跟随其圆角设置。 */
