@@ -5771,7 +5771,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         addressInput?.clearFocus()
         hideKeyboard()
         hideSuggestions()
-        if (AppServices.settings.uiStyle() == 1) {
+        // 滚动收起的底栏保持收起：触摸网页也会走到这里，复位会把底栏弹出来。
+        if (AppServices.settings.uiStyle() == 1 && !toolbarHidden) {
             // 取消编辑时键盘还在收起，底栏先复位；等键盘完全收起再校正一次。
             val dock = view?.findViewById<View>(R.id.modern_chrome)
             if (dock != null) {
