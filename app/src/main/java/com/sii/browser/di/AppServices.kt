@@ -132,6 +132,9 @@ object AppServices {
     /** 内存紧张时释放浏览器标签缩略图。 */
     var trimThumbnails: (() -> Unit)? = null
 
+    /** 主页搜索聚焦时不让根窗口为键盘预留高度，让键盘直接盖住悬浮工具栏。 */
+    var homeSearchImeSuspend: Boolean = false
+
     /** 密码库列表点击 → 填充到当前页面（由 BrowserFragment 注册）。 */
     var fillPassword: ((String, String) -> Unit)? = null
 

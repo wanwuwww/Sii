@@ -218,6 +218,7 @@ class HomePanel(
      */
     private fun enterSearchFocus() {
         if (previewMode) return
+        setImeSuspend(true)
         searchFocusActive = true
         pendingFocusMove = true
         lockContentHeight()
@@ -271,6 +272,14 @@ class HomePanel(
         content.minimumHeight = 0
     }
 
+    /** 主页搜索聚焦时让键盘直接覆盖悬浮工具栏，不为键盘预留窗口高度。 */
+    private fun setImeSuspend(suspend: Boolean) {
+        if (previewMode) return
+        if (AppServices.homeSearchImeSuspend == suspend) return
+        AppServices.homeSearchImeSuspend = suspend
+        (context as? ShellActivity)?.refreshImeInsets()
+    }
+
     private fun moveContentForFocus() {
         if (!searchFocusActive) return
         pendingFocusMove = false
@@ -294,6 +303,7 @@ class HomePanel(
     private fun exitSearchFocus() {
         if (!searchFocusActive) return
         searchFocusActive = false
+        setImeSuspend(false)
         pendingFocusMove = false
         val content = view.findViewById<View>(R.id.home_content)
         content?.animate()?.cancel()
@@ -312,9 +322,11 @@ class HomePanel(
         topSearchInput.setOnFocusChangeListener { _, hasFocus ->
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
             if (hasFocus) {
+                setImeSuspend(true)
                 lockContentHeight()
                 setOthersDimmed(true, includeMainSearch = true)
             } else if (!searchFocusActive) {
+                setImeSuspend(false)
                 restoreContentHeight()
                 setOthersDimmed(false)
             }
@@ -957,6 +969,7 @@ class HomePanel(
 
     /** View 销毁时释放浮层、背景解码任务与图片引用。 */
     fun release() {
+        setImeSuspend(false)
         hideSuggestions()
         topSuggestJob?.cancel()
         topSuggestionPopup?.dismiss(false)

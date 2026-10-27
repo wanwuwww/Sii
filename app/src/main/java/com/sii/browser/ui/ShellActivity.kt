@@ -328,8 +328,10 @@ class ShellActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            // 经典工具栏不随键盘上移；只有悬浮胶囊需要让出键盘高度。
-            val bottom = if (settings.uiStyle() == 1) {
+            // 经典工具栏不随键盘上移；悬浮胶囊只在地址栏编辑等场景让出键盘高度。
+            val bottom = if (settings.uiStyle() == 1 && !
+                com.sii.browser.di.AppServices.homeSearchImeSuspend
+            ) {
                 maxOf(bars.bottom, ime.bottom)
             } else {
                 bars.bottom
@@ -341,6 +343,13 @@ class ShellActivity : AppCompatActivity() {
                 bottom
             )
             insets
+        }
+    }
+
+    /** 主页搜索聚焦状态变化后重新计算窗口 insets。 */
+    fun refreshImeInsets() {
+        findViewById<View>(R.id.shell_root)?.let {
+            androidx.core.view.ViewCompat.requestApplyInsets(it)
         }
     }
 

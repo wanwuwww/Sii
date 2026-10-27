@@ -9703,6 +9703,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun applyDockImeOffset() {
         if (AppServices.settings.uiStyle() != 1) return
         val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
+        // 主页搜索聚焦时键盘直接盖住底栏，不做收起动画。
+        if (AppServices.homeSearchImeSuspend) {
+            if (dock.translationY != 0f) {
+                dock.animate().cancel()
+                dock.translationY = 0f
+            }
+            return
+        }
         val hidden = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(12)
         val hide = !addressEditing && (imeInsetVisible || toolbarHidden)
         val target = if (hide) hidden.toFloat() else 0f
