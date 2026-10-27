@@ -228,7 +228,13 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun uiStyle(): Int =
         int(SettingsKeys.UI_STYLE, SettingsDefaults.UI_STYLE).coerceIn(0, 1)
 
-    override fun setUiStyle(value: Int) = putInt(SettingsKeys.UI_STYLE, value.coerceIn(0, 1))
+    override fun setUiStyle(value: Int) {
+        putInt(SettingsKeys.UI_STYLE, value.coerceIn(0, 1))
+        // 悬浮胶囊工具栏下不支持主页搜索框置底，切过去时拉回居中。
+        if (value == 1 && homeLayoutPos() == 2) {
+            putInt(SettingsKeys.HOME_LAYOUT_POS, 1)
+        }
+    }
 
     override fun settingsCardAlpha(): Int =
         int(SettingsKeys.SETTINGS_CARD_ALPHA, 100).coerceIn(0, 100)
@@ -602,9 +608,11 @@ class DataStoreSettings(private val context: Context) : Settings {
         int(SettingsKeys.HOME_LAYOUT_POS, 1)
 
     override fun setHomeLayoutPos(value: Int) {
-        putInt(SettingsKeys.HOME_LAYOUT_POS, value)
+        // 悬浮胶囊工具栏下不支持主页搜索框置底。
+        val target = if (value == 2 && uiStyle() == 1) 1 else value
+        putInt(SettingsKeys.HOME_LAYOUT_POS, target)
         // 搜索框已在顶部时，不再叠加主页顶部搜索入口。
-        if (value == 0) putBool(SettingsKeys.HOME_TOP_ADDRESS, false)
+        if (target == 0) putBool(SettingsKeys.HOME_TOP_ADDRESS, false)
     }
 
     override fun homeLogoText(): String =

@@ -546,8 +546,9 @@ class HomeCustomizeFragment : Fragment() {
         },
         choiceRow(
             getString(R.string.settings_home_layout),
-            arrayOf("顶部", "居中", "底部"),
-            settings.homeLayoutPos().coerceIn(0, 2)
+            if (settings.uiStyle() == 1) arrayOf("顶部", "居中")
+            else arrayOf("顶部", "居中", "底部"),
+            settings.homeLayoutPos().coerceIn(0, if (settings.uiStyle() == 1) 1 else 2)
         ) { index ->
             settings.setHomeLayoutPos(index)
             refreshPreview()

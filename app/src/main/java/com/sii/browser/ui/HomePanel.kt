@@ -279,8 +279,10 @@ class HomePanel(
         if (!searchFocusActive) return
         pendingFocusMove = false
         val box = view.findViewById<View>(R.id.home_search_box) ?: return
-        // 居中/顶部布局不移动；底部布局只把搜索框抬到键盘上方。
-        if (AppServices.settings.homeLayoutPos() != 2) {
+        // 居中/顶部布局不移动；悬浮胶囊不支持底部，也不移动。
+        if (AppServices.settings.uiStyle() == 1 ||
+            AppServices.settings.homeLayoutPos() != 2
+        ) {
             box.translationY = 0f
             return
         }
@@ -460,7 +462,8 @@ class HomePanel(
     /** 按设置调整主页搜索框（连同 logo）的垂直位置。 */
     fun applyLayoutPos() {
         val root = view.findViewById<LinearLayout>(R.id.home_content) ?: return
-        val pos = AppServices.settings.homeLayoutPos()
+        val raw = AppServices.settings.homeLayoutPos()
+        val pos = if (AppServices.settings.uiStyle() == 1 && raw == 2) 1 else raw
         root.gravity = when (pos) {
             0 -> android.view.Gravity.TOP
             2 -> android.view.Gravity.BOTTOM
