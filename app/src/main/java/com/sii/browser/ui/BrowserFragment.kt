@@ -6805,6 +6805,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (!AppServices.settings.gameMode()) showLongPressMenu(result)
             }
             onScrollDy = { dy -> handleToolbarAutoHide(dy) }
+            onTouchDown = {
+                // 触摸网页时清掉之前的滚动累计与待执行方向，防止回弹把隐藏的工具栏弹回来。
+                this@BrowserFragment.scrollAccum = 0
+                this@BrowserFragment.pendingScrollDir = 0
+                this@BrowserFragment.view?.removeCallbacks(this@BrowserFragment.applyScrollDirection)
+            }
             onDoubleTap = {
                 if (!AppServices.settings.gameMode()) {
                     when (AppServices.settings.gestureDoubleTap()) {

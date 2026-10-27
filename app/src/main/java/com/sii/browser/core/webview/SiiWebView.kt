@@ -51,6 +51,11 @@ class SiiWebView @JvmOverloads constructor(
     /** 滚动回调（dy = 本次滚动位移；用于工具栏自动隐藏）。 */
     var onScrollDy: ((Int) -> Unit)? = null
 
+    /** 手指按下网页：清掉上一次的滚动累计，避免触摸瞬间的回弹误判方向。 */
+    var onTouchDown: (() -> Unit)? = null
+
+    private var lastTouchDownAt = 0L
+
     /** 双击网页回调（动作由浏览器按设置决定）。 */
     var onDoubleTap: (() -> Unit)? = null
 
@@ -67,7 +72,10 @@ class SiiWebView @JvmOverloads constructor(
 
     override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
         super.onScrollChanged(l, t, oldl, oldt)
-        onScrollDy?.invoke(t - oldt)
+        // 按下瞬间停住惯性滚动/回弹会先报一个反向位移，忽略这段时间的滚动。
+        if (android.os.SystemClock.uptimeMillis() - lastTouchDownAt >= 120L) {
+            onScrollDy?.invoke(t - oldt)
+        }
     }
 
     /** 文本选择菜单附加项（文案 + 回调，参数为选中文本）。 */
@@ -120,6 +128,8 @@ class SiiWebView @JvmOverloads constructor(
     override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
         if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
             lastTouchPoint = android.graphics.PointF(event.x, event.y)
+            lastTouchDownAt = android.os.SystemClock.uptimeMillis()
+            onTouchDown?.invoke()
         }
         doubleTapDetector.onTouchEvent(event)
         return super.onTouchEvent(event)
