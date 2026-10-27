@@ -216,6 +216,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 (activity as? ShellActivity)?.refreshImeInsets()
             }
             applyDockImeOffset()
+            if (imeInsetVisible && addressEditing && pendingAddressClipboard) {
+                showPendingAddressClipboard()
+            }
             insets
         }
         view.findViewById<View>(R.id.modern_chrome)?.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
@@ -2010,6 +2013,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var imeInsetVisible = false
     private var imeInsetBottom = 0
     private var lastDockDebugTarget = Float.MIN_VALUE
+    /** 地址栏聚焦后等键盘、底栏就位再弹剪贴板建议。 */
+    private var pendingAddressClipboard = false
     /** 每个标签的网页自绘全屏状态。 */
     private val pageFullscreenStates = java.util.WeakHashMap<SiiWebView, Boolean>()
     private var translatePolling: kotlinx.coroutines.Job? = null
@@ -5547,10 +5552,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     addressInput?.text?.toString().orEmpty().isBlank()
                 ) {
                     suggestionsSuppressed = false
-                    val clips = ClipboardSuggestion.readAll(requireContext())
-                    if (clips.isNotEmpty()) showSuggestions(clips, preferAbove = true)
+                    pendingAddressClipboard = true
+                    if (imeInsetVisible) {
+                        showPendingAddressClipboard()
+                    } else {
+                        view?.postDelayed({ if (addressEditing) showPendingAddressClipboard() }, 420L)
+                    }
                 }
             } else {
+                pendingAddressClipboard = false
                 addressInput?.animate()
                     ?.scaleX(1f)
                     ?.scaleY(1f)
@@ -5686,6 +5696,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
             }
             return out.distinct()
+        }
+    }
+
+    private fun showPendingAddressClipboard() {
+        if (!pendingAddressClipboard) return
+        pendingAddressClipboard = false
+        val input = addressInput ?: return
+        if (!input.hasFocus() || input.text.toString().isNotBlank()) return
+        val clips = ClipboardSuggestion.readAll(requireContext())
+        if (clips.isNotEmpty() && input.hasFocus()) {
+            showSuggestions(clips, preferAbove = true)
         }
     }
 
