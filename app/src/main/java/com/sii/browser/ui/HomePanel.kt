@@ -86,6 +86,7 @@ class HomePanel(
     private var pendingFocusMove = false
     private var othersDimmed = false
     private var dimmedMainSearch = false
+    private var homeOriginalHeight = Int.MIN_VALUE
 
     private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -221,6 +222,7 @@ class HomePanel(
         setImeSuspend(true)
         searchFocusActive = true
         pendingFocusMove = true
+        lockHomeHeight()
         lockContentHeight()
         setOthersDimmed(true)
         if (lastImeVisible) moveContentForFocus()
@@ -255,6 +257,27 @@ class HomePanel(
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
         }
+    }
+
+    /**
+     * 锁住主页视图高度：即使键盘弹出让父容器变矮，主页内部也不重新布局，
+     * 超出部分由父容器裁剪，用户看到的是键盘直接盖住底栏。
+     */
+    private fun lockHomeHeight() {
+        if (previewMode || homeOriginalHeight != Int.MIN_VALUE) return
+        val lp = view.layoutParams ?: return
+        if (view.height <= 0) return
+        homeOriginalHeight = lp.height
+        lp.height = view.height
+        view.layoutParams = lp
+    }
+
+    private fun unlockHomeHeight() {
+        if (homeOriginalHeight == Int.MIN_VALUE) return
+        val lp = view.layoutParams ?: return
+        lp.height = homeOriginalHeight
+        view.layoutParams = lp
+        homeOriginalHeight = Int.MIN_VALUE
     }
 
     /**
@@ -304,6 +327,7 @@ class HomePanel(
         if (!searchFocusActive) return
         searchFocusActive = false
         setImeSuspend(false)
+        unlockHomeHeight()
         pendingFocusMove = false
         val content = view.findViewById<View>(R.id.home_content)
         content?.animate()?.cancel()
@@ -323,10 +347,12 @@ class HomePanel(
             topSearchBox.elevation = if (hasFocus) dp(6).toFloat() else 0f
             if (hasFocus) {
                 setImeSuspend(true)
+                lockHomeHeight()
                 lockContentHeight()
                 setOthersDimmed(true, includeMainSearch = true)
             } else if (!searchFocusActive) {
                 setImeSuspend(false)
+                unlockHomeHeight()
                 restoreContentHeight()
                 setOthersDimmed(false)
             }
