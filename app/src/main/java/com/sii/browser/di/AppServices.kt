@@ -135,6 +135,9 @@ object AppServices {
     /** 主页搜索聚焦时不让根窗口为键盘预留高度，让键盘直接盖住悬浮工具栏。 */
     var homeSearchImeSuspend: Boolean = false
 
+    /** 地址栏编辑时也不缩页面，只把悬浮底栏抬到键盘上方。 */
+    var addressEditImeSuspend: Boolean = false
+
     /** 密码库列表点击 → 填充到当前页面（由 BrowserFragment 注册）。 */
     var fillPassword: ((String, String) -> Unit)? = null
 

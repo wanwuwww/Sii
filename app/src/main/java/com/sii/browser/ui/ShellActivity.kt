@@ -330,9 +330,9 @@ class ShellActivity : AppCompatActivity() {
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
             // 经典工具栏不随键盘上移；悬浮胶囊只在地址栏编辑等场景让出键盘高度。
-            val bottom = if (settings.uiStyle() == 1 && !
-                com.sii.browser.di.AppServices.homeSearchImeSuspend
-            ) {
+            val suspend = com.sii.browser.di.AppServices.homeSearchImeSuspend ||
+                com.sii.browser.di.AppServices.addressEditImeSuspend
+            val bottom = if (settings.uiStyle() == 1 && !suspend) {
                 maxOf(bars.bottom, ime.bottom)
             } else {
                 bars.bottom

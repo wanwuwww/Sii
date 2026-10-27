@@ -208,6 +208,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             imeInsetVisible = insets.isVisible(
                 androidx.core.view.WindowInsetsCompat.Type.ime()
             )
+            imeInsetBottom = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.ime()
+            ).bottom
+            if (!imeInsetVisible && !addressEditing && AppServices.addressEditImeSuspend) {
+                AppServices.addressEditImeSuspend = false
+                (activity as? ShellActivity)?.refreshImeInsets()
+            }
             applyDockImeOffset()
             insets
         }
@@ -2001,6 +2008,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var immersiveFullscreen = false
     /** IME 是否可见，用于悬浮底栏与键盘同步下移。 */
     private var imeInsetVisible = false
+    private var imeInsetBottom = 0
     private var lastDockDebugTarget = Float.MIN_VALUE
     /** 每个标签的网页自绘全屏状态。 */
     private val pageFullscreenStates = java.util.WeakHashMap<SiiWebView, Boolean>()
@@ -8983,6 +8991,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (AppServices.settings.uiStyle() != 1) return
         if (addressEditing == editing) return
         addressEditing = editing
+        AppServices.addressEditImeSuspend = editing
+        (activity as? ShellActivity)?.refreshImeInsets()
         val root = view ?: return
         val cancel = root.findViewById<View>(R.id.modern_cancel) ?: return
         val tools = root.findViewById<View>(R.id.modern_tool_row) ?: return
@@ -9713,6 +9723,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun applyDockImeOffset() {
         if (AppServices.settings.uiStyle() != 1) return
         val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
+        // 地址栏编辑时页面不缩，只把底栏抬到键盘上方。
+        if (AppServices.addressEditImeSuspend) {
+            val target = -imeInsetBottom.toFloat()
+            if (dock.translationY != target) {
+                dock.animate().cancel()
+                dock.translationY = target
+            }
+            return
+        }
         // 主页搜索聚焦时键盘直接盖住底栏，不做收起动画。
         if (AppServices.homeSearchImeSuspend) {
             if (dock.translationY != 0f) {
