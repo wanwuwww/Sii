@@ -205,7 +205,7 @@ class HomePanel(
                 exitSearchInput()
             }
             lastImeVisible = imeVisible
-            if (imeVisible && pendingFocusMove) moveContentForIme(lastImeHeight)
+            if (imeVisible && pendingFocusMove) moveContentForFocus()
             insets
         }
         applyHomeStyle()
@@ -220,7 +220,7 @@ class HomePanel(
         searchFocusActive = true
         pendingFocusMove = true
         lockScrollHeight()
-        if (lastImeHeight > 0) moveContentForIme(lastImeHeight)
+        if (lastImeHeight > 0) moveContentForFocus()
     }
 
     /** 聚焦时把滚动区高度停在当前值，键盘弹出不再触发整页重排。 */
@@ -243,14 +243,16 @@ class HomePanel(
         searchScrollParams = null
     }
 
-    private fun moveContentForIme(imeHeight: Int) {
+    private fun moveContentForFocus() {
         if (!searchFocusActive) return
         pendingFocusMove = false
+        // 居中/顶部布局不移动；只有底部布局需要避开键盘。
+        if (AppServices.settings.homeLayoutPos() != 2) return
         val content = view.findViewById<View>(R.id.home_content) ?: return
         content.animate().cancel()
         content.animate()
-            .translationY(-(imeHeight / 3).toFloat())
-            .setDuration(200L)
+            .translationY(-dp(120).toFloat())
+            .setDuration(180L)
             .setInterpolator(android.view.animation.DecelerateInterpolator())
             .start()
     }
@@ -451,10 +453,16 @@ class HomePanel(
     private fun applySearchBoxOrder(pos: Int) {
         val content = view.findViewById<LinearLayout>(R.id.home_content) ?: return
         val box = view.findViewById<View>(R.id.home_search_box) ?: return
+        val sites = view.findViewById<View>(R.id.home_sites_card) ?: return
         if (pos == 0) {
             if (content.indexOfChild(box) != 0) {
                 content.removeView(box)
                 content.addView(box, 0)
+            }
+            // 搜索框在顶部时，常用网站紧跟搜索框，Logo/时钟排到常用网站下方。
+            if (content.indexOfChild(sites) != 1) {
+                content.removeView(sites)
+                content.addView(sites, 1)
             }
             return
         }
@@ -466,6 +474,10 @@ class HomePanel(
         if (content.indexOfChild(box) != anchor + 1) {
             content.removeView(box)
             content.addView(box, (anchor + 1).coerceAtMost(content.childCount))
+        }
+        if (content.indexOfChild(sites) != content.childCount - 1) {
+            content.removeView(sites)
+            content.addView(sites)
         }
     }
 
