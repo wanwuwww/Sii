@@ -394,20 +394,26 @@ class AdBlockEngine {
     /** 生成当前域名的元素隐藏 CSS；`#@#` 例外优先。 */
     @Synchronized
     fun cosmeticCssFor(host: String?): String {
-        rebuildIndexIfNeeded()
-        if (cosmeticRules.isEmpty()) return ""
-        val exceptions = cosmeticRules
-            .filter { (it.privacyCategory == null || privacyEnabled) && it.isException && it.appliesTo(host) }
-            .map { it.selector }
-            .toSet()
-        val selectors = cosmeticRules
-            .filter { (it.privacyCategory == null || privacyEnabled) && !it.isException && it.appliesTo(host) }
-            .map { it.selector }
-            .filter { it !in exceptions }
-            .distinct()
+        val selectors = cosmeticSelectorsFor(host)
         if (selectors.isEmpty()) return ""
         return selectors.chunked(100).joinToString("\n") { chunk ->
             chunk.joinToString(",") + "{display:none!important}"
         }
+    }
+
+    /** 当前域名实际生效的元素隐藏选择器（去掉 `#@#` 例外），供命中统计使用。 */
+    @Synchronized
+    fun cosmeticSelectorsFor(host: String?): List<String> {
+        rebuildIndexIfNeeded()
+        if (cosmeticRules.isEmpty()) return emptyList()
+        val exceptions = cosmeticRules
+            .filter { (it.privacyCategory == null || privacyEnabled) && it.isException && it.appliesTo(host) }
+            .map { it.selector }
+            .toSet()
+        return cosmeticRules
+            .filter { (it.privacyCategory == null || privacyEnabled) && !it.isException && it.appliesTo(host) }
+            .map { it.selector }
+            .filter { it !in exceptions }
+            .distinct()
     }
 }

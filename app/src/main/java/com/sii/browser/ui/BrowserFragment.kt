@@ -1579,6 +1579,113 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .commit()
     }
 
+    /** 本页请求列表：仅拦截层记录的元数据，可复制或直接加为拦截规则。 */
+    private fun showPageRequests() {
+        if (!AppServices.settings.pageRequests()) {
+            Toast.makeText(requireContext(), R.string.page_requests_disabled, Toast.LENGTH_LONG)
+                .show()
+            return
+        }
+        val webView = tabManager.currentWebView ?: return
+        val entries = com.sii.browser.core.webview.PageRequests.list(webView)
+        if (entries.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.page_requests_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val context = requireContext()
+        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        entries.forEach { list.addView(buildRequestRow(it)) }
+        val scroll = android.widget.ScrollView(context).apply { addView(list) }
+        val dialog = android.app.AlertDialog.Builder(context)
+            .setTitle(getString(R.string.page_requests_title, entries.size))
+            .setView(scroll)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.setOnShowListener {
+            val metrics = resources.displayMetrics
+            dialog.window?.setLayout(
+                (metrics.widthPixels * 0.92f).toInt(),
+                (metrics.heightPixels * 0.7f).toInt()
+            )
+        }
+        dialog.show()
+    }
+
+    private fun buildRequestRow(
+        entry: com.sii.browser.core.webview.PageRequests.Entry
+    ): View {
+        val context = requireContext()
+        val host = runCatching { android.net.Uri.parse(entry.url).host }.getOrNull().orEmpty()
+        val path = entry.url.substringAfter("://", entry.url)
+            .removePrefix(host)
+            .ifEmpty { "/" }
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(9), dp(18), dp(9))
+            isClickable = true
+            addView(TextView(context).apply {
+                val blocked = if (entry.blocked) " · " + getString(R.string.page_requests_blocked) else ""
+                text = requestKindLabel(entry.kind) + " · " + host.ifEmpty { entry.url.take(40) } + blocked
+                setTextSize(13.5f)
+                setTextColor(
+                    if (entry.blocked) ThemeAccent.color(context)
+                    else context.getColor(R.color.text_primary)
+                )
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+            addView(TextView(context).apply {
+                text = path
+                setTextSize(11.5f)
+                setTextColor(context.getColor(R.color.text_secondary))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+            })
+            setOnClickListener { copyToClipboard(entry.url) }
+            setOnLongClickListener {
+                showRequestActions(entry)
+                true
+            }
+        }
+    }
+
+    /** 长按请求：复制或生成拦截规则（整站 / 该路径）。 */
+    private fun showRequestActions(entry: com.sii.browser.core.webview.PageRequests.Entry) {
+        val host = runCatching { android.net.Uri.parse(entry.url).host }.getOrNull().orEmpty()
+        if (host.isEmpty()) return
+        val items = arrayOf(
+            getString(R.string.page_requests_copy),
+            getString(R.string.page_requests_rule_host),
+            getString(R.string.page_requests_rule_path)
+        )
+        android.app.AlertDialog.Builder(requireContext())
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> copyToClipboard(entry.url)
+                    1 -> addRuleWithToast("||${host.lowercase()}^")
+                    2 -> addRuleWithToast("||" + entry.url.substringAfter("://").substringBefore('#'))
+                }
+            }
+            .show()
+    }
+
+    private fun addRuleWithToast(line: String) {
+        addCustomRuleLines(listOf(line))
+        Toast.makeText(requireContext(), R.string.page_requests_added, Toast.LENGTH_SHORT).show()
+    }
+
+    /** 请求类型文案（核心层只存英文键）。 */
+    private fun requestKindLabel(kind: String): String = when (kind) {
+        "script" -> "脚本"
+        "style" -> "样式"
+        "image" -> "图片"
+        "font" -> "字体"
+        "media" -> "媒体"
+        "document" -> "文档"
+        "data" -> "数据"
+        else -> "其它"
+    }
+
     /** 长按菜单：按命中类型（链接/图片）展示对应操作。 */
     private fun showLongPressMenu(result: android.webkit.WebView.HitTestResult) {
         val url = result.extra ?: return
@@ -1833,15 +1940,80 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val host = tabManager.current?.url
             ?.let { runCatching { android.net.Uri.parse(it).host }.getOrNull() }
             ?: return
-        val line = "||${host.lowercase()}^"
+        addCustomRuleLines(listOf("||${host.lowercase()}^"))
+        Toast.makeText(requireContext(), getString(R.string.ad_marked, host), Toast.LENGTH_SHORT).show()
+    }
+
+    /** 选取结果确认：逐条列出候选选择器（带匹配数），可试隐 3 秒或直接写入规则。 */
+    private fun showAdPickDialog(candidates: List<com.sii.browser.core.adblock.AdPickBridge.Candidate>) {
+        if (candidates.isEmpty()) return
+        val labels = candidates.map {
+            "${it.label}：${it.selector}（匹配 ${it.count} 个）"
+        }.toTypedArray()
+        val checked = BooleanArray(candidates.size) { true }
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.ad_pick_title)
+            .setMultiChoiceItems(labels, checked) { _, which, value -> checked[which] = value }
+            .setPositiveButton(R.string.ad_pick_save) { _, _ ->
+                val selectors = candidates.filterIndexed { index, _ -> checked[index] }
+                    .map { it.selector }
+                saveCosmeticRules(selectors)
+            }
+            .setNeutralButton(R.string.ad_pick_try) { _, _ ->
+                val selectors = candidates.filterIndexed { index, _ -> checked[index] }
+                    .map { it.selector }
+                tryHideSelectors(selectors)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** 把选中的选择器写成 `域名##选择器` 规则并立即重新注入。 */
+    private fun saveCosmeticRules(selectors: List<String>) {
+        val host = tabManager.current?.url
+            ?.let { runCatching { android.net.Uri.parse(it).host }.getOrNull() } ?: return
+        if (selectors.isEmpty()) return
+        val lines = selectors.map { "${host.lowercase()}##$it" }
+        addCustomRuleLines(lines)
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.ad_pick_saved, lines.size),
+            Toast.LENGTH_SHORT
+        ).show()
+        injectCosmeticCss(tabManager.currentWebView, tabManager.current?.url.orEmpty())
+    }
+
+    /** 写入自定义规则（去重，逐个交给引擎立即生效）。 */
+    private fun addCustomRuleLines(lines: List<String>) {
+        if (lines.isEmpty()) return
         viewLifecycleOwner.lifecycleScope.launch {
             val existing = AppServices.ruleRepository.customRulesText()
-            if (existing.lines().none { it.trim() == line }) {
-                AppServices.ruleRepository.saveCustomRules(existing.trimEnd() + "\n" + line)
+            val added = lines.filter { line -> existing.lines().none { it.trim() == line } }
+            if (added.isNotEmpty()) {
+                AppServices.ruleRepository.saveCustomRules(
+                    existing.trimEnd().trimEnd('\n') + "\n" + added.joinToString("\n")
+                )
+                added.forEach { AppServices.adBlock.addCustomRule(it) }
             }
-            AppServices.adBlock.addCustomRule(line)
         }
-        Toast.makeText(requireContext(), getString(R.string.ad_marked, host), Toast.LENGTH_SHORT).show()
+    }
+
+    /** 试隐 3 秒：临时注入样式，不进规则文件。 */
+    private fun tryHideSelectors(selectors: List<String>) {
+        val wv = tabManager.currentWebView ?: return
+        if (selectors.isEmpty()) return
+        val css = selectors.joinToString(",") + "{display:none!important}"
+        wv.evaluateJavascript(
+            "(function(){var old=document.getElementById('sii_ad_try');" +
+                "if(old)old.remove();" +
+                "var s=document.createElement('style');s.id='sii_ad_try';" +
+                "s.textContent=" + org.json.JSONObject.quote(css) + ";" +
+                "document.documentElement.appendChild(s);" +
+                "setTimeout(function(){var e=document.getElementById('sii_ad_try');" +
+                "if(e)e.remove();},3000);})();",
+            null
+        )
+        Toast.makeText(requireContext(), R.string.ad_pick_try_hint, Toast.LENGTH_SHORT).show()
     }
 
     private fun copyToClipboard(url: String) {
@@ -5202,6 +5374,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         MenuEntry("jsconsole", getString(R.string.menu_js_console), R.drawable.ic_m_code, false, { false }, { hasWebPage() }) { openJsConsole() },
         MenuEntry("history", getString(R.string.menu_history), R.drawable.ic_m_history, false, { false }) { openHistory() },
         MenuEntry("adblockstats", getString(R.string.menu_adblock_stats), R.drawable.ic_m_shield_check, false, { false }) { openAdblockStats() },
+        MenuEntry("pagerequests", getString(R.string.menu_page_requests), R.drawable.ic_m_netlog, false, { false }, { hasWebPage() }) { showPageRequests() },
         MenuEntry("find", getString(R.string.menu_find), R.drawable.ic_m_find, false, { false }, { hasWebPage() }) { showFindBar() },
         MenuEntry("font", getString(R.string.menu_font_size), R.drawable.ic_m_font, false, { false }, { hasWebPage() }) { showFontSizeSlider() },
         MenuEntry("uiscale", getString(R.string.menu_ui_scale), R.drawable.ic_m_zoom, false, { false }, { true }) { showUiScaleSlider() },
@@ -6848,7 +7021,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 callback,
                 UrlDecision(),
                 chain,
-                captureEnabled = { AppServices.settings.mcpAllowCapture() }
+                captureEnabled = { AppServices.settings.mcpAllowCapture() },
+                pageRequestsEnabled = { AppServices.settings.pageRequests() }
             )
             webChromeClient = WebChromeClientBridge(callback)
             // 水平滑动前进/后退（横向浏览占少数场景，不干扰竖向滚动）
@@ -6914,9 +7088,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 "SiiCapture",
                 com.sii.browser.core.webview.CaptureJsBridge(this)
             )
-            com.sii.browser.core.adblock.AdPickBridge().also {
-                registerJsBridge("SiiAdPick", it)
-                adPickBridges[this] = it
+            com.sii.browser.core.adblock.AdPickBridge().also { bridge ->
+                bridge.onCandidates = { candidates ->
+                    view?.post { if (isAdded) showAdPickDialog(candidates) }
+                }
+                registerJsBridge("SiiAdPick", bridge)
+                adPickBridges[this] = bridge
             }
             com.sii.browser.core.webview.PasswordJsBridge().also { bridge ->
                 bridge.onOfferSave = { host, username, password ->
@@ -7275,6 +7452,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 抓包：新导航清空该标签旧记录（保留本次主文档），再注入 fetch/XHR hook。
             webView?.let { target ->
                 com.sii.browser.core.webview.NetworkCapture.clear(target, startedUrl)
+                com.sii.browser.core.webview.PageRequests.clear(target, startedUrl)
                 if (AppServices.settings.mcpAllowCapture()) {
                     target.injectJavaScript(
                         com.sii.browser.core.webview.CaptureScript.js(
@@ -7792,9 +7970,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         else -> getString(R.string.ssl_err_unknown)
     }
 
-    /** 注入元素隐藏规则（cosmetic）生成的 CSS。 */
+    /** 注入元素隐藏规则（cosmetic）生成的 CSS，并统计实际命中的节点数。 */
     private fun injectCosmeticCss(webView: SiiWebView?, url: String) {
         val host = runCatching { android.net.Uri.parse(url).host }.getOrNull()
+        val selectors = AppServices.adBlock.cosmeticSelectorsFor(host)
         val css = AppServices.adBlock.cosmeticCssFor(host)
         if (css.isEmpty() || webView == null) return
         val escaped = css.replace("\\", "\\\\").replace("'", "\\'")
@@ -7805,6 +7984,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 "s.textContent='$escaped';})();",
             null
         )
+        if (selectors.isEmpty()) return
+        webView.evaluateJavascript(
+            "(function(){var s=" + org.json.JSONArray(selectors) + ";var n=0;" +
+                "for(var i=0;i<s.length;i++){try{n+=document.querySelectorAll(s[i]).length;}catch(e){}}" +
+                "return n;})();"
+        ) { raw ->
+            val count = raw?.trim('"')?.toIntOrNull() ?: 0
+            com.sii.browser.core.adblock.CosmeticStats.update(host, count, selectors.size)
+        }
     }
 
     /** 展示证书信息。 */

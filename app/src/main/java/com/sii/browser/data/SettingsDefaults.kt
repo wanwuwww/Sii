@@ -169,6 +169,9 @@ object SettingsDefaults {
     /** 广告拦截总开关。 */
     const val ADBLOCK_ENABLED = false
 
+    /** 「查看本页请求」的元数据记录。 */
+    const val PAGE_REQUESTS = true
+
     /** 滚动自动隐藏工具栏。 */
     const val TOOLBAR_AUTOHIDE = true
 

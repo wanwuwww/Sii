@@ -91,7 +91,17 @@ class RulesFragment : Fragment() {
                 AppServices.settings.setAdBlockEnabled(enabled)
                 AppServices.refreshAdBlockWhitelist()
                 render(latestRules)
-            }
+            },
+            switchRow(
+                getString(R.string.settings_page_requests),
+                getString(R.string.settings_page_requests_desc),
+                AppServices.settings.pageRequests()
+            ) { enabled ->
+                AppServices.settings.setPageRequests(enabled)
+                if (!enabled) com.sii.browser.core.webview.PageRequests.clearAll()
+                render(latestRules)
+            },
+            cosmeticStatsRow()
         )
 
         container.addView(CardList.sectionTitle(requireContext(), getString(R.string.adblock_source)))
@@ -148,6 +158,28 @@ class RulesFragment : Fragment() {
                 }.toTypedArray()
             )
         }
+    }
+
+    /** 最近一次页面注入元素隐藏规则后的命中数；没统计过就不占位。 */
+    private fun cosmeticStatsRow(): View {
+        val host = com.sii.browser.core.adblock.CosmeticStats.host
+        val row = CardList.row(requireContext())
+        val text = if (host.isNullOrEmpty()) {
+            getString(R.string.adblock_cosmetic_stats_none)
+        } else {
+            getString(
+                R.string.adblock_cosmetic_stats,
+                com.sii.browser.core.adblock.CosmeticStats.hidden,
+                com.sii.browser.core.adblock.CosmeticStats.rules
+            ) + "\n" + host
+        }
+        row.addView(TextView(requireContext()).apply {
+            this.text = text
+            setTextSize(13f)
+            setTextColor(requireContext().getColor(R.color.text_secondary))
+            setLineSpacing(0f, 1.3f)
+        })
+        return row
     }
 
     private fun card(vararg rows: View) {

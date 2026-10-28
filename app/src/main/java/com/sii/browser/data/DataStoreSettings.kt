@@ -197,6 +197,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setAdBlockEnabled(value: Boolean) =
         putBool(SettingsKeys.ADBLOCK_ENABLED, value)
 
+    override fun pageRequests(): Boolean =
+        bool(SettingsKeys.PAGE_REQUESTS, SettingsDefaults.PAGE_REQUESTS)
+
+    override fun setPageRequests(value: Boolean) =
+        putBool(SettingsKeys.PAGE_REQUESTS, value)
+
     override fun builtinRulesEnabled(): Boolean =
         bool(SettingsKeys.ADBLOCK_BUILTIN, true)
 

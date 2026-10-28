@@ -65,6 +65,11 @@ interface Settings :
 
     fun setAdBlockEnabled(value: Boolean)
 
+    /** 「查看本页请求」的元数据记录（仅内存，与 MCP 抓包无关）。 */
+    fun pageRequests(): Boolean
+
+    fun setPageRequests(value: Boolean)
+
     /** 是否启用内建广告规则。 */
     fun builtinRulesEnabled(): Boolean
 

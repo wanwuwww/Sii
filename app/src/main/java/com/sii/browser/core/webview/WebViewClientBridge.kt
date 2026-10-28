@@ -25,7 +25,8 @@ class WebViewClientBridge(
     private val callback: WebViewCallback,
     private val urlDecision: UrlLoadDecision? = null,
     private val interceptors: ResourceInterceptorChain,
-    private val captureEnabled: () -> Boolean = { false }
+    private val captureEnabled: () -> Boolean = { false },
+    private val pageRequestsEnabled: () -> Boolean = { false }
 ) : WebViewClient() {
 
     private var currentUrl: String? = null
@@ -107,8 +108,13 @@ class WebViewClientBridge(
         val url = request.url.toString()
         val response = interceptors.intercept(url, request, currentUrl)
             ?: callback.interceptResource(view as? SiiWebView, request, url, (view as? SiiWebView)?.getReferer())
+        val target = view as? SiiWebView
+        if (pageRequestsEnabled() && target != null) {
+            PageRequests.record(
+                target, request.method, url, request.isForMainFrame, response != null
+            )
+        }
         if (captureEnabled()) {
-            val target = view as? SiiWebView
             if (target != null) {
                 if (response != null) {
                     NetworkCapture.recordBlocked(target, url, request.method, request.isForMainFrame)

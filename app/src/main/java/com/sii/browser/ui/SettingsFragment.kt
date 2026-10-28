@@ -51,6 +51,7 @@ class SettingsFragment : Fragment() {
         SearchEntry("屏幕方向", "通用", "orientation"),
         SearchEntry("保持亮屏", "通用", "keep screen on"),
         SearchEntry("广告拦截", "隐私与安全", "adblock"),
+        SearchEntry("本页请求", "隐私与安全", "requests 请求 记录 抓包"),
         SearchEntry("无痕", "隐私与安全", "incognito"),
         SearchEntry("隐私保护", "隐私与安全", "privacy"),
         SearchEntry("密码库", "隐私与安全", "password"),

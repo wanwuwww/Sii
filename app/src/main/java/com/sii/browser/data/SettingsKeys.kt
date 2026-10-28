@@ -239,6 +239,7 @@ object SettingsKeys {
     const val LOGIN = "login"
     const val ADBLOCKED_TIMES = "adblockedtimes"
     const val ADBLOCK_ENABLED = "adblockenabled"
+    const val PAGE_REQUESTS = "page_requests"
     const val ADBLOCK_BUILTIN = "adblockbuiltin"
     const val SUB_INTERVAL = "subinterval"
     const val TAB_POS = "tabpos"
