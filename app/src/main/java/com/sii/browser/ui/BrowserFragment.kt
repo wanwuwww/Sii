@@ -112,8 +112,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /** 本次导航由主页发起：返回键先回主页，而不是退网页历史。 */
     private var navFromHome = false
     private var navFromHomeUrl: String? = null
-    /** 从主页返回网页时主动 goBack：这期间不要因页面开始加载就收起主页。 */
-    private var suppressHomeDismiss = false
     private var sniffPrompt: View? = null
     private var sniffPromptResource: com.sii.browser.core.webview.SniffedResource? = null
     private var sniffPromptKey: Any? = null
@@ -513,17 +511,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             return true
         }
         if (navFromHome) {
-            // 从主页发起的搜索：返回先把网页退到搜索前那一页，再把主页盖回去。
+            // 从主页发起的搜索：返回直接回主页，主页再按返回就退出。
             navFromHome = false
             navFromHomeUrl = null
-            val wv = tabManager.currentWebView
-            if (wv?.canGoBack() == true) {
-                suppressHomeDismiss = true
-                wv.goBack()
-                homeOverlayActive = true
-            } else {
-                homeOverlayActive = false
-            }
+            homeOverlayActive = false
             homeForwardAvailable = false
             showHome(createTab = false)
             return true
@@ -7199,10 +7190,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
                 if (webView === tabManager.currentWebView) {
                     // 从主页前进/后退到真实网站时，把原生主页面板收起来。
-                    val dismissedOnce = suppressHomeDismiss
-                    suppressHomeDismiss = false
                     if (startedUrl.startsWith("http") &&
-                        homeContainer?.visibility == View.VISIBLE && !dismissedOnce
+                        homeContainer?.visibility == View.VISIBLE
                     ) {
                         showWeb()
                     }
@@ -7270,7 +7259,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
 
         override fun onPageFinished(webView: SiiWebView?, url: String) {
-            suppressHomeDismiss = false
             if (webView === tabManager.currentWebView) hidePageLoadingCover()
             markPageFinished(webView)
             // 补注入抓包 hook：onPageStarted 的注入可能落在旧文档上，
