@@ -7957,15 +7957,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /** 当前 host 应使用的 UA（电脑模式判定集中在此，供签名与设置共用）。 */
     private fun targetUserAgent(host: String?): String {
         if (desktopForHost(host)) return desktopUserAgent()
-        val base = globalUserAgent()
-        // 必应对完整移动 UA 会做一次页面内跳转；仅对 Bing 使用简化 UA，
-        // 不改变用户全局的“简化浏览器标识”选择。
-        if (!AppServices.settings.uaSimplified() &&
-            host?.lowercase()?.let { it == "bing.com" || it.endsWith(".bing.com") } == true
-        ) {
-            return simplifyUserAgent(base)
-        }
-        return base
+        return globalUserAgent()
     }
 
     /** 手机专用站 → 电脑版域名的映射（如微博 m 站）。 */
