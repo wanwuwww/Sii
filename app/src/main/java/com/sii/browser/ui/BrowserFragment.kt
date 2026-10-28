@@ -303,13 +303,27 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         forwardButton?.setOnClickListener {
             blurAddressInput()
-            if (homeForwardAvailable && homeContainer?.visibility != View.VISIBLE) {
+            if (homeContainer?.visibility == View.VISIBLE) {
+                // 主页覆盖在网页上时，前进等同于“回到被覆盖的网页”（后退的反向操作）。
+                if (homeOverlayActive) {
+                    homeOverlayActive = false
+                    homeForwardAvailable = false
+                    showWeb()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.nav_forward_unavailable,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@setOnClickListener
+            }
+            if (homeForwardAvailable) {
                 homeForwardAvailable = false
                 homeOverlayActive = true
                 showHome(createTab = false)
                 return@setOnClickListener
             }
-            if (homeContainer?.visibility == View.VISIBLE) return@setOnClickListener
             val webView = tabManager.currentWebView
             if (webView?.canGoForward() == true) {
                 webView.goForward()
@@ -3907,6 +3921,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private fun showHome(createTab: Boolean = true) {
         AppServices.lastHomeVisible = true
+        resetDockVisibility()
         hidePageLoadingCover()
         hideSniffPrompt()
         val wasWebVisible = homeContainer?.visibility != View.VISIBLE
@@ -3955,6 +3970,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private fun showWeb() {
         AppServices.lastHomeVisible = false
+        resetDockVisibility()
         homePanel?.exitSearchInput()
         homeContainer?.visibility = View.GONE
         attachCurrentWebView()
@@ -9277,7 +9293,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val hidden = AppServices.settings.toolbarHidden().orEmpty()
             .split(",").filter { it.isNotEmpty() }.toSet()
         val canForward = if (::tabManager.isInitialized) {
-            tabManager.currentWebView?.canGoForward() == true
+            tabManager.currentWebView?.canGoForward() == true || homeForwardAvailable ||
+                (homeContainer?.visibility == View.VISIBLE && homeOverlayActive)
         } else false
         fun apply(id: Int, key: String, on: Boolean) {
             view?.findViewById<View>(id)?.visibility =
@@ -9542,6 +9559,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private fun applyToolbarScrollHidden(dy: Int) {
         if (!AppServices.settings.toolbarAutoHide()) return
+        // 主页没有可滚动的网页，迟到的滚动回调不能把底栏收走。
+        if (homeContainer?.visibility == View.VISIBLE) return
         if (AppServices.settings.uiStyle() == 1) {
             if (addressEditing) return
             val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
@@ -9792,6 +9811,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .setDuration(140L)
             .setInterpolator(android.view.animation.DecelerateInterpolator())
             .start()
+    }
+
+    /** 回主页 / 切网页时把自动收起的悬浮底栏复位，避免它停在屏幕外。 */
+    private fun resetDockVisibility() {
+        toolbarHidden = false
+        val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
+        dock.animate().cancel()
+        if (dock.translationY != 0f) dock.translationY = 0f
     }
 
     private fun isSafeExternalUrl(url: String?): Boolean {
