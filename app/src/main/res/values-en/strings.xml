@@ -164,6 +164,9 @@
     <string name="translate_no_text">No text to translate</string>
     <string name="translate_done">Page translated</string>
     <string name="translate_progress">Translating %1$d/%2$d</string>
+    <string name="translate_mark">文A</string>
+    <string name="translate_switch_to_original">Orig</string>
+    <string name="translate_switch_to_translated">Trans</string>
     <string name="translate_show_original">Show original</string>
     <string name="settings_translate_limit">Translation limit</string>
     <string name="settings_translate_custom_method">Request method</string>

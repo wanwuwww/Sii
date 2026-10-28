@@ -77,16 +77,19 @@
                 android:textColorHint="@color/text_secondary"
                 android:textSize="15sp" />
 
-            <ImageButton
+            <TextView
                 android:id="@+id/translate_tool"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/menu_translate_page"
-                android:padding="8dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_m_translate"
-                android:tint="@color/icon_primary"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:text="@string/translate_mark"
+                android:textColor="@color/icon_primary"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
                 android:visibility="gone" />
 
             <ImageButton

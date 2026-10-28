@@ -2104,7 +2104,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var translatePolling: kotlinx.coroutines.Job? = null
     private var translateStatus: android.widget.TextView? = null
     private var translateStatusFade: Runnable? = null
-    private var translateTool: android.widget.ImageButton? = null
+    private var translateTool: android.widget.TextView? = null
     private var translateFabState = 0
     /** 翻译按钮自动隐藏计时与已隐藏过的页面，避免同一页面反复弹。 */
     private var translateFabAutoHide: Runnable? = null
@@ -3232,7 +3232,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
     }
 
-    /** 翻译按钮：并入工具栏/地址栏的图标，按状态显隐与着色。 */
+    /** 翻译按钮：可翻译时显示「文A」，已翻译时显示「原 / 译」并点击切换。 */
     private fun updateTranslateFab() {
         val tool = translateTool ?: return
         if (AppServices.settings.translateMode() == 0) {
@@ -3253,22 +3253,36 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
             1 -> {
                 tool.visibility = View.VISIBLE
-                tool.alpha = 1f
-                tool.imageTintList = android.content.res.ColorStateList.valueOf(normal)
+                tool.text = getString(R.string.translate_mark)
+                tool.setTextSize(12.5f)
+                tool.setTextColor(normal)
+                tool.contentDescription = getString(R.string.menu_translate_page)
                 scheduleTranslateFabAutoHide()
             }
             2 -> {
+                // 翻译中不另设视觉态，进度看底部浮条；点击取消。
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
-                tool.alpha = 1f
-                tool.imageTintList = android.content.res.ColorStateList.valueOf(normal)
+                tool.text = getString(R.string.translate_mark)
+                tool.setTextSize(12.5f)
+                tool.setTextColor(normal)
+                tool.contentDescription = getString(R.string.menu_translate_page)
             }
             else -> {
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
-                tool.alpha = 1f
-                tool.imageTintList =
-                    android.content.res.ColorStateList.valueOf(ThemeAccent.color(requireContext()))
+                val label = getString(
+                    if (translateShowOriginal) R.string.translate_switch_to_translated
+                    else R.string.translate_switch_to_original
+                )
+                tool.text = label
+                // 英文界面下 Orig / Trans 比单个汉字长，缩小字号避免被 40dp 槽位截断。
+                tool.setTextSize(if (label.length > 1) 10.5f else 16f)
+                tool.setTextColor(ThemeAccent.color(requireContext()))
+                tool.contentDescription = getString(
+                    if (translateShowOriginal) R.string.translate_show_translated
+                    else R.string.translate_show_original
+                )
             }
         }
     }
