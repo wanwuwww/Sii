@@ -88,7 +88,7 @@
                 android:singleLine="true"
                 android:text="@string/translate_mark"
                 android:textColor="@color/icon_primary"
-                android:textSize="12.5sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
 

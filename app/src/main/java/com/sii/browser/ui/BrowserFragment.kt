@@ -3254,7 +3254,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             1 -> {
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(12.5f)
+                tool.setTextSize(14f)
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
                 scheduleTranslateFabAutoHide()
@@ -3264,7 +3264,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(12.5f)
+                tool.setTextSize(14f)
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
             }
