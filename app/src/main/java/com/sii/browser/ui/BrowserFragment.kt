@@ -3469,9 +3469,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             1 -> {
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(14.5f)
+                tool.setTextSize(16f)
                 tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
-                tool.textScaleX = 0.78f
+                tool.textScaleX = 0.85f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
@@ -3482,9 +3482,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(14.5f)
+                tool.setTextSize(16f)
                 tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
-                tool.textScaleX = 0.78f
+                tool.textScaleX = 0.85f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
@@ -5554,10 +5554,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             setTextColor(color)
             setTextSize(
                 android.util.TypedValue.COMPLEX_UNIT_PX,
-                (iconSize * 0.55f).coerceAtLeast(dp(10).toFloat())
+                (iconSize * 0.62f).coerceAtLeast(dp(11).toFloat())
             )
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            textScaleX = 0.78f
+            textScaleX = 0.85f
             letterSpacing = -0.02f
             gravity = android.view.Gravity.CENTER
             includeFontPadding = false
