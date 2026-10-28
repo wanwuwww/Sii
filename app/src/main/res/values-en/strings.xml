@@ -163,9 +163,6 @@
     <string name="translate_done">Page translated</string>
     <string name="translate_progress">Translating %1$d/%2$d</string>
     <string name="translate_show_original">Show original</string>
-    <string name="translate_fab_start">T</string>
-    <string name="translate_fab_loading">…</string>
-    <string name="settings_translate_fab_position">Translate button position</string>
     <string name="settings_translate_limit">Translation limit</string>
     <string name="settings_translate_custom_method">Request method</string>
     <string name="settings_translate_custom_headers">Request headers</string>

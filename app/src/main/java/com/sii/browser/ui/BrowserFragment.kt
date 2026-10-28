@@ -194,15 +194,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         siteInfoButton = view.findViewById(R.id.site_info_button)
         translateStatus = view.findViewById(R.id.translate_status)
         translateStatus?.setOnClickListener { onTranslateStatusClick() }
-        translateToggle = view.findViewById(R.id.translate_toggle)
-        translateToggle?.setOnClickListener {
+        translateTool = view.findViewById(R.id.translate_tool)
+        translateTool?.setOnClickListener {
             when (translateFabState) {
                 1 -> translatePage()
                 2 -> cancelTranslate()
                 3 -> toggleTranslation()
             }
         }
-        applyTranslateFabPosition()
         view.post { restoreTranslateUi() }
         siteInfoButton?.setOnClickListener { anchor -> showSiteInfoMenu(anchor) }
         progressBar = view.findViewById(R.id.progress_bar)
@@ -2088,7 +2087,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var translatePolling: kotlinx.coroutines.Job? = null
     private var translateStatus: android.widget.TextView? = null
     private var translateStatusFade: Runnable? = null
-    private var translateToggle: android.widget.TextView? = null
+    private var translateTool: android.widget.ImageButton? = null
     private var translateFabState = 0
     /** 翻译按钮自动隐藏计时与已隐藏过的页面，避免同一页面反复弹。 */
     private var translateFabAutoHide: Runnable? = null
@@ -2596,7 +2595,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (!url.startsWith("http")) return
         val host = runCatching { android.net.Uri.parse(url).host }.getOrNull()?.lowercase()
         if (siteTranslateButtonMode(host) == 2) {
-            translateToggle?.visibility = View.GONE
+            translateTool?.visibility = View.GONE
             return
         }
         if (translateFabState == 1) {
@@ -3168,45 +3167,50 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
     }
 
+    /** 翻译按钮：并入工具栏/地址栏的图标，按状态显隐与着色。 */
     private fun updateTranslateFab() {
-        val fab = translateToggle ?: return
+        val tool = translateTool ?: return
         if (AppServices.settings.translateMode() == 0) {
             cancelTranslateFabAutoHide()
-            fab.visibility = View.GONE
+            tool.visibility = View.GONE
             return
+        }
+        val normal = if (AppServices.settings.uiStyle() == 1) {
+            if (AppServices.settings.isNightMode()) android.graphics.Color.WHITE
+            else requireContext().getColor(R.color.text_primary)
+        } else {
+            requireContext().getColor(R.color.icon_primary)
         }
         when (translateFabState) {
             0 -> {
                 cancelTranslateFabAutoHide()
-                fab.visibility = View.GONE
+                tool.visibility = View.GONE
             }
             1 -> {
-                fab.visibility = View.VISIBLE
-                fab.alpha = 1f
-                fab.text = getString(R.string.translate_fab_start)
+                tool.visibility = View.VISIBLE
+                tool.alpha = 1f
+                tool.imageTintList = android.content.res.ColorStateList.valueOf(normal)
                 scheduleTranslateFabAutoHide()
             }
             2 -> {
                 cancelTranslateFabAutoHide()
-                fab.visibility = View.VISIBLE
-                fab.alpha = 1f
-                fab.text = getString(R.string.translate_fab_loading)
+                tool.visibility = View.VISIBLE
+                tool.alpha = 0.5f
+                tool.imageTintList = android.content.res.ColorStateList.valueOf(normal)
             }
             else -> {
                 cancelTranslateFabAutoHide()
-                fab.visibility = View.VISIBLE
-                fab.alpha = 0.5f
-                fab.text = getString(
-                    if (translateShowOriginal) R.string.translate_show_translated
-                    else R.string.translate_show_original
-                )
+                tool.visibility = View.VISIBLE
+                tool.alpha = 1f
+                tool.imageTintList =
+                    android.content.res.ColorStateList.valueOf(ThemeAccent.color(requireContext()))
             }
         }
     }
 
     /** 翻译按钮长时间不操作就收起，本次页面不再自动出现。 */
     private fun scheduleTranslateFabAutoHide() {
-        val fab = translateToggle ?: return
+        val fab = translateTool ?: return
         translateFabAutoHide?.let { fab.removeCallbacks(it) }
         val runnable = Runnable {
             if (translateFabState != 1) return@Runnable
@@ -3220,49 +3224,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private fun cancelTranslateFabAutoHide() {
-        val fab = translateToggle
+        val fab = translateTool
         translateFabAutoHide?.let { fab?.removeCallbacks(it) }
         translateFabAutoHide = null
-    }
-
-    /** 按设置摆放翻译按钮：左下/右下/底部居中/左上/右上。 */
-    private fun applyTranslateFabPosition() {
-        val fab = translateToggle ?: return
-        val lp = fab.layoutParams as? FrameLayout.LayoutParams ?: return
-        // 新版界面底栏悬浮在内容之上，底部位置的按钮要抬到底栏上方。
-        val bottomLift = if (AppServices.settings.uiStyle() == 1) {
-            val dockHeight = view?.findViewById<View>(R.id.modern_chrome)?.height
-                ?.takeIf { it > 0 } ?: dp(56)
-            dockHeight + dp(14)
-        } else dp(72)
-        when (AppServices.settings.translateFabPosition().coerceIn(0, 4)) {
-            0 -> {
-                lp.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.START
-                lp.marginStart = dp(16); lp.marginEnd = 0
-                lp.topMargin = 0; lp.bottomMargin = bottomLift
-            }
-            1 -> {
-                lp.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
-                lp.marginStart = 0; lp.marginEnd = dp(16)
-                lp.topMargin = 0; lp.bottomMargin = bottomLift
-            }
-            2 -> {
-                lp.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
-                lp.marginStart = 0; lp.marginEnd = 0
-                lp.topMargin = 0; lp.bottomMargin = bottomLift
-            }
-            3 -> {
-                lp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-                lp.marginStart = dp(16); lp.marginEnd = 0
-                lp.topMargin = dp(74); lp.bottomMargin = 0
-            }
-            else -> {
-                lp.gravity = android.view.Gravity.TOP or android.view.Gravity.END
-                lp.marginStart = 0; lp.marginEnd = dp(16)
-                lp.topMargin = dp(74); lp.bottomMargin = 0
-            }
-        }
-        fab.layoutParams = lp
     }
 
     /** 新版底栏悬浮在内容之上，页面上的浮动条统一抬到底栏上方。 */
@@ -3288,7 +3252,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         setBottom(R.id.sniff_prompt, 10)
         setBottom(R.id.translate_status, 72)
         applyFloatingBarStyle(modern)
-        applyTranslateFabPosition()
     }
 
     /** 新版浮动条跟随日夜：白天浅色药丸，夜间深色药丸。 */
@@ -3306,9 +3269,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         root.findViewById<View>(R.id.download_bar)?.setBackgroundResource(barBg)
         root.findViewById<View>(R.id.sniff_prompt)?.setBackgroundResource(barBg)
         root.findViewById<View>(R.id.translate_status)?.setBackgroundResource(barBg)
-        root.findViewById<View>(R.id.translate_toggle)?.setBackgroundResource(
-            if (dark) R.drawable.bg_translate_fab_dark else R.drawable.bg_translate_fab
-        )
         root.findViewById<android.widget.EditText>(R.id.find_input)?.apply {
             setTextColor(textColor)
             setHintTextColor(secondary)
@@ -3518,7 +3478,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val target = url ?: restoredUrl(null)
         tabManager.newTab(target)
         applySiteThemeColor(currentThemeColor())
-        applyTranslateFabPosition()
         if (target == ABOUT_HOME) {
             tabManager.currentWebView?.loadUrl("about:blank")
             showHome()
@@ -7112,18 +7071,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         if (addressInput?.hasFocus() == true) return
         // 导航开始前 tab.url 已是目标地址，先显示它；重定向/提交后由 doUpdateVisitedHistory 替换。
-        val url = tabManager.current?.url?.takeIf { it.isNotBlank() && it != "about:blank" }
+        val tab = tabManager.current
+        val url = tab?.url?.takeIf { it.isNotBlank() && it != "about:blank" }
             ?: tabManager.currentWebView?.url?.takeIf { it.isNotBlank() && it != "about:blank" }
             ?: ""
-        setAddressText(addressDisplayUrl(url))
-    }
-
-    /** 地址栏未聚焦时的显示内容：地址 / 标题 / 域名。主页显示设置的主页网址。 */
-    private fun addressDisplay(tab: Tab): String {
-        if (tab.url == ABOUT_HOME) {
-            return AppServices.settings.homeUrl().takeIf { it != ABOUT_HOME }.orEmpty()
-        }
-        return addressDisplayUrl(tab.url, tab.title)
+        setAddressText(addressDisplayUrl(url, tab?.title.orEmpty()))
     }
 
     private fun addressDisplayUrl(url: String, title: String = ""): String {
@@ -7153,7 +7105,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             val url = tab?.url?.takeIf { it.isNotBlank() && it != "about:blank" }
                 ?: webView?.url?.takeIf { it.isNotBlank() && it != "about:blank" }
                 ?: return
-            val display = addressDisplayUrl(url)
+            val display = addressDisplayUrl(url, tab?.title.orEmpty())
             val input = addressInput ?: return
             val focused = input.hasFocus()
             val currentText = input.text?.toString().orEmpty()
@@ -9321,8 +9273,39 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (addressEditing) {
             root.findViewById<View>(R.id.search_toolbar_scroll)?.visibility = View.GONE
         }
+        applyTranslateToolPlacement(modern = true)
         applyBottomBarStyle(root, modern = true)
         applyModernToolVisibility()
+        updateTranslateFab()
+    }
+
+    /** 翻译图标：新版并入底栏工具行（菜单左侧），经典插在地址输入与刷新之间。 */
+    private fun applyTranslateToolPlacement(modern: Boolean) {
+        val root = view ?: return
+        val tool = root.findViewById<View>(R.id.translate_tool) ?: return
+        if (modern) {
+            val bar = root.findViewById<LinearLayout>(R.id.bottom_bar) ?: return
+            if (tool.parent !== bar) {
+                (tool.parent as? ViewGroup)?.removeView(tool)
+                val menuIndex = bar.indexOfChild(root.findViewById(R.id.menu_button))
+                bar.addView(
+                    tool,
+                    if (menuIndex >= 0) menuIndex else bar.childCount,
+                    LinearLayout.LayoutParams(dp(40), ViewGroup.LayoutParams.MATCH_PARENT)
+                )
+            }
+        } else {
+            val address = root.findViewById<View>(R.id.address_bar) as? LinearLayout ?: return
+            if (tool.parent !== address) {
+                (tool.parent as? ViewGroup)?.removeView(tool)
+                val refreshIndex = address.indexOfChild(root.findViewById(R.id.refresh_button))
+                address.addView(
+                    tool,
+                    if (refreshIndex >= 0) refreshIndex else address.childCount,
+                    LinearLayout.LayoutParams(dp(40), dp(40))
+                )
+            }
+        }
     }
 
     /** 经典样式还原：地址栏回顶部、工具栏回底部并恢复标签与顺序。 */
@@ -9361,7 +9344,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             ViewGroup.LayoutParams.MATCH_PARENT,
             dp(3)
         )
+        applyTranslateToolPlacement(modern = false)
         applyBottomBarStyle(root, modern = false)
+        updateTranslateFab()
     }
 
     /** 工具行：新版只留图标并按导航优先排序，经典恢复标签与顺序。 */
@@ -9386,6 +9371,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 R.id.back_button,
                 R.id.forward_button,
                 R.id.tab_count_button,
+                R.id.translate_tool,
                 R.id.menu_button,
                 R.id.home_button
             )
@@ -9858,7 +9844,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         findInput = null
         findCount = null
         translateStatus = null
-        translateToggle = null
+        translateTool = null
         fontCachePath = null
         fontCacheMtime = 0L
         fontCacheBase64 = null
@@ -10075,7 +10061,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         const val ABOUT_CATALOG = "about:catalog"
         const val ABOUT_SAVE = "about:save"
         const val ABOUT_BLANK = "about:blank"
-        const val TRANSLATE_FAB_IDLE_MS = 8_000L
+        const val TRANSLATE_FAB_IDLE_MS = 15_000L
         const val THUMB_MAX_WIDTH = 360
         const val ABOUT_RES = "about:res"
         const val ABOUT_IMAGES = "about:images"

@@ -78,6 +78,18 @@
                 android:textSize="15sp" />
 
             <ImageButton
+                android:id="@+id/translate_tool"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/menu_translate_page"
+                android:padding="8dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_m_translate"
+                android:tint="@color/icon_primary"
+                android:visibility="gone" />
+
+            <ImageButton
                 android:id="@+id/refresh_button"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -472,20 +484,6 @@
         android:paddingHorizontal="12dp"
         android:paddingVertical="7dp"
         android:textColor="@color/text_primary"
-        android:textSize="11sp"
-        android:visibility="gone" />
-
-    <!-- 翻译悬浮按钮：未翻译/翻译中/原文译文切换 -->
-    <TextView
-        android:id="@+id/translate_toggle"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_gravity="bottom|start"
-        android:background="@drawable/bg_translate_fab"
-        android:elevation="6dp"
-        android:gravity="center"
-        android:text="@string/translate_fab_start"
-        android:textColor="?android:attr/colorAccent"
         android:textSize="11sp"
         android:visibility="gone" />
 

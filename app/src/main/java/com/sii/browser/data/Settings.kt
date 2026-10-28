@@ -576,11 +576,6 @@ interface BehaviorSettings {
 
     fun setTranslateChunk(value: Int)
 
-    /** 翻译悬浮按钮位置：0 左下 1 右下 2 底部居中 3 左上 4 右上。 */
-    fun translateFabPosition(): Int
-
-    fun setTranslateFabPosition(value: Int)
-
     /** 自动翻译总量上限（文本节点数）。 */
     fun translateLimit(): Int
 

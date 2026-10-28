@@ -145,7 +145,6 @@ object SettingsKeys {
     const val TRANSLATE_SCAN = "translatescan"
     const val TRANSLATE_INTERVAL_MS = "translateintervalms"
     const val TRANSLATE_CHUNK = "translatechunk"
-    const val TRANSLATE_FAB_POS = "translatefabpos"
     const val TRANSLATE_LIMIT = "translatelimit"
     const val TRANSLATE_CUSTOM_METHOD = "translatecustommethod"
     const val TRANSLATE_CUSTOM_HEADERS = "translatecustomheaders"

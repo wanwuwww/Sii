@@ -824,12 +824,6 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setTranslateChunk(value: Int) =
         putInt(SettingsKeys.TRANSLATE_CHUNK, value.coerceIn(500, 8000))
 
-    override fun translateFabPosition(): Int =
-        int(SettingsKeys.TRANSLATE_FAB_POS, 0)
-
-    override fun setTranslateFabPosition(value: Int) =
-        putInt(SettingsKeys.TRANSLATE_FAB_POS, value.coerceIn(0, 4))
-
     override fun translateLimit(): Int {
         val raw = int(SettingsKeys.TRANSLATE_LIMIT, SettingsDefaults.TRANSLATE_LIMIT)
         // 旧版上限 100000 视为无上限（0）。

@@ -186,9 +186,6 @@
     <string name="translate_done">网页翻译完成</string>
     <string name="translate_progress">翻译中 %1$d/%2$d</string>
     <string name="translate_show_original">显示原文</string>
-    <string name="translate_fab_start">译</string>
-    <string name="translate_fab_loading">…</string>
-    <string name="settings_translate_fab_position">翻译按钮位置</string>
     <string name="settings_translate_limit">翻译总量上限</string>
     <string name="settings_translate_custom_method">请求方法</string>
     <string name="settings_translate_custom_headers">请求头</string>

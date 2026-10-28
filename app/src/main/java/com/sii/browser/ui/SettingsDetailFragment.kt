@@ -462,14 +462,6 @@ class SettingsDetailFragment : Fragment() {
             },
             navRow(getString(R.string.settings_translate_log)) {
                 open(VIEW_V2_TRANSLATE_LOG)
-            },
-            choiceRow(
-                getString(R.string.settings_translate_fab_position),
-                TRANSLATE_FAB_POS_NAMES,
-                settings.translateFabPosition().coerceIn(0, 4)
-            ) {
-                settings.setTranslateFabPosition(it)
-                AppServices.applyLayout?.invoke()
             }
         )
     }
@@ -2913,8 +2905,6 @@ class SettingsDetailFragment : Fragment() {
 
         private val THEME_COLOR_NAMES = arrayOf("默认（蓝）", "绿", "橙", "紫")
         private val DOWNLOADER_NAMES = arrayOf("Sii 内建下载器", "系统下载管理器")
-        private val TRANSLATE_FAB_POS_NAMES =
-            arrayOf("左下", "右下", "底部居中", "左上", "右上")
         private val THEME_COLOR_IDS = arrayOf(null, "green", "orange", "purple")
 
         /** 长按菜单项。 */
