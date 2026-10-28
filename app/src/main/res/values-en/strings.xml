@@ -727,8 +727,12 @@
     <string name="ssl_err_date_invalid">Invalid certificate date</string>
     <string name="ssl_err_invalid">Invalid certificate</string>
     <string name="ssl_err_unknown">Unknown certificate error</string>
-    <string name="menu_mark_ad">Mark as ad</string>
-    <string name="ad_marked">Blocked %1$s</string>
+    <string name="menu_mark_ad_link">Block link host</string>
+    <string name="menu_mark_ad_image">Block image host</string>
+    <string name="ad_marked_domain">Blocked %1$s (whole domain)</string>
+    <string name="ad_marked_path">Blocked path: %1$s</string>
+    <string name="ad_mark_no_host">No recognizable domain for this target</string>
+    <string name="ad_mark_same_site_no_path">Same-site resource has no usable path. Use “Pick ad element” instead</string>
     <string name="rules_export">Export rules</string>
     <string name="rules_import">Import rules</string>
     <string name="rules_exported">Written to file</string>

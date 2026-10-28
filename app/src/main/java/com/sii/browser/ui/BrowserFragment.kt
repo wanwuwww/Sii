@@ -1716,7 +1716,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 add("play", R.string.menu_open_with_app) { openWithApp(url) }
                 add("scanqr", R.string.menu_scan_qr) { startScan() }
                 add("pageinfo", R.string.menu_page_info) { showPageInfo() }
-                add("markad", R.string.menu_mark_ad) { markAsAd() }
+                add("markad", R.string.menu_mark_ad_link) { markAsAd(url) }
             }
             android.webkit.WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE,
             android.webkit.WebView.HitTestResult.IMAGE_TYPE -> {
@@ -1743,7 +1743,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
                 add("scanqr", R.string.menu_scan_qr) { startScan() }
                 add("pageinfo", R.string.menu_page_info) { showPageInfo() }
-                add("markad", R.string.menu_mark_ad) { markAsAd() }
+                add("markad", R.string.menu_mark_ad_image) { markAsAd(url) }
                 add("copy", R.string.menu_copy_link) { copyToClipboard(url) }
             }
             else -> return
@@ -1935,13 +1935,34 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         Toast.makeText(requireContext(), R.string.ad_pick_hint, Toast.LENGTH_SHORT).show()
     }
 
-    /** 把当前站点加入自定义拦截规则。 */
-    private fun markAsAd() {
-        val host = tabManager.current?.url
+    /** 把长按目标的域名加入拦截规则；同域目标改用路径规则，避免误伤整站。 */
+    private fun markAsAd(targetUrl: String) {
+        val target = runCatching { android.net.Uri.parse(targetUrl) }.getOrNull()
+        val host = target?.host?.lowercase().orEmpty()
+        if (host.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.ad_mark_no_host, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val pageHost = tabManager.current?.url
             ?.let { runCatching { android.net.Uri.parse(it).host }.getOrNull() }
-            ?: return
-        addCustomRuleLines(listOf("||${host.lowercase()}^"))
-        Toast.makeText(requireContext(), getString(R.string.ad_marked, host), Toast.LENGTH_SHORT).show()
+            ?.lowercase()
+        val path = target?.path.orEmpty()
+        val sameSite = pageHost != null && pageHost.hostEquals(host)
+        val line: String
+        val message: String
+        if (sameSite && path.isNotEmpty() && path != "/") {
+            line = "||$host$path"
+            message = getString(R.string.ad_marked_path, host + path)
+        } else if (sameSite) {
+            Toast.makeText(requireContext(), R.string.ad_mark_same_site_no_path, Toast.LENGTH_LONG)
+                .show()
+            return
+        } else {
+            line = "||$host^"
+            message = getString(R.string.ad_marked_domain, host)
+        }
+        addCustomRuleLines(listOf(line))
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
     /** 选取结果确认：逐条列出候选选择器（带匹配数），可试隐 3 秒或直接写入规则。 */

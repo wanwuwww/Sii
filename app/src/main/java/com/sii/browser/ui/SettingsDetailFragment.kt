@@ -2931,7 +2931,7 @@ class SettingsDetailFragment : Fragment() {
             "qrcode" to "生成二维码",
             "scanqr" to "扫描二维码",
             "pageinfo" to "页面信息",
-            "markad" to "标记为广告"
+            "markad" to "拦截目标域名"
         )
 
         /** 文本选择菜单附加项。 */

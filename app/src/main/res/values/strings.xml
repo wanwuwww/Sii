@@ -728,8 +728,12 @@
     <string name="ssl_err_date_invalid">证书时间无效</string>
     <string name="ssl_err_invalid">证书无效</string>
     <string name="ssl_err_unknown">未知证书错误</string>
-    <string name="menu_mark_ad">标记为广告</string>
-    <string name="ad_marked">已拦截 %1$s</string>
+    <string name="menu_mark_ad_link">拦截该链接域名</string>
+    <string name="menu_mark_ad_image">拦截该图片域名</string>
+    <string name="ad_marked_domain">已拦截 %1$s（整个域名）</string>
+    <string name="ad_marked_path">已拦截该路径：%1$s</string>
+    <string name="ad_mark_no_host">该目标没有可识别的域名</string>
+    <string name="ad_mark_same_site_no_path">同站资源没有可用路径，请改用「选取广告元素」</string>
     <string name="rules_export">导出规则</string>
     <string name="rules_import">导入规则</string>
     <string name="rules_exported">已写入文件</string>
