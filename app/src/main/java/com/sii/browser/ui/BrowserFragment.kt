@@ -112,6 +112,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /** 本次导航由主页发起：返回键先回主页，而不是退网页历史。 */
     private var navFromHome = false
     private var navFromHomeUrl: String? = null
+    /** 从主页返回网页时主动 goBack：这期间不要因页面开始加载就收起主页。 */
+    private var suppressHomeDismiss = false
     private var sniffPrompt: View? = null
     private var sniffPromptResource: com.sii.browser.core.webview.SniffedResource? = null
     private var sniffPromptKey: Any? = null
@@ -496,23 +498,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             return true
         }
         if (homeContainer?.visibility == View.VISIBLE) {
-            val webView = tabManager.currentWebView
             if (homeOverlayActive) {
                 homeOverlayActive = false
                 homeForwardAvailable = true
                 showWeb()
                 return true
             }
-            if (webView != null && webView.canGoBack()) {
-                webView.goBack()
-                showWeb()
-                return true
-            }
-            val url = webView?.url
-            if (!url.isNullOrEmpty() && url != "about:blank") {
-                showWeb()
-                return true
-            }
+            // 主页是导航栈的根：不再跟 WebView 历史互相顶，没有覆盖页就直接最小化/退出。
             requireActivity().moveTaskToBack(true)
             return true
         }
@@ -521,10 +513,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             return true
         }
         if (navFromHome) {
-            // 从主页发起的搜索：返回先回主页，网页留在历史里等下一次返回。
+            // 从主页发起的搜索：返回先把网页退到搜索前那一页，再把主页盖回去。
             navFromHome = false
             navFromHomeUrl = null
-            homeOverlayActive = false
+            val wv = tabManager.currentWebView
+            if (wv?.canGoBack() == true) {
+                suppressHomeDismiss = true
+                wv.goBack()
+                homeOverlayActive = true
+            } else {
+                homeOverlayActive = false
+            }
             homeForwardAvailable = false
             showHome(createTab = false)
             return true
@@ -544,7 +543,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         homeOverlayActive = false
         homeForwardAvailable = false
         tabManager.current?.let { tab ->
-            if (tab.url != ABOUT_HOME) {
+            // tab.url 可能已标成主页，但 WebView 里还留着网页；两者不一致会让返回来回跳。
+            if (tab.url != ABOUT_HOME || tab.webView.url.orEmpty().startsWith("http")) {
                 tab.url = ABOUT_HOME
                 tab.webView.loadUrl("about:blank")
             }
@@ -7199,8 +7199,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
                 if (webView === tabManager.currentWebView) {
                     // 从主页前进/后退到真实网站时，把原生主页面板收起来。
+                    val dismissedOnce = suppressHomeDismiss
+                    suppressHomeDismiss = false
                     if (startedUrl.startsWith("http") &&
-                        homeContainer?.visibility == View.VISIBLE
+                        homeContainer?.visibility == View.VISIBLE && !dismissedOnce
                     ) {
                         showWeb()
                     }
@@ -7268,6 +7270,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
 
         override fun onPageFinished(webView: SiiWebView?, url: String) {
+            suppressHomeDismiss = false
             if (webView === tabManager.currentWebView) hidePageLoadingCover()
             markPageFinished(webView)
             // 补注入抓包 hook：onPageStarted 的注入可能落在旧文档上，
