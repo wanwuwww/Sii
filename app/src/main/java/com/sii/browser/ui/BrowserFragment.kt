@@ -1940,7 +1940,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val target = runCatching { android.net.Uri.parse(targetUrl) }.getOrNull()
         val host = target?.host?.lowercase().orEmpty()
         if (host.isEmpty()) {
-            Toast.makeText(requireContext(), R.string.ad_mark_no_host, Toast.LENGTH_SHORT).show()
+            showAdMarkNoHostDialog()
             return
         }
         val pageHost = tabManager.current?.url
@@ -1963,6 +1963,28 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         addCustomRuleLines(listOf(line))
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    /** 内嵌/临时图片没有独立域名：给出「隐藏元素」与「拦截当前站点」两个明确选项。 */
+    private fun showAdMarkNoHostDialog() {
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.ad_mark_no_host_title)
+            .setMessage(R.string.ad_mark_no_host_message)
+            .setPositiveButton(R.string.ad_mark_hide_element) { _, _ -> startAdPick() }
+            .setNeutralButton(R.string.ad_mark_block_site) { _, _ ->
+                val host = tabManager.current?.url
+                    ?.let { runCatching { android.net.Uri.parse(it).host }.getOrNull() }
+                    ?.lowercase()
+                    ?: return@setNeutralButton
+                addCustomRuleLines(listOf("||$host^"))
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.ad_marked_domain, host),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /** 选取结果确认：逐条列出候选选择器（带匹配数），可试隐 3 秒或直接写入规则。 */
@@ -7599,6 +7621,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
         override fun onPageCommitVisible(webView: SiiWebView?, url: String) {
             if (webView === tabManager.currentWebView) hidePageLoadingCover()
+            // 首个画面刚提交就先隐藏已命中的广告节点，不等整页加载完成。
+            injectCosmeticCss(webView, url, countStats = false)
         }
 
         override fun onPageFinished(webView: SiiWebView?, url: String) {
@@ -7991,21 +8015,25 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         else -> getString(R.string.ssl_err_unknown)
     }
 
-    /** 注入元素隐藏规则（cosmetic）生成的 CSS，并统计实际命中的节点数。 */
-    private fun injectCosmeticCss(webView: SiiWebView?, url: String) {
+    /** 注入元素隐藏 CSS；页面段落一渲染就生效，广告不会先显示再消失。 */
+    private fun injectCosmeticCss(webView: SiiWebView?, url: String, countStats: Boolean = true) {
         val host = runCatching { android.net.Uri.parse(url).host }.getOrNull()
         val selectors = AppServices.adBlock.cosmeticSelectorsFor(host)
         val css = AppServices.adBlock.cosmeticCssFor(host)
         if (css.isEmpty() || webView == null) return
         val escaped = css.replace("\\", "\\\\").replace("'", "\\'")
+        // documentElement 可能还没建立（提交早期）：短间隔重试，最迟 5 秒后放弃。
         webView.evaluateJavascript(
-            "(function(){var s=document.getElementById('sii_cosmetic');" +
+            "(function(){var css='$escaped';" +
+                "function apply(){var root=document.documentElement;if(!root)return false;" +
+                "var s=document.getElementById('sii_cosmetic');" +
                 "if(!s){s=document.createElement('style');s.id='sii_cosmetic';" +
-                "(document.head||document.documentElement).appendChild(s);}" +
-                "s.textContent='$escaped';})();",
+                "root.appendChild(s);}s.textContent=css;return true;}" +
+                "if(!apply()){var t=setInterval(function(){if(apply())clearInterval(t);},20);" +
+                "setTimeout(function(){clearInterval(t);},5000);}})();",
             null
         )
-        if (selectors.isEmpty()) return
+        if (!countStats || selectors.isEmpty()) return
         webView.evaluateJavascript(
             "(function(){var s=" + org.json.JSONArray(selectors) + ";var n=0;" +
                 "for(var i=0;i<s.length;i++){try{n+=document.querySelectorAll(s[i]).length;}catch(e){}}" +

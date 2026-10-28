@@ -731,7 +731,10 @@
     <string name="menu_mark_ad_image">Block image host</string>
     <string name="ad_marked_domain">Blocked %1$s (whole domain)</string>
     <string name="ad_marked_path">Blocked path: %1$s</string>
-    <string name="ad_mark_no_host">No recognizable domain for this target</string>
+    <string name="ad_mark_no_host_title">No usable domain</string>
+    <string name="ad_mark_no_host_message">This image is inline or temporary data (data: / blob:), so it has no domain to block. You can hide the element instead, or block the whole site.</string>
+    <string name="ad_mark_hide_element">Pick element to hide</string>
+    <string name="ad_mark_block_site">Block current site</string>
     <string name="ad_mark_same_site_no_path">Same-site resource has no usable path. Use “Pick ad element” instead</string>
     <string name="rules_export">Export rules</string>
     <string name="rules_import">Import rules</string>

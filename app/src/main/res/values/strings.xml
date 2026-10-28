@@ -732,7 +732,10 @@
     <string name="menu_mark_ad_image">拦截该图片域名</string>
     <string name="ad_marked_domain">已拦截 %1$s（整个域名）</string>
     <string name="ad_marked_path">已拦截该路径：%1$s</string>
-    <string name="ad_mark_no_host">该目标没有可识别的域名</string>
+    <string name="ad_mark_no_host_title">无法识别域名</string>
+    <string name="ad_mark_no_host_message">这张图片是内嵌或临时数据（data: / blob:），没有独立域名，无法按域名拦截。可以改为隐藏这个元素，或拦截整个站点。</string>
+    <string name="ad_mark_hide_element">选取元素隐藏</string>
+    <string name="ad_mark_block_site">拦截当前站点</string>
     <string name="ad_mark_same_site_no_path">同站资源没有可用路径，请改用「选取广告元素」</string>
     <string name="rules_export">导出规则</string>
     <string name="rules_import">导入规则</string>
