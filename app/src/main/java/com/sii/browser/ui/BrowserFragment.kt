@@ -3470,9 +3470,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
                 tool.setTextSize(15.5f)
-                tool.typeface = android.graphics.Typeface.create(
-                    "sans-serif-medium", android.graphics.Typeface.NORMAL
-                )
+                tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
                 tool.textScaleX = 0.8f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
@@ -3485,9 +3483,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
                 tool.setTextSize(15.5f)
-                tool.typeface = android.graphics.Typeface.create(
-                    "sans-serif-medium", android.graphics.Typeface.NORMAL
-                )
+                tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
                 tool.textScaleX = 0.8f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
@@ -3502,8 +3498,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 )
                 tool.text = label
                 // 英文界面下 Orig / Trans 比单个汉字长，缩小字号避免被 40dp 槽位截断。
-                tool.setTextSize(if (label.length > 1) 10.5f else 16f)
-                tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
+                tool.setTextSize(if (label.length > 1) 11.5f else 17.5f)
+                tool.typeface = android.graphics.Typeface.create(
+                    "sans-serif-medium", android.graphics.Typeface.NORMAL
+                )
                 tool.textScaleX = 1f
                 tool.letterSpacing = 0f
                 tool.setTextColor(ThemeAccent.color(requireContext()))
@@ -5558,9 +5556,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 android.util.TypedValue.COMPLEX_UNIT_PX,
                 (iconSize * 0.55f).coerceAtLeast(dp(10).toFloat())
             )
-            typeface = android.graphics.Typeface.create(
-                "sans-serif-medium", android.graphics.Typeface.NORMAL
-            )
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
             textScaleX = 0.8f
             letterSpacing = -0.02f
             gravity = android.view.Gravity.CENTER
