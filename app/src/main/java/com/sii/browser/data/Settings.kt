@@ -1200,6 +1200,16 @@ interface WebPageSettings {
 
     fun setDownloader(value: Int)
 
+    /** 下载连接模式：0 自动 / 1 HTTP/2 / 2 HTTP/1.1。 */
+    fun downloadProtocol(): Int
+
+    fun setDownloadProtocol(value: Int)
+
+    /** 指定下载目录时是否直接写入 SAF（关闭则先写沙箱再复制）。 */
+    fun downloadSafDirect(): Boolean
+
+    fun setDownloadSafDirect(value: Boolean)
+
     /** 下载完成后自动打开文件。 */
     fun downloadAutoOpen(): Boolean
 

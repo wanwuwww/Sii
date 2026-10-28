@@ -55,6 +55,32 @@ class DownloadEngine(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = java.util.concurrent.ConcurrentHashMap<Long, Job>()
 
+    private val http2Client: OkHttpClient by lazy {
+        client.newBuilder()
+            .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            .build()
+    }
+    private val http11Client: OkHttpClient by lazy {
+        client.newBuilder().protocols(listOf(okhttp3.Protocol.HTTP_1_1)).build()
+    }
+
+    /** 自动模式下已降级的域名：HTTP/2 失败过一次就改走 HTTP/1.1。 */
+    private val degradedHosts = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    private fun hostOf(url: String): String =
+        runCatching { android.net.Uri.parse(url).host?.lowercase() }.getOrNull().orEmpty()
+
+    private fun clientFor(url: String): OkHttpClient {
+        val mode = runCatching {
+            com.sii.browser.di.AppServices.settings.downloadProtocol()
+        }.getOrDefault(0)
+        return when (mode) {
+            1 -> http2Client
+            2 -> http11Client
+            else -> if (hostOf(url) in degradedHosts) http11Client else http2Client
+        }
+    }
+
     /** 每个任务最后一次用户意图：true 运行，false 暂停；用于快速连点时以最后一次为准。 */
     private val desiredRunning = java.util.concurrent.ConcurrentHashMap<Long, Boolean>()
     private val lastProgressAt = java.util.concurrent.ConcurrentHashMap<Long, Long>()
@@ -95,9 +121,6 @@ class DownloadEngine(
                     maxRequestsPerHost = 8
                 }
             )
-            // 强制 HTTP/1.1：8 个 Range 请求才会是 8 条真连接，
-            // HTTP/2 复用单连接时很多 CDN 按连接限速，开再多段也没用。
-            .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
             .build()
 
         /** 网络类型自适应段数：Wi-Fi/以太网 8 段，移动网络与 VPN 4 段。 */
@@ -132,7 +155,7 @@ class DownloadEngine(
     suspend fun probe(url: String): Probe = withContext(Dispatchers.IO) {
         runCatching {
             val request = requestBuilder(url).header("Range", "bytes=0-0").build()
-            client.newCall(request).execute().use { resp ->
+            clientFor(url).newCall(request).execute().use { resp ->
                 resp.header("ETag")?.takeIf { it.isNotBlank() }?.let { etags[url] = it }
                 if (resp.code == 206) {
                     val total = resp.header("Content-Range")
@@ -251,6 +274,17 @@ class DownloadEngine(
             if (!currentCoroutineContext().isActive) return
             if (currentCoroutineContext()[Job]?.isCancelled == true) return
             if (repository.taskById(taskId)?.state == DownloadState.PAUSED) return
+            // 自动模式：该域名 HTTP/2 失败过一次就改走 HTTP/1.1 重来（每域名只降一次）。
+            val mode = runCatching {
+                com.sii.browser.di.AppServices.settings.downloadProtocol()
+            }.getOrDefault(0)
+            if (mode == 0 && degradedHosts.add(hostOf(task.url))) {
+                if (desiredRunning[taskId] == true) {
+                    kotlinx.coroutines.delay(300)
+                    start(taskId)
+                }
+                return
+            }
             val retried = attempts.getOrDefault(taskId, 0) < MAX_RETRY &&
                 runCatching { com.sii.browser.di.AppServices.settings.downloadRetry() }.getOrDefault(false)
             if (retried) {
@@ -274,7 +308,7 @@ class DownloadEngine(
         withContext(Dispatchers.IO) {
             runCatching {
                 val request = Request.Builder().url(url).head().build()
-                client.newCall(request).execute().use { resp ->
+                clientFor(url).newCall(request).execute().use { resp ->
                     val current = resp.header("ETag") ?: return@withContext true
                     current == expected
                 }
@@ -348,7 +382,7 @@ class DownloadEngine(
 
     /** 服务器不支持大小探测/Range 时，用单流下载到 EOF；完成后补总大小。 */
     private suspend fun downloadStream(taskId: Long, task: DownloadTask, sink: Sink) {
-        val call = client.newCall(requestBuilder(task.url).build())
+        val call = clientFor(task.url).newCall(requestBuilder(task.url).build())
         val resp = awaitResponse(call)
         resp.use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
@@ -436,7 +470,10 @@ class DownloadEngine(
         val tree = if (incognito) null else runCatching {
             com.sii.browser.di.AppServices.settings.downloadDir()
         }.getOrNull()
-        if (!tree.isNullOrEmpty()) {
+        val safDirect = runCatching {
+            com.sii.browser.di.AppServices.settings.downloadSafDirect()
+        }.getOrDefault(true)
+        if (safDirect && !tree.isNullOrEmpty()) {
             runCatching { openSafSink(android.net.Uri.parse(tree), task.name) }
                 .getOrNull()?.let { return it }
         }
@@ -507,7 +544,7 @@ class DownloadEngine(
         val request = requestBuilder(task.url)
             .header("Range", "bytes=$start-$end")
             .build()
-        val call = client.newCall(request)
+        val call = clientFor(task.url).newCall(request)
         val resp = awaitResponse(call)
         resp.use { response ->
             if (response.code != 206) {

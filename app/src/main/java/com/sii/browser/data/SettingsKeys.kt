@@ -86,6 +86,8 @@ object SettingsKeys {
     const val LONG_PRESS_ORDER = "longpressorder"
     const val SELECTION_MENU_ITEMS = "selectionmenuitems"
     const val DOWNLOADER = "downloader"
+    const val DOWNLOAD_PROTOCOL = "download_protocol"
+    const val DOWNLOAD_SAF_DIRECT = "download_saf_direct"
     const val DOWNLOAD_AUTO_OPEN = "downloadautoopen"
     const val DOWNLOAD_RETRY = "downloadretry"
     const val DOWNLOAD_DIR = "downloaddir"

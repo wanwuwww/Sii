@@ -809,6 +809,9 @@
     <string name="settings_gesture_volume">音量键翻页</string>
     <string name="settings_gesture_double_tap">双击网页</string>
     <string name="settings_downloader">下载器</string>
+    <string name="settings_download_protocol">连接模式</string>
+    <string name="settings_download_saf_direct">直接写入下载目录</string>
+    <string name="settings_download_saf_direct_desc">关闭后先写应用沙箱，完成后再复制到下载目录</string>
     <string name="settings_download">下载</string>
     <string name="settings_download_auto_open">下载完成后打开文件</string>
     <string name="settings_download_retry">下载失败自动重试</string>
@@ -937,6 +940,7 @@
     <string name="download_clear_keep">仅清除列表</string>
     <string name="download_clear_delete">同时删除文件</string>
     <string name="download_clear_confirm">是否同时删除本地文件？</string>
+    <string name="download_delete_unfinished_confirm">任务尚未下载完成，删除后会同时清除已下载的部分文件。</string>
     <string name="download_url_title">下载地址</string>
     <string name="download_share">分享链接</string>
     <string name="download_install_permission">请允许安装未知应用后重试</string>

@@ -43,6 +43,8 @@ class SettingsFragment : Fragment() {
         SearchEntry("桌面站点", "通用", "desktop site"),
         SearchEntry("脚本", "通用", "userscript"),
         SearchEntry("下载", "通用", "download"),
+        SearchEntry("下载连接模式", "通用", "下载 协议 HTTP2 HTTP1.1 protocol"),
+        SearchEntry("直接写入下载目录", "通用", "下载目录 saf 写入"),
         SearchEntry("仅 Wi-Fi 图片", "通用", "图片"),
         SearchEntry("手势", "通用", "gesture"),
         SearchEntry("长按定制", "通用", "长按菜单"),

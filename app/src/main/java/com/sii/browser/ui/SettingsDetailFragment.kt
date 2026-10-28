@@ -752,6 +752,18 @@ class SettingsDetailFragment : Fragment() {
                 settings.setDownloader(it)
                 build()
             },
+            choiceRow(
+                getString(R.string.settings_download_protocol),
+                DOWNLOAD_PROTOCOL_NAMES,
+                settings.downloadProtocol().coerceIn(0, 2),
+                enabled = builtin
+            ) { settings.setDownloadProtocol(it) },
+            switchRow(
+                getString(R.string.settings_download_saf_direct),
+                settings.downloadSafDirect(),
+                getString(R.string.settings_download_saf_direct_desc),
+                enabled = builtin
+            ) { settings.setDownloadSafDirect(it) },
             switchRow(
                 getString(R.string.settings_download_confirm),
                 settings.downloadConfirm(),
@@ -2910,6 +2922,7 @@ class SettingsDetailFragment : Fragment() {
 
         private val THEME_COLOR_NAMES = arrayOf("默认（蓝）", "绿", "橙", "紫")
         private val DOWNLOADER_NAMES = arrayOf("Sii 内建下载器", "系统下载管理器")
+        private val DOWNLOAD_PROTOCOL_NAMES = arrayOf("自动", "HTTP/2", "HTTP/1.1")
         private val THEME_COLOR_IDS = arrayOf(null, "green", "orange", "purple")
 
         /** 长按菜单项。 */

@@ -808,6 +808,9 @@
     <string name="settings_gesture_volume">Volume keys to turn pages</string>
     <string name="settings_gesture_double_tap">Double-tap page</string>
     <string name="settings_downloader">Downloader</string>
+    <string name="settings_download_protocol">Connection mode</string>
+    <string name="settings_download_saf_direct">Write directly to download folder</string>
+    <string name="settings_download_saf_direct_desc">When off, files are written to app storage first and copied afterwards</string>
     <string name="settings_download">Downloads</string>
     <string name="settings_download_auto_open">Open file after download</string>
     <string name="settings_download_retry">Auto-retry failed downloads</string>
@@ -936,6 +939,7 @@
     <string name="download_clear_keep">Clear list only</string>
     <string name="download_clear_delete">Also delete files</string>
     <string name="download_clear_confirm">Also delete local files?</string>
+    <string name="download_delete_unfinished_confirm">This download is unfinished. Deleting it will also remove the partial file.</string>
     <string name="download_url_title">Download URL</string>
     <string name="download_share">Share link</string>
     <string name="download_install_permission">Allow installing unknown apps and retry</string>
