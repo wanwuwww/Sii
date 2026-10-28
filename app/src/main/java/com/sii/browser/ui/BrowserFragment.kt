@@ -3469,7 +3469,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             1 -> {
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(14f)
+                tool.setTextSize(15.5f)
+                tool.typeface = android.graphics.Typeface.DEFAULT
+                tool.textScaleX = 0.8f
+                tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
                 scheduleTranslateFabAutoHide()
@@ -3479,7 +3482,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(14f)
+                tool.setTextSize(15.5f)
+                tool.typeface = android.graphics.Typeface.DEFAULT
+                tool.textScaleX = 0.8f
+                tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
             }
@@ -3493,6 +3499,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tool.text = label
                 // 英文界面下 Orig / Trans 比单个汉字长，缩小字号避免被 40dp 槽位截断。
                 tool.setTextSize(if (label.length > 1) 10.5f else 16f)
+                tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
+                tool.textScaleX = 1f
+                tool.letterSpacing = 0f
                 tool.setTextColor(ThemeAccent.color(requireContext()))
                 tool.contentDescription = getString(
                     if (translateShowOriginal) R.string.translate_show_translated
@@ -5430,7 +5439,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         MenuEntry("readaloud", getString(R.string.menu_read_aloud), R.drawable.ic_m_speaker, false, { false }, { hasWebPage() }) { toggleReadAloud() },
         MenuEntry("savepage", getString(R.string.menu_save_page), R.drawable.ic_m_save_page, false, { false }, { hasWebPage() }) { savePageOffline() },
         MenuEntry("readlaterlist", getString(R.string.menu_read_later), R.drawable.ic_m_read_later, false, { false }) { openReadLater() },
-        MenuEntry("translatepage", getString(R.string.menu_translate_page), R.drawable.ic_m_translate, false, { false }, { hasWebPage() }) { translatePage() },
+        MenuEntry("translatepage", getString(R.string.menu_translate_page), R.drawable.ic_m_translate, false, { false }, { hasWebPage() }, iconText = getString(R.string.translate_mark)) { translatePage() },
         MenuEntry("source", getString(R.string.menu_source), R.drawable.ic_m_code, false, { false }, { hasWebPage() }) { showPageSource() },
         MenuEntry("print", getString(R.string.menu_print), R.drawable.ic_m_print, false, { false }, { hasWebPage() }) { printPage() },
         MenuEntry("passwords", getString(R.string.menu_passwords), R.drawable.ic_m_key, false, { false }) { openPasswords() },
@@ -5516,8 +5525,43 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val isToggle: Boolean,
         val active: () -> Boolean,
         val enabled: () -> Boolean = { true },
+        /** 非空时用文字代替矢量图标（字号/字重与工具栏文字标记一致）。 */
+        val iconText: String? = null,
         val action: () -> Unit
     )
+
+    /** 菜单图标：有 iconText 时用文字（与工具栏文字标记同款），否则用矢量图标。 */
+    private fun addMenuIcon(
+        container: LinearLayout,
+        entry: MenuEntry,
+        color: Int,
+        iconSize: Int
+    ) {
+        val context = requireContext()
+        val text = entry.iconText
+        if (text.isNullOrEmpty()) {
+            container.addView(ImageView(context).apply {
+                setImageResource(entry.icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(color)
+                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+            })
+            return
+        }
+        container.addView(TextView(context).apply {
+            this.text = text
+            setTextColor(color)
+            setTextSize(
+                android.util.TypedValue.COMPLEX_UNIT_PX,
+                (iconSize * 0.55f).coerceAtLeast(dp(10).toFloat())
+            )
+            typeface = android.graphics.Typeface.DEFAULT
+            textScaleX = 0.8f
+            letterSpacing = -0.02f
+            gravity = android.view.Gravity.CENTER
+            includeFontPadding = false
+            layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+        })
+    }
 
     /** 单个菜单格（上方 grid 与固定栏共用）：图标默认灰、开启态为主题色；单元格按面板可用宽度/4 居中。 */
     private fun buildMenuEntry(entry: MenuEntry, foreground: Int? = null, columns: Int = 4, fixed: Boolean = false): View {
@@ -5545,11 +5589,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             layoutParams = LinearLayout.LayoutParams(cellWidth, if (fixed) dp(AppServices.settings.fixedMenuHeight()) else ViewGroup.LayoutParams.WRAP_CONTENT)
             isClickable = true
             setBackgroundResource(android.R.drawable.list_selector_background)
-            addView(ImageView(context).apply {
-                setImageResource(entry.icon)
-                imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
-                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
-            })
+            addMenuIcon(this, entry, iconColor, iconSize)
             addView(TextView(context).apply {
                 text = uiText(entry.label)
                 setTextSize(textSize)
@@ -5603,11 +5643,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             layoutParams = LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
             isClickable = true
             setBackgroundResource(android.R.drawable.list_selector_background)
-            addView(ImageView(context).apply {
-                setImageResource(entry.icon)
-                imageTintList = android.content.res.ColorStateList.valueOf(color)
-                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
-            })
+            addMenuIcon(this, entry, color, iconSize)
             addView(TextView(context).apply {
                 text = uiText(entry.label)
                 setTextSize(AppServices.settings.fixedMenuTextSize().coerceIn(8, 18).toFloat())

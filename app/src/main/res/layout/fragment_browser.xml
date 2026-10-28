@@ -88,8 +88,7 @@
                 android:singleLine="true"
                 android:text="@string/translate_mark"
                 android:textColor="@color/icon_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
+                android:textSize="15.5sp"
                 android:visibility="gone" />
 
             <ImageButton
