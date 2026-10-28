@@ -10022,12 +10022,38 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .start()
     }
 
-    /** 回主页 / 切网页时把自动收起的悬浮底栏复位，避免它停在屏幕外。 */
+    /** 回主页 / 切网页时把自动收起的工具栏复位，避免它停在屏幕外。 */
     private fun resetDockVisibility() {
+        val restoreClassic = toolbarHidden || toolbarAutoHideHeights.isNotEmpty()
         toolbarHidden = false
+        if (restoreClassic && AppServices.settings.uiStyle() != 1) {
+            restoreToolbarScrollHidden()
+        }
         val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
         dock.animate().cancel()
         if (dock.translationY != 0f) dock.translationY = 0f
+    }
+
+    /** 经典工具栏滚动收起后按记录高度展开，否则回主页/切网页时工具栏会一直隐藏。 */
+    private fun restoreToolbarScrollHidden() {
+        val views = toolbarAutoHideViews()
+        if (views.isEmpty()) return
+        toolbarAutoHideAnimator?.cancel()
+        views.forEach { target ->
+            toolbarAutoHideHeights[target]?.let { height ->
+                if (target.layoutParams.height != height) {
+                    target.layoutParams = target.layoutParams.apply { this.height = height }
+                }
+            }
+            target.visibility = View.VISIBLE
+            target.translationY = 0f
+            target.alpha = 1f
+        }
+        toolbarAutoHideHeights.clear()
+        view?.findViewById<View>(R.id.bottom_bar)?.visibility =
+            if (AppServices.settings.toolbarPosition() == 2) View.GONE else View.VISIBLE
+        updateQuickEngineVisibility()
+        applyTabBarPosition()
     }
 
     private fun isSafeExternalUrl(url: String?): Boolean {
