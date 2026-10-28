@@ -76,7 +76,7 @@ class DownloadEngine(
 
     companion object {
         private const val DEFAULT_BUFFER_SIZE = 256 * 1024
-        private const val PROGRESS_FLUSH_BYTES = 1024L * 1024
+        private const val PROGRESS_FLUSH_BYTES = 4L * 1024 * 1024
         private const val MAX_RETRY = 3
         private const val RETRY_DELAY_MS = 3000L
         private const val BROWSER_UA =
@@ -87,60 +87,62 @@ class DownloadEngine(
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .connectionPool(okhttp3.ConnectionPool(8, 5, TimeUnit.MINUTES))
+            // 分块并发会到 8，OkHttp 默认 maxRequestsPerHost=5 会把并发卡在 5。
+            .dispatcher(
+                okhttp3.Dispatcher().apply {
+                    maxRequests = 16
+                    maxRequestsPerHost = 8
+                }
+            )
             .build()
 
-        /** 网络类型自适应段数：Wi-Fi 4 段，移动网络 2 段，未知 1 段。 */
+        /** 网络类型自适应段数：Wi-Fi/以太网 8 段，移动网络与 VPN 4 段。 */
         fun chunkCountForNetwork(context: Context): Int {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            val network = cm?.activeNetwork ?: return 1
-            val caps = cm.getNetworkCapabilities(network) ?: return 1
+            val network = cm?.activeNetwork ?: return 4
+            val caps = cm.getNetworkCapabilities(network) ?: return 4
             return when {
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> 4
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> 2
-                else -> 1
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> 8
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> 4
+                else -> 4
             }
         }
 
-        /** 混合策略：网络建议值与文件大小建议值取小，避免小文件过度并发。 */
+        /** 混合策略：网络建议值与文件大小建议值取小；单段不小于 512KB，避免小文件过度并发。 */
         fun chunkCountForFile(context: Context, total: Long): Int {
             if (total <= 0L) return 1
             val byNetwork = chunkCountForNetwork(context)
-            val bySize = ((total + 1024L * 1024L - 1) / (1024L * 1024L))
-                .coerceIn(1L, 4L)
-                .toInt()
+            val bySize = (total / (512L * 1024L)).coerceIn(1L, 8L).toInt()
             return minOf(byNetwork, bySize).coerceAtLeast(1)
         }
     }
 
-    /** 探测服务器是否真正支持 Range；不支持则走单流下载，避免分块写坏文件。 */
-    suspend fun supportsRange(url: String): Boolean = withContext(Dispatchers.IO) {
+    /** 探测结果：总大小与服务器是否真正支持 Range（一次请求拿到）。 */
+    data class Probe(val total: Long, val rangeSupported: Boolean)
+
+    /**
+     * 一次 `Range: bytes=0-0` 同时拿到「是否支持 Range」与总大小，
+     * 不再先 HEAD 再探测，少 1–2 个往返。
+     */
+    suspend fun probe(url: String): Probe = withContext(Dispatchers.IO) {
         runCatching {
             val request = requestBuilder(url).header("Range", "bytes=0-0").build()
-            client.newCall(request).execute().use { response ->
-                response.code == 206 ||
-                    response.header("Accept-Ranges")?.contains("bytes", true) == true
+            client.newCall(request).execute().use { resp ->
+                resp.header("ETag")?.takeIf { it.isNotBlank() }?.let { etags[url] = it }
+                if (resp.code == 206) {
+                    val total = resp.header("Content-Range")
+                        ?.let { it.substringAfter('/', "").toLongOrNull() } ?: 0L
+                    Probe(total, true)
+                } else {
+                    Probe(resp.header("Content-Length")?.toLongOrNull() ?: 0L, false)
+                }
             }
-        }.getOrDefault(false)
+        }.getOrDefault(Probe(0L, false))
     }
 
-    /** 探测资源总大小（HEAD；不支持时退回 Range 探测）。 */
-    suspend fun probeSize(url: String): Long = withContext(Dispatchers.IO) {
-        val head = requestBuilder(url).head().build()
-        client.newCall(head).execute().use { resp ->
-            resp.header("ETag")?.takeIf { it.isNotBlank() }?.let { etags[url] = it }
-            resp.header("Content-Length")?.toLongOrNull()?.let {
-                if (it > 0L) return@withContext it
-            }
-        }
-        val range = requestBuilder(url).header("Range", "bytes=0-0").build()
-        client.newCall(range).execute().use { resp ->
-            resp.header("Content-Range")?.let { cr ->
-                val slash = cr.lastIndexOf('/')
-                if (slash >= 0) cr.substring(slash + 1).toLongOrNull()?.let { return@withContext it }
-            }
-            0L
-        }
-    }
+    /** 仅取总大小（下载前的确认弹窗用）。 */
+    suspend fun probeSize(url: String): Long = probe(url).total
 
     fun start(taskId: Long) {
         desiredRunning[taskId] = true
@@ -300,6 +302,8 @@ class DownloadEngine(
             .url(url)
             .header("User-Agent", BROWSER_UA)
             .header("Referer", url)
+            // 服务器若对 Range 响应做内容压缩，OkHttp 会透明解压导致字节数与 Content-Range 对不上。
+            .header("Accept-Encoding", "identity")
         runCatching {
             android.webkit.CookieManager.getInstance().getCookie(url)
                 ?.takeIf { it.isNotBlank() }
@@ -399,6 +403,7 @@ class DownloadEngine(
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 var downloaded = chunk.downloaded
                 var lastFlush = downloaded
+                var lastFlushAt = android.os.SystemClock.elapsedRealtime()
                 val input = body.byteStream()
                 while (true) {
                     currentCoroutineContext().ensureActive()
@@ -406,10 +411,13 @@ class DownloadEngine(
                     if (read < 0) break
                     raf.write(buffer, 0, read)
                     downloaded += read
-                    if (downloaded - lastFlush >= PROGRESS_FLUSH_BYTES) {
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    // 进度落库不能太频繁：4MB 或 1 秒一次，减少低端机上的随机 I/O。
+                    if (downloaded - lastFlush >= PROGRESS_FLUSH_BYTES || now - lastFlushAt >= 1000L) {
                         repository.updateChunkProgress(chunk.id, downloaded)
                         publishTaskProgress(task.id)
                         lastFlush = downloaded
+                        lastFlushAt = now
                     }
                 }
                 repository.updateChunkProgress(chunk.id, downloaded)

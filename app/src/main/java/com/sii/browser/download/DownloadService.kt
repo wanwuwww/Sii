@@ -137,12 +137,10 @@ class DownloadService : Service() {
                 return@launch
             }
             if (existing != null) AppServices.downloadRepository.deleteTask(existing.id)
-            val probed = runCatching {
-                AppServices.downloadEngine.probeSize(url)
-            }.getOrDefault(0L)
-            val total = if (probed > 0L && AppServices.downloadEngine.supportsRange(url)) {
-                probed
-            } else 0L
+            val probe = runCatching {
+                AppServices.downloadEngine.probe(url)
+            }.getOrDefault(DownloadEngine.Probe(0L, false))
+            val total = if (probe.total > 0L && probe.rangeSupported) probe.total else 0L
             val task = AppServices.downloadRepository.createTask(
                 url = url,
                 name = name,
@@ -273,12 +271,10 @@ class DownloadService : Service() {
             // 先停止旧任务，再重置分块进度重新下载
             AppServices.downloadEngine.cancelAndWait(id)
             AppServices.downloadRepository.deleteTask(id)
-            val probed = runCatching {
-                AppServices.downloadEngine.probeSize(task.url)
-            }.getOrDefault(0L)
-            val total = if (probed > 0L && AppServices.downloadEngine.supportsRange(task.url)) {
-                probed
-            } else 0L
+            val probe = runCatching {
+                AppServices.downloadEngine.probe(task.url)
+            }.getOrDefault(DownloadEngine.Probe(0L, false))
+            val total = if (probe.total > 0L && probe.rangeSupported) probe.total else 0L
             val fresh = AppServices.downloadRepository.createTask(
                 url = task.url, name = task.name, mimetype = task.mimetype,
                 totalSize = total,
