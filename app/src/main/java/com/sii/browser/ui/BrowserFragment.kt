@@ -3470,7 +3470,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
                 tool.setTextSize(15.5f)
-                tool.typeface = android.graphics.Typeface.DEFAULT
+                tool.typeface = android.graphics.Typeface.create(
+                    "sans-serif-medium", android.graphics.Typeface.NORMAL
+                )
                 tool.textScaleX = 0.8f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
@@ -3483,7 +3485,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
                 tool.setTextSize(15.5f)
-                tool.typeface = android.graphics.Typeface.DEFAULT
+                tool.typeface = android.graphics.Typeface.create(
+                    "sans-serif-medium", android.graphics.Typeface.NORMAL
+                )
                 tool.textScaleX = 0.8f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
@@ -5554,7 +5558,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 android.util.TypedValue.COMPLEX_UNIT_PX,
                 (iconSize * 0.55f).coerceAtLeast(dp(10).toFloat())
             )
-            typeface = android.graphics.Typeface.DEFAULT
+            typeface = android.graphics.Typeface.create(
+                "sans-serif-medium", android.graphics.Typeface.NORMAL
+            )
             textScaleX = 0.8f
             letterSpacing = -0.02f
             gravity = android.view.Gravity.CENTER
