@@ -3469,9 +3469,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             1 -> {
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(15.5f)
+                tool.setTextSize(14.5f)
                 tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
-                tool.textScaleX = 0.8f
+                tool.textScaleX = 0.78f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
@@ -3482,9 +3482,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
                 tool.text = getString(R.string.translate_mark)
-                tool.setTextSize(15.5f)
+                tool.setTextSize(14.5f)
                 tool.typeface = android.graphics.Typeface.DEFAULT_BOLD
-                tool.textScaleX = 0.8f
+                tool.textScaleX = 0.78f
                 tool.letterSpacing = -0.02f
                 tool.setTextColor(normal)
                 tool.contentDescription = getString(R.string.menu_translate_page)
@@ -5557,7 +5557,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 (iconSize * 0.55f).coerceAtLeast(dp(10).toFloat())
             )
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            textScaleX = 0.8f
+            textScaleX = 0.78f
             letterSpacing = -0.02f
             gravity = android.view.Gravity.CENTER
             includeFontPadding = false
