@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 测试包在桌面/任务切换器显示为「Sii测试包」，英文系统同样如此。 -->
+    <string name="app_name">Sii测试包</string>
+</resources>
