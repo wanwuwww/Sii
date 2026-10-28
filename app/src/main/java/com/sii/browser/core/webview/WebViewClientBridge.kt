@@ -125,13 +125,17 @@ class WebViewClientBridge(
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         val url = request.url.toString()
         val isLinkHit = view.hitTestResult?.type ?: 0
-        val action = callback.evaluateUrlAction(view as? SiiWebView, url, isLinkHit == 0, false)
+        val action = callback.evaluateUrlAction(
+            view as? SiiWebView, url, isLinkHit == 0, false, request.isForMainFrame
+        )
         return urlDecision?.shouldLoad(view as? SiiWebView, request, url, action) ?: false
     }
 
     @Suppress("DEPRECATION")
     override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-        val action = callback.evaluateUrlAction(view as? SiiWebView, url, view.hitTestResult?.type == 0, false)
+        val action = callback.evaluateUrlAction(
+            view as? SiiWebView, url, view.hitTestResult?.type == 0, false, true
+        )
         return urlDecision?.shouldLoad(view as? SiiWebView, null, url, action) ?: false
     }
 

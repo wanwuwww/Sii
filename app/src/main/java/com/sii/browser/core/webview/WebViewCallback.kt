@@ -136,5 +136,11 @@ open class WebViewCallback {
      * 评估 URL 加载动作（shouldOverrideUrlLoading 前置）。
      * 返回动作码由浏览器核心定义（新标签/外部应用/继续加载等）。
      */
-    open fun evaluateUrlAction(webView: SiiWebView?, url: String, isLinkHit: Boolean, isNewWindow: Boolean): Int = 0
+    open fun evaluateUrlAction(
+        webView: SiiWebView?,
+        url: String,
+        isLinkHit: Boolean,
+        isNewWindow: Boolean,
+        isForMainFrame: Boolean
+    ): Int = 0
 }

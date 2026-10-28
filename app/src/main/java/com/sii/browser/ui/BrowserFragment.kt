@@ -114,7 +114,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var homeForwardAvailable = false
     /** 本次导航由主页发起：返回键先回主页，而不是退网页历史。 */
     private var navFromHome = false
-    private var navFromHomeUrl: String? = null
     private var sniffPrompt: View? = null
     private var sniffPromptResource: com.sii.browser.core.webview.SniffedResource? = null
     private var sniffPromptKey: Any? = null
@@ -518,7 +517,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (navFromHome) {
             // 从主页发起的搜索：返回直接回主页，主页再按返回就退出。
             navFromHome = false
-            navFromHomeUrl = null
             homeOverlayActive = false
             homeForwardAvailable = false
             showHome(createTab = false)
@@ -3565,7 +3563,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 }
             }
             navFromHome = false
-            navFromHomeUrl = null
             showHome()
             return
         }
@@ -3622,7 +3619,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val url = if (httpsOnlyEnabled()) upgradeToHttps(cleanUrl(rawUrl)) else cleanUrl(rawUrl)
         // 从主页发起的导航：返回键应先回到主页，再退网页历史。
         navFromHome = homeContainer?.visibility == View.VISIBLE
-        navFromHomeUrl = url
         homeOverlayActive = false
         homeForwardAvailable = false
         if (tabManager.current == null) {
@@ -4322,7 +4318,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         homeOverlayActive = false
         homeForwardAvailable = false
         navFromHome = false
-        navFromHomeUrl = null
         hideSniffPrompt()
         previous?.onPause()
         if (tabManager.current?.url == ABOUT_HOME) {
@@ -7169,22 +7164,33 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
         }
 
+        override fun evaluateUrlAction(
+            webView: SiiWebView?,
+            url: String,
+            isLinkHit: Boolean,
+            isNewWindow: Boolean,
+            isForMainFrame: Boolean
+        ): Int {
+            // 主框架在页内主动跳到别的站点，主页就不再是「上一页」。服务端重定向
+            // （如 bing 的 www→cn 同站跳转）与 iframe 跳转不算，否则从主页搜索后
+            // 按返回会退到被覆盖的旧网页。
+            if (navFromHome && isForMainFrame && !isNewWindow &&
+                webView === tabManager.currentWebView
+            ) {
+                val from = runCatching { android.net.Uri.parse(webView?.url.orEmpty()).host }
+                    .getOrNull()?.lowercase()
+                val to = runCatching { android.net.Uri.parse(url).host }
+                    .getOrNull()?.lowercase()
+                if (from != null && to != null && siteKeyOf(from) != siteKeyOf(to)) {
+                    navFromHome = false
+                }
+            }
+            return 0
+        }
+
         override fun doUpdateVisitedHistory(webView: SiiWebView?, url: String) {
             homeForwardAvailable = false
             if (webView == null || url.isBlank() || url == "about:blank") return
-            // 从主页发起后又跳到了别的站，主页就不再是“上一页”。
-            if (navFromHome) {
-                val fromHost = navFromHomeUrl?.let {
-                    runCatching { android.net.Uri.parse(it).host }.getOrNull()
-                }
-                val toHost = runCatching { android.net.Uri.parse(url).host }.getOrNull()
-                if (fromHost != null && toHost != null &&
-                    stripHostPrefix(fromHost.lowercase()) != stripHostPrefix(toHost.lowercase())
-                ) {
-                    navFromHome = false
-                    navFromHomeUrl = null
-                }
-            }
             tabManager.tabs.firstOrNull { it.webView === webView }?.let {
                 it.url = url
                 persistTabs()
@@ -8739,6 +8745,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private fun stripHostPrefix(host: String): String =
         host.removePrefix("www.").removePrefix("m.").removePrefix("mobile.")
+
+    /** 站点归属：取最后两段域名，www./m./cn. 之类的子域差异视为同站。 */
+    private fun siteKeyOf(host: String): String =
+        host.split('.').takeLast(2).joinToString(".")
 
     /** 当前是否为计费网络（移动网络）——「仅 Wi-Fi 加载图片」用。 */
     private fun isMeteredNetwork(): Boolean {
