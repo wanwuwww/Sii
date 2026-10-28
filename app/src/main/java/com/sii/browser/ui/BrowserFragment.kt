@@ -582,7 +582,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     else -> false
                 }
             },
-            isUiReady = { isAdded && view != null }
+            isUiReady = { isAdded && view != null },
+            uiStateProvider = { uiStateJson() }
         )
     }
 
@@ -3483,6 +3484,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     /** 统一加载入口：about:home 显示主页，其余走 WebView（无当前标签时先创建）。 */
     private fun loadUrlFor(rawUrl: String) {
+        com.sii.browser.core.mcp.DiagLog.record("load", rawUrl)
         homePanel?.dismissSuggestions()
         blurAddressInput()
         // 任何主动导航都收起搜索建议，防止结果页上残留。
@@ -3582,6 +3584,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         showWeb()
         showPageLoadingCover()
         val wv = tabManager.currentWebView
+        com.sii.browser.core.mcp.DiagLog.record(
+            "load-target",
+            "wv=" + (if (wv != null) "1" else "0") +
+                " tab=" + tabManager.currentIndex + "/" + tabManager.size +
+                " home=" + (homeContainer?.visibility == View.VISIBLE)
+        )
         if (wv != null) {
             // 电脑模式下手机专用站换成电脑版域名（如 m.weibo.cn → weibo.com）。
             val target = if (isDesktopForUrl(url)) desktopAliasUrl(url, null) ?: url else url
@@ -3592,6 +3600,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (wv.settings.userAgentString != ua) wv.settings.userAgentString = ua
             tabManager.current?.url = target
             val privacyHeaders = privacyRequestHeaders(target)
+            com.sii.browser.core.mcp.DiagLog.record(
+                "loadurl",
+                target + " headers=" + if (privacyHeaders.isEmpty()) "-" else privacyHeaders.keys.joinToString(",")
+            )
             if (privacyHeaders.isEmpty()) {
                 wv.post { wv.loadUrl(target) }
             } else {
@@ -3931,6 +3943,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private fun showHome(createTab: Boolean = true) {
+        com.sii.browser.core.mcp.DiagLog.record(
+            "show-home",
+            "tab=" + tabManager.current?.url + " wv=" + tabManager.currentWebView?.url
+        )
         AppServices.lastHomeVisible = true
         resetDockVisibility()
         hidePageLoadingCover()
@@ -3980,6 +3996,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private fun showWeb() {
+        com.sii.browser.core.mcp.DiagLog.record(
+            "show-web",
+            "tab=" + tabManager.current?.url + " wv=" + tabManager.currentWebView?.url
+        )
         AppServices.lastHomeVisible = false
         resetDockVisibility()
         homePanel?.exitSearchInput()
@@ -5508,6 +5528,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     private fun navigateFromHome(text: String) {
+        com.sii.browser.core.mcp.DiagLog.record(
+            "home-search",
+            text + " tab=" + tabManager.currentIndex + "/" + tabManager.size
+        )
         val url = resolveInput(text)
         loadUrlFor(url)
     }
@@ -6928,6 +6952,29 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
     }
 
+    /** 原生界面状态：地址栏内容、主页覆盖、当前 WebView 地址与 UA，供 MCP 诊断。 */
+    private fun uiStateJson(): String {
+        val tab = tabManager.current
+        val wv = tab?.webView
+        return org.json.JSONObject()
+            .put("address_text", addressInput?.text?.toString().orEmpty())
+            .put("address_focused", addressInput?.hasFocus() == true)
+            .put("address_editing", addressEditing)
+            .put("home_visible", homeContainer?.visibility == View.VISIBLE)
+            .put("home_overlay", homeOverlayActive)
+            .put("nav_from_home", navFromHome)
+            .put("tab_index", tabManager.currentIndex)
+            .put("tab_count", tabManager.size)
+            .put("tab_url", tab?.url.orEmpty())
+            .put("webview_url", wv?.url.orEmpty())
+            .put("webview_attached", wv?.parent != null)
+            .put("webview_visible", wv?.visibility == View.VISIBLE)
+            .put("user_agent", wv?.settings?.userAgentString.orEmpty())
+            .put("site_config_host", wv?.siteConfigHost.orEmpty())
+            .put("loading", isCurrentPageLoading())
+            .toString()
+    }
+
     /** 主页覆盖在网页上时，标签卡显示“主页”而不是被覆盖的网站。 */
     private fun tabDisplayTitle(tab: Tab): String {
         if (homeOverlayActive && homeContainer?.visibility == View.VISIBLE &&
@@ -6990,6 +7037,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         hideSuggestions()
         hideKeyboard()
         val text = addressInput?.text?.toString()?.trim().orEmpty()
+        com.sii.browser.core.mcp.DiagLog.record(
+            "addr-input",
+            text + " tab=" + tabManager.currentIndex + "/" + tabManager.size
+        )
         if (text.isEmpty()) return
         val url = resolveInput(text)
         loadUrlFor(url)
@@ -7116,6 +7167,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
 
         override fun onPageStarted(webView: SiiWebView?, url: String, favicon: Bitmap?) {
+            if (webView === tabManager.currentWebView) {
+                com.sii.browser.core.mcp.DiagLog.record("start", url)
+            }
             homeForwardAvailable = false
             webView?.let {
                 sniffPrompted.remove(it)
@@ -7259,7 +7313,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
 
         override fun onPageFinished(webView: SiiWebView?, url: String) {
-            if (webView === tabManager.currentWebView) hidePageLoadingCover()
+            if (webView === tabManager.currentWebView) {
+                com.sii.browser.core.mcp.DiagLog.record("finish", url)
+                hidePageLoadingCover()
+            }
             markPageFinished(webView)
             // 补注入抓包 hook：onPageStarted 的注入可能落在旧文档上，
             // 加载完成后补一次，确保后续 XHR/接口请求被记录（脚本自身幂等）。
@@ -7580,6 +7637,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
 
         override fun onReceivedErrorMainFrame(webView: SiiWebView?, errorCode: Int, description: String?, url: String) {
+            com.sii.browser.core.mcp.DiagLog.record(
+                "error",
+                errorCode.toString() + " " + description.orEmpty() + " " + url
+            )
             if (webView != null && webView === tabManager.currentWebView) {
                 // 错误页自身再报错时不再递归加载。
                 if (errorPageLoading[webView] == true) return
@@ -8603,6 +8664,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 val oldSignature = currentWebView.siteConfigSignature
                 applySiteSettings(currentWebView, currentUrl)
                 if (oldSignature != null && currentWebView.siteConfigSignature != oldSignature) {
+                    com.sii.browser.core.mcp.DiagLog.record("resume-reload", currentUrl)
                     currentWebView.reload()
                 }
             }

@@ -38,6 +38,12 @@ data class HistoryHit(val title: String, val url: String, val time: Long)
 interface McpHost {
     suspend fun state(): BrowserState
 
+    /** 原生界面与导航状态（JSON），用于排查导航类问题。 */
+    suspend fun uiState(): String
+
+    /** 最近的导航诊断事件（JSON 数组），按时间正序。 */
+    suspend fun logs(limit: Int): String
+
     suspend fun tabs(): List<TabSummary>
 
     suspend fun pageText(tab: Int?, maxChars: Int): String

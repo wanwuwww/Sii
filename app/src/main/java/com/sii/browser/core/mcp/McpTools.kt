@@ -14,7 +14,8 @@ enum class McpGroup {
     JS,
     BOOKMARK_WRITE,
     HISTORY_WRITE,
-    CAPTURE
+    CAPTURE,
+    DIAG
 }
 
 data class ToolResult(val text: String, val isError: Boolean = false)
@@ -25,7 +26,8 @@ data class ToolResult(val text: String, val isError: Boolean = false)
  */
 class McpTools(
     private val settings: Settings,
-    private val hostProvider: () -> McpHost?
+    private val hostProvider: () -> McpHost?,
+    private val debugBuild: Boolean
 ) {
 
     private data class ToolSpec(
@@ -85,8 +87,32 @@ class McpTools(
         )
         add(
             ToolSpec(
-                "sii_get_page_text",
-                "Read page text",
+                "sii_get_ui_state",
+                "UI state",
+                "Native UI and navigation state: address bar text/focus, home overlay, tab and WebView URL, UA, site config host, loading.",
+                McpGroup.DIAG,
+                schema(JSONObject())
+            ) { host, _ ->
+                ToolResult(host.uiState())
+            }
+        )
+        add(
+            ToolSpec(
+                "sii_get_logs",
+                "Navigation logs",
+                "Recent navigation and UI events as a JSON array (oldest first).",
+                McpGroup.DIAG,
+                schema(
+                    JSONObject().put("limit", prop("integer", "Max entries, 1-300; default 100.")),
+                )
+            ) { host, args ->
+                val limit = args.optInt("limit", 100).coerceIn(1, 300)
+                ToolResult(host.logs(limit))
+            }
+        )
+        add(
+            ToolSpec(
+                "sii_get_page_text",                "Read page text",
                 "Extract visible text of the page (default 20000 chars, max 50000).",
                 McpGroup.READ,
                 schema(
@@ -545,7 +571,7 @@ class McpTools(
 
     fun enabledCount(): Int = tools.count { isAllowed(it.group) }
 
-    fun totalCount(): Int = tools.size
+    fun totalCount(): Int = tools.count { debugBuild || it.group != McpGroup.DIAG }
 
     suspend fun call(name: String, arguments: JSONObject): ToolResult {
         val spec = tools.firstOrNull { it.name == name }
@@ -572,6 +598,7 @@ class McpTools(
         McpGroup.BOOKMARK_WRITE -> settings.mcpAllowBookmarkWrite()
         McpGroup.HISTORY_WRITE -> settings.mcpAllowHistoryWrite()
         McpGroup.CAPTURE -> settings.mcpAllowCapture()
+        McpGroup.DIAG -> debugBuild && settings.mcpAllowDiag()
     }
 
     private fun tab(args: JSONObject): Int? =

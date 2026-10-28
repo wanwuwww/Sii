@@ -1070,6 +1070,8 @@
     <string name="mcp_perm_history_desc">按网址删除浏览历史</string>
     <string name="mcp_perm_incognito">无痕模式访问</string>
     <string name="mcp_perm_incognito_desc">无痕模式下仍允许 MCP 读取页面，默认禁止</string>
+    <string name="mcp_perm_diag">诊断接口</string>
+    <string name="mcp_perm_diag_desc">允许 MCP 读取界面状态与导航事件日志（地址、主页覆盖、加载状态），不包含页面内容</string>
     <string name="mcp_section_capture">抓包</string>
     <string name="mcp_capture">网络抓包</string>
     <string name="mcp_capture_desc">记录页面请求的 URL、状态与响应体，供 MCP 读取</string>

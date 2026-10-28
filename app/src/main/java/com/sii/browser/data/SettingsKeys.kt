@@ -297,6 +297,7 @@ object SettingsKeys {
     const val MCP_ALLOW_INCOGNITO = "mcp_allow_incognito"
     const val MCP_ALLOW_CAPTURE = "mcp_allow_capture"
     const val MCP_CAPTURE_BODY = "mcp_capture_body"
+    const val MCP_ALLOW_DIAG = "mcp_allow_diag"
 
     const val UPDATER_PREFIX = "updater_"
 }

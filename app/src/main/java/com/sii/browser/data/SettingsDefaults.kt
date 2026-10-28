@@ -220,6 +220,7 @@ object SettingsDefaults {
     const val MCP_ALLOW_INCOGNITO = false
     const val MCP_ALLOW_CAPTURE = false
     const val MCP_CAPTURE_BODY = false
+    const val MCP_ALLOW_DIAG = true
 
     /**
      * 工具栏长按/滑动默认动作：0 无 / 1 刷新 / 2 主页 / 3 新建标签 / 4 菜单 / 5 后退 / 6 前进。

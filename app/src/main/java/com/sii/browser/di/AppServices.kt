@@ -203,7 +203,14 @@ object AppServices {
         }
         passwordRepository = PasswordRepository(db.passwordDao())
         readLaterRepository = ReadLaterRepository(db.readLaterDao())
-        mcpServer = com.sii.browser.core.mcp.McpServer({ settings }, { mcpHost })
+        val debugBuild = application.applicationInfo != null &&
+            (application.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        com.sii.browser.core.mcp.DiagLog.enabled = debugBuild
+        mcpServer = com.sii.browser.core.mcp.McpServer(
+            { settings },
+            { mcpHost },
+            debugBuild = debugBuild
+        )
         CoroutineScope(Dispatchers.IO).launch {
             kotlinx.coroutines.delay(3000)
             val now = System.currentTimeMillis()

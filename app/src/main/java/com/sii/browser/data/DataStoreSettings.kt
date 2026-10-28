@@ -1612,6 +1612,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setMcpCaptureBody(value: Boolean) =
         putBool(SettingsKeys.MCP_CAPTURE_BODY, value)
 
+    override fun mcpAllowDiag(): Boolean =
+        bool(SettingsKeys.MCP_ALLOW_DIAG, SettingsDefaults.MCP_ALLOW_DIAG)
+
+    override fun setMcpAllowDiag(value: Boolean) =
+        putBool(SettingsKeys.MCP_ALLOW_DIAG, value)
+
     // ---- 导出分组 ----
 
     private fun boolKeys() = arrayOf(

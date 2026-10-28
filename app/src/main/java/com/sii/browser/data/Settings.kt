@@ -1334,4 +1334,9 @@ interface McpSettings {
     fun mcpCaptureBody(): Boolean
 
     fun setMcpCaptureBody(value: Boolean)
+
+    /** 诊断接口：界面状态与导航事件日志。 */
+    fun mcpAllowDiag(): Boolean
+
+    fun setMcpAllowDiag(value: Boolean)
 }

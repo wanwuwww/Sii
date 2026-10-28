@@ -1069,6 +1069,8 @@
     <string name="mcp_perm_history_desc">Delete history entries by URL</string>
     <string name="mcp_perm_incognito">Incognito access</string>
     <string name="mcp_perm_incognito_desc">Allow MCP reads while in incognito mode; blocked by default</string>
+    <string name="mcp_perm_diag">Diagnostics</string>
+    <string name="mcp_perm_diag_desc">Allow MCP to read native UI state and navigation event logs (addresses, home overlay, loading); no page content</string>
     <string name="mcp_section_capture">Network capture</string>
     <string name="mcp_capture">Capture requests</string>
     <string name="mcp_capture_desc">Record request URL, status and response body for MCP reads</string>

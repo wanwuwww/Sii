@@ -4,6 +4,7 @@ package com.sii.browser.ui
 
 import com.sii.browser.core.mcp.BookmarkHit
 import com.sii.browser.core.mcp.BrowserState
+import com.sii.browser.core.mcp.DiagLog
 import com.sii.browser.core.mcp.FindOutcome
 import com.sii.browser.core.mcp.HistoryHit
 import com.sii.browser.core.mcp.McpHost
@@ -29,7 +30,8 @@ class BrowserMcpHost(
     private val onSwitchTab: (Int) -> Unit,
     private val onCloseTab: (Int) -> Unit,
     private val onNavigate: (String) -> Boolean,
-    private val isUiReady: () -> Boolean
+    private val isUiReady: () -> Boolean,
+    private val uiStateProvider: () -> String
 ) : McpHost {
 
     private suspend fun <T> main(block: suspend () -> T): T =
@@ -324,4 +326,8 @@ class BrowserMcpHost(
         AppServices.privacyManager.isIncognito
 
     override suspend fun uiReady(): Boolean = isUiReady()
+
+    override suspend fun uiState(): String = main { uiStateProvider() }
+
+    override suspend fun logs(limit: Int): String = DiagLog.dump(limit)
 }

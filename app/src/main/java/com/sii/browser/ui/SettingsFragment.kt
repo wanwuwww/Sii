@@ -32,7 +32,7 @@ class SettingsFragment : Fragment() {
         val diyTab: Int = -1
     )
 
-    private val searchIndex = listOf(
+    private val baseSearchIndex = listOf(
         SearchEntry("语言", "通用", "language"),
         SearchEntry("搜索引擎", "通用", "engine"),
         SearchEntry("默认浏览器", "通用", "default browser"),
@@ -75,6 +75,14 @@ class SettingsFragment : Fragment() {
         SearchEntry("标签页", "外观与主页", "tabs 标签卡 网格", diyTab = 7),
         SearchEntry("主题", "外观与主页", "夜间 深色 玻璃", diyTab = 8)
     )
+
+    /** 诊断接口只在测试包出现，正式包的搜索索引里也不留。 */
+    private val searchIndex: List<SearchEntry> by lazy {
+        val debuggable = (requireContext().applicationInfo.flags and
+            android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!debuggable) baseSearchIndex
+        else baseSearchIndex + SearchEntry("MCP 诊断接口", "高级", "mcp 诊断 界面状态 导航日志 diag")
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
