@@ -1160,12 +1160,7 @@ interface WebPageSettings {
 
     fun setSafeBrowsing(value: Boolean)
 
-    /** 更新检查地址（预留，JSON：versionCode/versionName/url/notes）。 */
-    fun updateCheckUrl(): String?
-
-    fun setUpdateCheckUrl(value: String?)
-
-    /** 更新提醒方式：0 关闭自动检查 / 1 仅设置页 / 2 系统通知。 */
+    /** 更新提醒方式：0 关闭自动检查 / 1 启动时提醒。 */
     fun updatePrompt(): Int
 
     fun setUpdatePrompt(value: Int)

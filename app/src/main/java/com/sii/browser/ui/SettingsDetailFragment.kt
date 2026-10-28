@@ -172,7 +172,6 @@ class SettingsDetailFragment : Fragment() {
         VIEW_V2_NETLOG -> getString(R.string.settings_netlog)
         VIEW_V2_IMPORT -> getString(R.string.settings_import_export)
         VIEW_V2_LAB -> getString(R.string.settings_lab)
-        VIEW_V2_UPDATE -> getString(R.string.settings_update)
         VIEW_V2_MCP -> getString(R.string.settings_mcp)
         VIEW_ABOUT -> getString(R.string.settings_about)
         VIEW_CRASH_LOG -> getString(R.string.settings_crash_log)
@@ -235,7 +234,6 @@ class SettingsDetailFragment : Fragment() {
             VIEW_V2_NETLOG -> buildV2Netlog()
             VIEW_V2_IMPORT -> buildV2Import()
             VIEW_V2_LAB -> buildV2Lab()
-            VIEW_V2_UPDATE -> buildV2Update()
             VIEW_V2_MCP -> buildV2Mcp()
             VIEW_ABOUT -> buildAbout()
             VIEW_CRASH_LOG -> buildCrashLog()
@@ -1931,8 +1929,7 @@ class SettingsDetailFragment : Fragment() {
         sectionTitle(R.string.settings_section_other)
         card(
             navRow(getString(R.string.settings_mcp)) { open(VIEW_V2_MCP) },
-            navRow(getString(R.string.settings_lab)) { open(VIEW_V2_LAB) },
-            navRow(getString(R.string.settings_update)) { open(VIEW_V2_UPDATE) }
+            navRow(getString(R.string.settings_lab)) { open(VIEW_V2_LAB) }
         )
         aboutText(R.string.about_advanced)
     }
@@ -2311,42 +2308,6 @@ class SettingsDetailFragment : Fragment() {
             .show()
     }
 
-    private fun buildV2Update() {
-        val rows = mutableListOf<View>()
-        val latest = settings.updateLatest()?.split("|")?.takeIf { it.size >= 2 }
-        if (latest != null) {
-            rows.add(
-                navRow(
-                    getString(R.string.update_found_row, latest[0]),
-                    getString(R.string.update_open_release)
-                ) { openUpdateUrl(latest[1]) }
-            )
-        }
-        rows.add(navRow(getString(R.string.settings_check_update)) { checkForUpdate() })
-        rows.add(
-            choiceRow(
-                getString(R.string.settings_update_prompt),
-                arrayOf(
-                    getString(R.string.update_prompt_off),
-                    getString(R.string.update_prompt_settings),
-                    getString(R.string.update_prompt_notification)
-                ),
-                settings.updatePrompt().coerceIn(0, 2),
-                getString(R.string.settings_update_prompt_desc)
-            ) { value ->
-                settings.setUpdatePrompt(value)
-                build()
-            }
-        )
-        rows.add(
-            textRow(
-                getString(R.string.settings_update_url),
-                settings.updateCheckUrl().orEmpty()
-            ) { settings.setUpdateCheckUrl(it.ifBlank { null }) }
-        )
-        card(*rows.toTypedArray())
-    }
-
     // ---- 外观与主页 ----
 
     private fun buildHomeSet() {
@@ -2715,6 +2676,20 @@ class SettingsDetailFragment : Fragment() {
             }
         )
         rows.add(navRow(getString(R.string.settings_check_update)) { checkForUpdate() })
+        rows.add(
+            choiceRow(
+                getString(R.string.settings_update_prompt),
+                arrayOf(
+                    getString(R.string.update_prompt_off),
+                    getString(R.string.update_prompt_startup)
+                ),
+                settings.updatePrompt().coerceIn(0, 1),
+                getString(R.string.settings_update_prompt_desc)
+            ) { value ->
+                settings.setUpdatePrompt(value)
+                build()
+            }
+        )
         rows.add(navRow(getString(R.string.settings_crash_log)) { open(VIEW_CRASH_LOG) })
         rows.add(navRow(getString(R.string.settings_about_license)) { showLicense() })
         card(*rows.toTypedArray())
@@ -2868,7 +2843,6 @@ class SettingsDetailFragment : Fragment() {
         const val VIEW_V2_NETLOG = "v2Netlog"
         const val VIEW_V2_IMPORT = "v2Import"
         const val VIEW_V2_LAB = "v2Lab"
-        const val VIEW_V2_UPDATE = "v2Update"
         const val VIEW_V2_MCP = "v2Mcp"
         const val VIEW_ABOUT = "about"
         const val VIEW_CRASH_LOG = "crashLog"

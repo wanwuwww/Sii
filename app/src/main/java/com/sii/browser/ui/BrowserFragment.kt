@@ -108,6 +108,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var tabsList: LinearLayout? = null
     private var pageLoadingCover: View? = null
     private var homeOverlayActive = false
+
+    /** 异常退出恢复提示条，更新弹窗靠它避让，不叠在同一个位置。 */
+    private var restorePromptBar: View? = null
     private var homeForwardAvailable = false
     /** 本次导航由主页发起：返回键先回主页，而不是退网页历史。 */
     private var navFromHome = false
@@ -451,6 +454,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 handleNewIntent(startIntent)
             }
         }
+        AppServices.onUpdatePromptReady = { view?.post { maybeShowUpdatePrompt() } }
+        view.postDelayed({ maybeShowUpdatePrompt() }, 5000)
     }
 
     /** 返回键/返回手势统一处理：游戏模式 → 全屏 → 浮层 → 网页后退 → 关标签 → 交还系统。 */
@@ -703,6 +708,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             setPadding(dp(14), dp(8), dp(14), dp(8))
             setOnClickListener {
                 root.removeView(bar)
+                restorePromptBar = null
                 restoreSavedTabs(saved, preferHome = false)
             }
         })
@@ -716,7 +722,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val autoDismiss = Runnable {
             if (bar.parent == null) return@Runnable
             bar.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(180)
-                .withEndAction { root.removeView(bar) }
+                .withEndAction {
+                    restorePromptBar = null
+                    root.removeView(bar)
+                }
                 .start()
             // 自动忽略：清空快照，主页保持可操作，避免下次启动重复提示。
             clearSnapshot()
@@ -732,9 +741,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             setOnClickListener {
                 bar.removeCallbacks(autoDismiss)
                 root.removeView(bar)
+                restorePromptBar = null
                 clearSnapshot()
             }
         })
+        restorePromptBar = bar
         root.addView(
             bar,
             android.widget.FrameLayout.LayoutParams(
@@ -749,6 +760,45 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         )
         bar.animate().alpha(1f).translationY(0f).setDuration(180).start()
         bar.postDelayed(autoDismiss, 5000)
+    }
+
+    /** 启动时的更新弹窗：只在主页、无浮层、无恢复提示时展示，展示后清空待处理标记。 */
+    private fun maybeShowUpdatePrompt() {
+        if (!isAdded || view == null) return
+        val raw = AppServices.pendingUpdatePrompt ?: return
+        if (homeContainer?.visibility != View.VISIBLE) return
+        if (addressEditing || homePanel?.isSearchActive() == true) return
+        if (menuOverlay?.visibility == View.VISIBLE ||
+            tabsOverlay?.visibility == View.VISIBLE
+        ) return
+        if (restorePromptBar?.parent != null) {
+            view?.postDelayed({ maybeShowUpdatePrompt() }, 3000)
+            return
+        }
+        val parts = raw.split("|")
+        if (parts.size < 2) {
+            AppServices.pendingUpdatePrompt = null
+            return
+        }
+        val name = parts[0]
+        val url = parts[1]
+        val summary = parts.getOrNull(2).orEmpty()
+            .trim()
+            .split("\n\n")
+            .firstOrNull()
+            .orEmpty()
+            .take(200)
+        AppServices.pendingUpdatePrompt = null
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.update_available, name))
+            .setMessage(summary.ifBlank { getString(R.string.update_tap_to_download) })
+            .setPositiveButton(R.string.update_download) { _, _ -> loadUrlFor(url) }
+            .setNeutralButton(R.string.update_ignore_version) { _, _ ->
+                AppServices.settings.setUpdateIgnoredVersion(name)
+                AppServices.settings.setUpdateLatest(null)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
 
@@ -3993,6 +4043,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (AppServices.settings.uiStyle() != 1) renderTabs()
         // 同步启动，避免先画出一帧完整内容再重置透明导致的闪一下。
         if (wasWebVisible) homePanel?.playIntro()
+        view?.post { maybeShowUpdatePrompt() }
     }
 
     private fun showWeb() {
@@ -9764,6 +9815,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     override fun onDestroyView() {
+        AppServices.onUpdatePromptReady = null
+        restorePromptBar = null
         view?.removeCallbacks(applyScrollDirection)
         MenuPopup.dismiss()
         tts?.shutdown()

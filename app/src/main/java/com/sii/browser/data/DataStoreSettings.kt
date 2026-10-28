@@ -1437,16 +1437,9 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setSafeBrowsing(value: Boolean) = putBool(SettingsKeys.SAFE_BROWSING, value)
 
-    override fun updateCheckUrl(): String? = str(SettingsKeys.UPDATE_CHECK_URL, null)
-
-    override fun setUpdateCheckUrl(value: String?) {
-        putStr(SettingsKeys.UPDATE_CHECK_URL, value)
-    }
-
     override fun updatePrompt(): Int {
-        // 旧版只有「自动检查」开关：未写过新键时按它推算，避免升级后行为突变。
-        val fallback = if (updateAutoCheck()) 1 else 0
-        return int(SettingsKeys.UPDATE_PROMPT, fallback)
+        // 两档：0 关闭自动检查 / 1 启动时提醒；旧值（仅设置页、通知栏）统一并为 1。
+        return int(SettingsKeys.UPDATE_PROMPT, 1).coerceIn(0, 1)
     }
 
     override fun setUpdatePrompt(value: Int) = putInt(SettingsKeys.UPDATE_PROMPT, value)

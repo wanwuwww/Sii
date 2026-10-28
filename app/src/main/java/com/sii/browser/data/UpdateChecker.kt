@@ -2,7 +2,6 @@
 // Copyright (c) 2026 wanwuwww
 package com.sii.browser.data
 
-import com.sii.browser.di.AppServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -36,26 +35,8 @@ object UpdateChecker {
         .build()
 
     suspend fun check(): UpdateInfo? = withContext(Dispatchers.IO) {
-        val endpoint = runCatching { AppServices.settings.updateCheckUrl() }.getOrNull()
-        if (!endpoint.isNullOrBlank()) checkJson(endpoint.trim()) else checkGitHub()
+        checkGitHub()
     }
-
-    private fun checkJson(endpoint: String): UpdateInfo? = runCatching {
-        val request = Request.Builder().url(endpoint).build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return null
-            val json = JSONObject(response.body?.string().orEmpty())
-            val code = json.optLong("versionCode", 0)
-            val name = json.optString("versionName")
-            if (code <= 0 && name.isBlank()) return null
-            UpdateInfo(
-                versionCode = code,
-                versionName = name,
-                url = json.optString("url"),
-                notes = json.optString("notes").ifBlank { null }
-            )
-        }
-    }.getOrNull()
 
     private fun checkGitHub(): UpdateInfo? = runCatching {
         val request = Request.Builder()

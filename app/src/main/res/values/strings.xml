@@ -94,8 +94,7 @@
     <string name="settings_update_prompt">更新提示</string>
     <string name="settings_update_prompt_desc">发现新版本时如何处理</string>
     <string name="update_prompt_off">关闭自动检查</string>
-    <string name="update_prompt_settings">仅设置页</string>
-    <string name="update_prompt_notification">通知栏</string>
+    <string name="update_prompt_startup">启动时提醒</string>
     <string name="update_ignore_version">忽略此版本</string>
     <string name="update_ignored">已忽略该版本</string>
     <string name="settings_pull_refresh">下拉刷新</string>

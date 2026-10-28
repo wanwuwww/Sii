@@ -94,8 +94,7 @@
     <string name="settings_update_prompt">Update prompt</string>
     <string name="settings_update_prompt_desc">How to be notified about new versions</string>
     <string name="update_prompt_off">Off (no auto check)</string>
-    <string name="update_prompt_settings">Settings page only</string>
-    <string name="update_prompt_notification">Notification</string>
+    <string name="update_prompt_startup">On app launch</string>
     <string name="update_ignore_version">Ignore this version</string>
     <string name="update_ignored">Version ignored</string>
     <string name="settings_pull_refresh">Pull to refresh</string>

@@ -62,7 +62,6 @@ object SettingsKeys {
     const val CUSTOM_CSS = "customcss"
     const val UI_SCALE = "uiscale"
     const val SAFE_BROWSING = "safebrowsing"
-    const val UPDATE_CHECK_URL = "updatecheckurl"
     const val CCT_DISABLED = "cctdisabled"
     const val DOWNLOAD_WIFI_ONLY = "dlwifi"
     const val WEBRTC_PROTECT = "webrtcprotect"

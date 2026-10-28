@@ -246,10 +246,17 @@ object AppServices {
         CoroutineScope(Dispatchers.IO).launch { runCatching { autoCheckUpdate(application) } }
     }
 
-    /** 启动时自动检查更新：按提示档位处理，24 小时最多一次，失败静默。 */
+    /** 待展示的更新提示（name|url|notes），界面消费后置空。 */
+    @Volatile
+    var pendingUpdatePrompt: String? = null
+
+    /** 界面就绪时回调，用于立即展示待处理的更新提示。 */
+    @Volatile
+    var onUpdatePromptReady: (() -> Unit)? = null
+
+    /** 启动时自动检查更新：每天最多一次，发现新版本交给界面弹窗，失败静默。 */
     private suspend fun autoCheckUpdate(app: Application) {
-        val prompt = settings.updatePrompt()
-        if (prompt <= 0) return
+        if (settings.updatePrompt() <= 0) return
         val now = System.currentTimeMillis()
         if (now - settings.updateLastCheck() < 24L * 60 * 60 * 1000) return
         // 先落时间戳：失败也算一次，避免网络异常时反复要请求耗尽 GitHub 限流。
@@ -270,43 +277,13 @@ object AppServices {
         settings.setUpdateLatest(
             listOf(name, info.url, info.notes.orEmpty()).joinToString("|")
         )
-        if (prompt >= 2) notifyUpdate(app, info)
-    }
-
-    private fun notifyUpdate(app: Application, info: com.sii.browser.data.UpdateChecker.UpdateInfo) {
-        if (info.url.isBlank()) return
-        val channelId = "updates"
-        val manager = app.getSystemService(android.app.NotificationManager::class.java) ?: return
-        if (android.os.Build.VERSION.SDK_INT >= 26) {
-            manager.createNotificationChannel(
-                android.app.NotificationChannel(
-                    channelId,
-                    app.getString(com.sii.browser.R.string.update_channel),
-                    android.app.NotificationManager.IMPORTANCE_DEFAULT
-                )
-            )
+        // 同一版本 24 小时内只弹一次。
+        if (now - settings.updateLastNotified() < 24L * 60 * 60 * 1000) return
+        settings.setUpdateLastNotified(now)
+        pendingUpdatePrompt = listOf(name, info.url, info.notes.orEmpty()).joinToString("|")
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            onUpdatePromptReady?.invoke()
         }
-        val intent = android.content.Intent(
-            android.content.Intent.ACTION_VIEW,
-            android.net.Uri.parse(info.url)
-        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        val pending = android.app.PendingIntent.getActivity(
-            app, 0, intent,
-            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        val notification = android.app.Notification.Builder(app, channelId)
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
-            .setContentTitle(
-                app.getString(
-                    com.sii.browser.R.string.update_available,
-                    info.versionName.ifEmpty { info.versionCode.toString() }
-                )
-            )
-            .setContentText(info.notes ?: app.getString(com.sii.browser.R.string.update_tap_to_download))
-            .setContentIntent(pending)
-            .setAutoCancel(true)
-            .build()
-        runCatching { manager.notify(1001, notification) }
     }
 
     /** 启动时更新超过 24 小时的规则订阅。 */
