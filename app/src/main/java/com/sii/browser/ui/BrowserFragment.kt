@@ -5540,8 +5540,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     ?.setInterpolator(android.view.animation.DecelerateInterpolator())
                     ?.start()
                 val url = tabManager.current?.url.orEmpty()
+                // 主页上的地址栏从被覆盖的网页取地址会误导搜索，主页态一律从空开始。
+                val onHome = homeContainer?.visibility == View.VISIBLE
                 setAddressText(
-                    if (url == ABOUT_HOME || url == "about:blank") "" else url
+                    if (onHome || url == ABOUT_HOME || url == "about:blank") "" else url
                 )
                 addressInput?.setSelection(addressInput?.text?.length ?: 0)
                 hideSuggestions()
@@ -6978,7 +6980,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private fun updateAddressBarForCurrent() {
         if (homeContainer?.visibility == View.VISIBLE) {
-            setAddressText("")
+            // 主页上地址栏保持空白；用户正在输入时不要覆盖已输入内容。
+            if (addressInput?.hasFocus() != true) setAddressText("")
             return
         }
         if (addressInput?.hasFocus() == true) return
@@ -7152,7 +7155,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                         showWeb()
                     }
                     updateSiteInfoIcon()
-                    if (addressInput?.hasFocus() == true) setAddressText(it.url)
+                    if (homeContainer?.visibility == View.VISIBLE) setAddressText("")
+                    else if (addressInput?.hasFocus() == true) setAddressText(it.url)
                     else updateAddressBarForCurrent()
                     renderTabs()
                     hideFindBar()
