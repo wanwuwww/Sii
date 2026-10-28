@@ -499,11 +499,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     }
 
     override fun searchEngineUrl(): String? {
-        val value = str(SettingsKeys.SEARCH_URL, "https://cn.bing.com/search?q=")?.takeIf { it.isNotBlank() }
+        val value = str(SettingsKeys.SEARCH_URL, "https://www.bing.com/search?q=")
+            ?.takeIf { it.isNotBlank() }
             ?: SettingsDefaults.SEARCH_ENGINE
-        // 必应旧预设会先跳 www 再按地区重定向到 cn，直接使用 cn 少一次主文档请求。
-        return if (value == "https://www.bing.com/search?q=") {
-            "https://cn.bing.com/search?q="
+        // cn.bing.com 的 /search 会被 301 到 www 首页，丢掉结果页；统一走 www。
+        return if (value == "https://cn.bing.com/search?q=") {
+            "https://www.bing.com/search?q="
         } else value
     }
 

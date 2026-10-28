@@ -9,7 +9,7 @@ object SearchEngines {
     val DEFAULT = listOf(
         "百度" to "https://www.baidu.com/s?wd=",
         "Google" to "https://www.google.com/search?q=",
-        "必应" to "https://cn.bing.com/search?q=",
+        "必应" to "https://www.bing.com/search?q=",
         "DuckDuckGo" to "https://duckduckgo.com/?q=",
         "搜狗" to "https://www.sogou.com/web?query=",
         "360 搜索" to "https://www.so.com/s?q=",
