@@ -32,6 +32,8 @@ class DownloadService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var activeTaskId: Long = -1
+    /** 当前任务的分段数，仅用于通知栏提示。 */
+    private var activeChunks = 0
     private var hlsActive = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -154,6 +156,7 @@ class DownloadService : Service() {
                 ) DownloadTaskFlags.INCOGNITO else 0
             )
             activeTaskId = task.id
+            activeChunks = task.chunks
             AppServices.downloadEngine.start(task.id)
             } catch (e: Exception) {
                 maybeStopIdle()
@@ -249,6 +252,9 @@ class DownloadService : Service() {
         if (id <= 0) return
         if (blockedByNetwork()) return
         activeTaskId = id
+        scope.launch {
+            AppServices.downloadRepository.taskById(id)?.let { activeChunks = it.chunks }
+        }
         AppServices.downloadEngine.start(id)
     }
 
@@ -286,6 +292,7 @@ class DownloadService : Service() {
                 ) DownloadTaskFlags.INCOGNITO else 0
             )
             activeTaskId = fresh.id
+            activeChunks = fresh.chunks
             AppServices.downloadEngine.start(fresh.id)
         }
     }
@@ -312,6 +319,7 @@ class DownloadService : Service() {
             val interrupted = AppServices.downloadRepository.allTasks().first()
                 .firstOrNull { it.state == DownloadState.DOWNLOADING } ?: return@launch
             activeTaskId = interrupted.id
+            activeChunks = interrupted.chunks
             AppServices.downloadEngine.start(interrupted.id)
         }
     }
@@ -393,10 +401,16 @@ class DownloadService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
         val progress = if (total > 0) (downloaded * 100 / total).toInt() else 0
+        val segments = if (activeChunks > 1) {
+            " · " + getString(R.string.download_segments, activeChunks)
+        } else ""
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle(getString(R.string.download_notification_title))
-            .setContentText(if (taskId > 0) "$downloaded / $total" else getString(R.string.download_preparing))
+            .setContentText(
+                if (taskId > 0) "$downloaded / $total$segments"
+                else getString(R.string.download_preparing)
+            )
             .setProgress(100, progress, total <= 0L)
             .setOngoing(true)
             .setContentIntent(contentIntent)

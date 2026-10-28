@@ -78,6 +78,7 @@ class DownloadEngine(
         private const val DEFAULT_BUFFER_SIZE = 256 * 1024
         private const val PROGRESS_FLUSH_BYTES = 4L * 1024 * 1024
         private const val MAX_RETRY = 3
+        private const val CHUNK_MAX_RETRY = 2
         private const val RETRY_DELAY_MS = 3000L
         private const val BROWSER_UA =
             "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 " +
@@ -94,6 +95,9 @@ class DownloadEngine(
                     maxRequestsPerHost = 8
                 }
             )
+            // 强制 HTTP/1.1：8 个 Range 请求才会是 8 条真连接，
+            // HTTP/2 复用单连接时很多 CDN 按连接限速，开再多段也没用。
+            .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
             .build()
 
         /** 网络类型自适应段数：Wi-Fi/以太网 8 段，移动网络与 VPN 4 段。 */
@@ -184,13 +188,22 @@ class DownloadEngine(
     private suspend fun run(taskId: Long) {
         if (desiredRunning[taskId] == false) return
         val task = repository.taskById(taskId) ?: return
-        val path = resolvePath(task)
+        val opened = runCatching { openSink(task) }.getOrElse {
+            val fallback = resolvePath(task)
+            runCatching { FileSink(fallback) to fallback }.getOrElse { error ->
+                repository.markFailed(taskId, error.message)
+                repository.taskById(taskId)?.let { onTaskCompleted?.invoke(it) }
+                return
+            }
+        }
+        val sink = opened.first
+        val path = opened.second
         if (task.path != path) repository.updatePath(taskId, path)
         val resolved = task.copy(path = path)
         repository.setState(taskId, DownloadState.DOWNLOADING)
         try {
             if (resolved.totalSize <= 0L) {
-                downloadStream(taskId, resolved)
+                downloadStream(taskId, resolved, sink)
                 return
             }
             val chunks = repository.chunksOf(taskId).sortedBy { it.start }
@@ -203,8 +216,8 @@ class DownloadEngine(
                 // 首块立即开始，其余分块错峰建连；避免同时握手抢占带宽，起步更快。
                 val jobs = chunks.mapIndexed { index, chunk ->
                     async(start = CoroutineStart.LAZY) {
-                        if (index > 0) kotlinx.coroutines.delay(index * 250L)
-                        downloadChunk(resolved, chunk)
+                        if (index > 0) kotlinx.coroutines.delay(index * 80L)
+                        downloadChunk(resolved, chunk, sink)
                     }
                 }
                 jobs.forEach { it.start() }
@@ -217,7 +230,7 @@ class DownloadEngine(
                 if (repository.taskById(taskId)?.state == DownloadState.PAUSED) return
                 val expected = etags[task.url]
                 if (expected != null && !verifyEtag(task.url, expected)) {
-                    File(resolved.path).delete()
+                    deleteTarget(resolved.path)
                     repository.markFailed(taskId, "ETag changed")
                     etags.remove(task.url)
                     repository.taskById(taskId)?.let { onTaskCompleted?.invoke(it) }
@@ -251,6 +264,8 @@ class DownloadEngine(
                 attempts.remove(taskId)
                 repository.taskById(taskId)?.let { onTaskCompleted?.invoke(it) }
             }
+        } finally {
+            runCatching { sink.close() }
         }
     }
 
@@ -332,8 +347,7 @@ class DownloadEngine(
         }
 
     /** 服务器不支持大小探测/Range 时，用单流下载到 EOF；完成后补总大小。 */
-    private suspend fun downloadStream(taskId: Long, task: DownloadTask) {
-        val path = task.path ?: throw IOException("empty path")
+    private suspend fun downloadStream(taskId: Long, task: DownloadTask, sink: Sink) {
         val call = client.newCall(requestBuilder(task.url).build())
         val resp = awaitResponse(call)
         resp.use { response ->
@@ -343,28 +357,26 @@ class DownloadEngine(
                 throw IOException("server returned html instead of apk")
             }
             val body = response.body ?: throw IOException("empty body")
-            RandomAccessFile(path, "rw").use { raf ->
-                raf.setLength(0)
-                val input = body.byteStream()
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var downloaded = 0L
-                var lastFlush = 0L
-                while (true) {
-                    currentCoroutineContext().ensureActive()
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    raf.write(buffer, 0, read)
-                    downloaded += read
-                    if (downloaded - lastFlush >= 256 * 1024L) {
-                        repository.updateProgress(taskId, downloaded)
-                        onTaskProgress?.invoke(taskId, downloaded, 0L)
-                        lastFlush = downloaded
-                    }
+            sink.truncate()
+            val input = body.byteStream()
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var downloaded = 0L
+            var lastFlush = 0L
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val read = input.read(buffer)
+                if (read < 0) break
+                sink.writeAt(buffer, downloaded, read)
+                downloaded += read
+                if (downloaded - lastFlush >= 256 * 1024L) {
+                    repository.updateProgress(taskId, downloaded)
+                    onTaskProgress?.invoke(taskId, downloaded, 0L)
+                    lastFlush = downloaded
                 }
-                if (downloaded <= 0L) throw IOException("empty body")
-                repository.updateProgress(taskId, downloaded)
-                repository.updateTotalSize(taskId, downloaded)
             }
+            if (downloaded <= 0L) throw IOException("empty body")
+            repository.updateProgress(taskId, downloaded)
+            repository.updateTotalSize(taskId, downloaded)
         }
         if (repository.taskById(taskId)?.state == DownloadState.PAUSED) return
         repository.setState(taskId, DownloadState.COMPLETED)
@@ -375,9 +387,122 @@ class DownloadEngine(
         onTaskCompleted?.invoke(finalTask)
     }
 
-    private suspend fun downloadChunk(task: DownloadTask, chunk: DownloadChunk) {
-        if (chunk.downloaded >= chunk.length) return
-        val start = chunk.start + chunk.downloaded
+    /** 写入目标：沙箱文件或 SAF 文档，两者都支持按偏移随机写，避免完成后整文件复制。 */
+    private interface Sink {
+        fun writeAt(buffer: ByteArray, offset: Long, count: Int)
+        fun truncate()
+        fun close()
+    }
+
+    private class FileSink(path: String) : Sink {
+        private val raf = RandomAccessFile(path, "rw")
+        override fun writeAt(buffer: ByteArray, offset: Long, count: Int) {
+            // 位置写不动文件指针，多分块并发写同一文件安全。
+            raf.channel.write(java.nio.ByteBuffer.wrap(buffer, 0, count), offset)
+        }
+        override fun truncate() = raf.setLength(0)
+        override fun close() = raf.close()
+    }
+
+    /** SAF 文档：pwrite 不改变文件位置，多分块并发写同一描述符安全。 */
+    private class SafSink(private val pfd: android.os.ParcelFileDescriptor) : Sink {
+        private val fd = pfd.fileDescriptor
+        override fun writeAt(buffer: ByteArray, offset: Long, count: Int) {
+            var written = 0
+            while (written < count) {
+                val n = android.system.Os.pwrite(
+                    fd,
+                    java.nio.ByteBuffer.wrap(buffer, written, count - written),
+                    offset + written
+                )
+                if (n <= 0) throw IOException("pwrite failed")
+                written += n
+            }
+        }
+        override fun truncate() {
+            runCatching { android.system.Os.ftruncate(fd, 0L) }
+        }
+        override fun close() = pfd.close()
+    }
+
+    /** 打开写入目标：优先直接写设置里的 SAF 目录，不可用时回退应用沙箱文件。 */
+    private suspend fun openSink(task: DownloadTask): Pair<Sink, String> {
+        val existing = task.path
+        if (existing != null && existing.startsWith("content://")) {
+            runCatching { openSafSink(android.net.Uri.parse(existing), null) }.getOrNull()
+                ?.let { return it }
+        }
+        val incognito = task.flags and com.sii.browser.data.db.DownloadTaskFlags.INCOGNITO != 0
+        val tree = if (incognito) null else runCatching {
+            com.sii.browser.di.AppServices.settings.downloadDir()
+        }.getOrNull()
+        if (!tree.isNullOrEmpty()) {
+            runCatching { openSafSink(android.net.Uri.parse(tree), task.name) }
+                .getOrNull()?.let { return it }
+        }
+        val path = existing?.takeIf { !it.startsWith("content://") } ?: resolvePath(task)
+        return FileSink(path) to path
+    }
+
+    private fun openSafSink(uri: android.net.Uri, name: String?): Pair<Sink, String>? {
+        val resolver = context.contentResolver
+        val targetUri = if (name == null) {
+            uri
+        } else {
+            val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                ?: return null
+            dir.findFile(name)?.delete()
+            dir.createFile("application/octet-stream", name)?.uri ?: return null
+        }
+        val pfd = resolver.openFileDescriptor(targetUri, "rw") ?: return null
+        // 云盘类 provider 返回的可能不是可定位写的文件：探测失败就回退沙箱。
+        val seekable = runCatching {
+            android.system.Os.pwrite(pfd.fileDescriptor, java.nio.ByteBuffer.allocate(0), 0L)
+        }.isSuccess
+        if (!seekable) {
+            runCatching { pfd.close() }
+            if (name != null) runCatching { resolver.delete(targetUri, null, null) }
+            return null
+        }
+        return SafSink(pfd) to targetUri.toString()
+    }
+
+    private fun deleteTarget(path: String?) {
+        if (path.isNullOrEmpty()) return
+        if (path.startsWith("content://")) {
+            runCatching { context.contentResolver.delete(android.net.Uri.parse(path), null, null) }
+        } else {
+            runCatching { File(path).delete() }
+        }
+    }
+
+    /** 单块失败只重连这一块，避免一个 502 把整任务重来。 */
+    private suspend fun downloadChunk(task: DownloadTask, chunk: DownloadChunk, sink: Sink) {
+        var downloaded = chunk.downloaded
+        if (downloaded >= chunk.length) return
+        var attempt = 0
+        while (true) {
+            try {
+                streamChunk(task, chunk, downloaded, sink)
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e.message?.contains("range unsupported") == true) throw e
+                if (++attempt > CHUNK_MAX_RETRY) throw e
+                kotlinx.coroutines.delay(700L * attempt)
+            }
+        }
+    }
+
+    private suspend fun streamChunk(
+        task: DownloadTask,
+        chunk: DownloadChunk,
+        startDownloaded: Long,
+        sink: Sink
+    ) {
+        var downloaded = startDownloaded
+        val start = chunk.start + downloaded
         val end = chunk.start + chunk.length - 1
         val request = requestBuilder(task.url)
             .header("Range", "bytes=$start-$end")
@@ -397,32 +522,27 @@ class DownloadEngine(
                 }
             }
             val body = response.body ?: throw IOException("empty body")
-            val file = RandomAccessFile(task.path, "rw")
-            file.use { raf ->
-                raf.seek(start)
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var downloaded = chunk.downloaded
-                var lastFlush = downloaded
-                var lastFlushAt = android.os.SystemClock.elapsedRealtime()
-                val input = body.byteStream()
-                while (true) {
-                    currentCoroutineContext().ensureActive()
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    raf.write(buffer, 0, read)
-                    downloaded += read
-                    val now = android.os.SystemClock.elapsedRealtime()
-                    // 进度落库不能太频繁：4MB 或 1 秒一次，减少低端机上的随机 I/O。
-                    if (downloaded - lastFlush >= PROGRESS_FLUSH_BYTES || now - lastFlushAt >= 1000L) {
-                        repository.updateChunkProgress(chunk.id, downloaded)
-                        publishTaskProgress(task.id)
-                        lastFlush = downloaded
-                        lastFlushAt = now
-                    }
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var lastFlush = downloaded
+            var lastFlushAt = android.os.SystemClock.elapsedRealtime()
+            val input = body.byteStream()
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val read = input.read(buffer)
+                if (read < 0) break
+                sink.writeAt(buffer, chunk.start + downloaded, read)
+                downloaded += read
+                val now = android.os.SystemClock.elapsedRealtime()
+                // 进度落库不能太频繁：4MB 或 1 秒一次，减少低端机上的随机 I/O。
+                if (downloaded - lastFlush >= PROGRESS_FLUSH_BYTES || now - lastFlushAt >= 1000L) {
+                    repository.updateChunkProgress(chunk.id, downloaded)
+                    publishTaskProgress(task.id)
+                    lastFlush = downloaded
+                    lastFlushAt = now
                 }
-                repository.updateChunkProgress(chunk.id, downloaded)
-                publishTaskProgress(task.id)
             }
+            repository.updateChunkProgress(chunk.id, downloaded)
+            publishTaskProgress(task.id)
         }
     }
 

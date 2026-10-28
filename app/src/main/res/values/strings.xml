@@ -325,6 +325,7 @@
     <string name="link_copied">链接已复制</string>
     <string name="download_channel">下载</string>
     <string name="download_notification_title">Sii 正在下载文件</string>
+    <string name="download_segments">%1$d 段</string>
     <string name="download_preparing">准备中…</string>
     <string name="menu_download_page">下载当前页面</string>
     <string name="menu_downloads">下载列表</string>

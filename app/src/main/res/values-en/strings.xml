@@ -325,6 +325,7 @@
     <string name="link_copied">Link copied</string>
     <string name="download_channel">Downloads</string>
     <string name="download_notification_title">Sii is downloading files</string>
+    <string name="download_segments">%1$d segments</string>
     <string name="download_preparing">Preparing…</string>
     <string name="menu_download_page">Download this page</string>
     <string name="menu_downloads">Downloads</string>
