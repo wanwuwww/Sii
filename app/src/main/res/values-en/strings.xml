@@ -153,6 +153,8 @@
     <string name="translate_loading">Translating…</string>
     <string name="translate_failed">Translation failed, check the endpoint or network</string>
     <string name="translate_failed_offline_pack">Offline language pack is missing. Download it in Settings → Translation → Offline pack</string>
+    <string name="translate_offline_pack_needed_title">Offline language pack missing</string>
+    <string name="translate_offline_pack_go">Download</string>
     <string name="translate_source_unknown">Could not identify the page language. Try again.</string>
     <string name="translate_source_unsupported">This source language is not supported offline yet; only Chinese and English are available.</string>
     <string name="translate_same_language">The page language already matches the target language.</string>
@@ -837,6 +839,9 @@
     <string name="settings_permission_cam">Camera</string>
     <string name="settings_permission_mic">Microphone</string>
     <string name="settings_back_action">Back button action</string>
+    <string name="settings_exit_confirm">Confirm before exit</string>
+    <string name="settings_exit_confirm_desc">Press back twice to exit or minimize</string>
+    <string name="exit_confirm_hint">Press back again to exit</string>
     <string name="settings_toolbar_hold">Toolbar long press actions</string>
     <string name="settings_hold_refresh">Long press refresh</string>
     <string name="settings_hold_home">Long press home</string>

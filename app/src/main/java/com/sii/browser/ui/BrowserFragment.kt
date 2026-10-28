@@ -506,12 +506,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 return true
             }
             // 主页是导航栈的根：不再跟 WebView 历史互相顶，没有覆盖页就直接最小化/退出。
-            requireActivity().moveTaskToBack(true)
-            return true
+            return confirmExit()
         }
         if (AppServices.settings.keyAction("back") == 1) {
-            requireActivity().moveTaskToBack(true)
-            return true
+            return confirmExit()
         }
         if (navFromHome) {
             // 从主页发起的搜索：返回直接回主页，主页再按返回就退出。
@@ -528,6 +526,23 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         // 网页没有历史（从主页直达）：先回主页，主页再按返回才退出/最小化。
         backToHomeWithoutHistory()
+        return true
+    }
+
+    /** 离开应用前二次确认（开关控制）：首次只提示，2 秒内再按才最小化。 */
+    private fun confirmExit(): Boolean {
+        if (!AppServices.settings.exitConfirm()) {
+            requireActivity().moveTaskToBack(true)
+            return true
+        }
+        if (exitArmed) {
+            exitArmed = false
+            requireActivity().moveTaskToBack(true)
+            return true
+        }
+        exitArmed = true
+        Toast.makeText(requireContext(), R.string.exit_confirm_hint, Toast.LENGTH_SHORT).show()
+        view?.postDelayed({ exitArmed = false }, EXIT_CONFIRM_MS)
         return true
     }
 
@@ -2076,6 +2091,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private var toolbarPosBeforeGame: Int? = null
     private var gameExitArmed = false
+    /** 返回键已提示过一次退出，窗口内再按才真正最小化。 */
+    private var exitArmed = false
     private var immersiveFullscreen = false
     /** IME 是否可见，用于悬浮底栏与键盘同步下移。 */
     private var imeInsetVisible = false
@@ -2673,6 +2690,19 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         if (translateFabState == 2) return
         if (translateJob?.isActive == true) return
+        // 离线模式且语言包未下载：不跑收集与翻译，直接引导去下载。
+        if (AppServices.settings.translateMode() == 2) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                if (!isAdded) return@launch
+                if (offlinePackReady()) startPageTranslate() else showOfflinePackNeeded()
+            }
+            return
+        }
+        startPageTranslate()
+    }
+
+    private fun startPageTranslate() {
+        if (translateFabState == 2 || translateJob?.isActive == true) return
         val wv = tabManager.currentWebView ?: return
         val host = runCatching { android.net.Uri.parse(wv.url).host }.getOrNull()?.lowercase()
         val target = effectiveTranslateTarget(host)
@@ -2840,9 +2870,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (!dynamic && nonEmpty == 0) {
                 // 全部失败：区分离线语言包缺失与网络/接口错误。
                 val offlineMissing = AppServices.settings.translateMode() == 2 &&
-                    !runCatching {
-                        com.sii.browser.core.webview.OfflineTranslator.isReady(requireContext())
-                    }.getOrDefault(false)
+                    !offlinePackReady()
                 val messageRes = if (offlineMissing) {
                     R.string.translate_failed_offline_pack
                 } else {
@@ -2856,7 +2884,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 updateTranslateFab()
                 saveTranslateTabState(wv)
                 hideTranslateStatus()
-                Toast.makeText(requireContext(), messageRes, Toast.LENGTH_SHORT).show()
+                if (offlineMissing) {
+                    showOfflinePackNeeded()
+                } else {
+                    Toast.makeText(requireContext(), messageRes, Toast.LENGTH_SHORT).show()
+                }
                 return@launch
             }
             if (!dynamic && nonEmpty < results.length()) {
@@ -3058,6 +3090,39 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     /** 翻译进度提示：完成后自动淡出。 */
+    private suspend fun offlinePackReady(): Boolean =
+        runCatching {
+            com.sii.browser.core.webview.OfflineTranslator.isReady(requireContext())
+        }.getOrDefault(false)
+
+    /** 离线语言包缺失：提示并提供直达下载页的入口。 */
+    private fun showOfflinePackNeeded() {
+        if (!isAdded) return
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.translate_offline_pack_needed_title)
+            .setMessage(R.string.translate_failed_offline_pack)
+            .setPositiveButton(R.string.translate_offline_pack_go) { _, _ ->
+                openTranslateOfflineSettings()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** 设置 → 翻译 → 离线语言包。 */
+    private fun openTranslateOfflineSettings() {
+        NavAnim.apply(parentFragmentManager.beginTransaction())
+            .replace(R.id.shell_root, SettingsDetailFragment().apply {
+                arguments = Bundle().apply {
+                    putString(
+                        SettingsDetailFragment.ARG_VIEW,
+                        SettingsDetailFragment.VIEW_V2_TRANSLATE_OFFLINE
+                    )
+                }
+            })
+            .addToBackStack(null)
+            .commit()
+    }
+
     private fun showTranslateStatus(
         text: String,
         autoHide: Boolean = false,
@@ -3195,7 +3260,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             2 -> {
                 cancelTranslateFabAutoHide()
                 tool.visibility = View.VISIBLE
-                tool.alpha = 0.5f
+                tool.alpha = 1f
                 tool.imageTintList = android.content.res.ColorStateList.valueOf(normal)
             }
             else -> {
@@ -4008,6 +4073,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         )
         AppServices.lastHomeVisible = false
         resetDockVisibility()
+        exitArmed = false
         homePanel?.exitSearchInput()
         homeContainer?.visibility = View.GONE
         attachCurrentWebView()
@@ -4274,6 +4340,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         translateJob?.cancel()
         translateJob = null
         if (!tabManager.switchTab(index)) return
+        exitArmed = false
         homeOverlayActive = false
         homeForwardAvailable = false
         navFromHome = false
@@ -10062,6 +10129,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         const val ABOUT_SAVE = "about:save"
         const val ABOUT_BLANK = "about:blank"
         const val TRANSLATE_FAB_IDLE_MS = 15_000L
+        /** 退出二次确认的有效窗口。 */
+        const val EXIT_CONFIRM_MS = 2_000L
         const val THUMB_MAX_WIDTH = 360
         const val ABOUT_RES = "about:res"
         const val ABOUT_IMAGES = "about:images"

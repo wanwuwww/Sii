@@ -176,6 +176,8 @@
     <string name="translate_loading">正在翻译…</string>
     <string name="translate_failed">翻译失败，请检查接口或网络</string>
     <string name="translate_failed_offline_pack">离线语言包未下载，请到 设置 → 翻译 → 离线语言包 下载</string>
+    <string name="translate_offline_pack_needed_title">缺少离线语言包</string>
+    <string name="translate_offline_pack_go">去下载</string>
     <string name="translate_source_unknown">无法识别页面语言，请重试</string>
     <string name="translate_source_unsupported">暂不支持该源语言，目前离线仅支持中英文</string>
     <string name="translate_same_language">页面语言与目标语言相同，无需翻译</string>
@@ -838,6 +840,9 @@
     <string name="settings_permission_cam">摄像头</string>
     <string name="settings_permission_mic">麦克风</string>
     <string name="settings_back_action">返回键动作</string>
+    <string name="settings_exit_confirm">返回二次确认</string>
+    <string name="settings_exit_confirm_desc">开启后需连按两次返回才退出或最小化</string>
+    <string name="exit_confirm_hint">再按一次返回退出</string>
     <string name="settings_toolbar_hold">工具栏长按动作</string>
     <string name="settings_hold_refresh">长按刷新按钮</string>
     <string name="settings_hold_home">长按主页按钮</string>

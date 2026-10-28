@@ -47,6 +47,7 @@ class SettingsFragment : Fragment() {
         SearchEntry("手势", "通用", "gesture"),
         SearchEntry("长按定制", "通用", "长按菜单"),
         SearchEntry("行为", "通用", "启动行为 操作"),
+        SearchEntry("返回二次确认", "通用", "退出 exit back"),
         SearchEntry("屏幕方向", "通用", "orientation"),
         SearchEntry("保持亮屏", "通用", "keep screen on"),
         SearchEntry("广告拦截", "隐私与安全", "adblock"),

@@ -732,6 +732,11 @@ interface BehaviorSettings {
 
     fun setExitRestorePrompt(value: Boolean)
 
+    /** 返回键退出/最小化前的二次确认。 */
+    fun exitConfirm(): Boolean
+
+    fun setExitConfirm(value: Boolean)
+
     fun sniffEnabled(): Boolean
 
     fun setSniffEnabled(value: Boolean)

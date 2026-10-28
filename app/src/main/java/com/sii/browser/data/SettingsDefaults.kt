@@ -184,6 +184,9 @@ object SettingsDefaults {
     /** 非正常退出后是否提醒恢复标签。 */
     const val EXIT_RESTORE_PROMPT = true
 
+    /** 返回键退出/最小化前的二次确认。 */
+    const val EXIT_CONFIRM = true
+
     /** HLS 下载完成后是否重封装为 MP4。 */
     const val HLS_TO_MP4 = true
 

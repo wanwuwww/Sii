@@ -1122,6 +1122,11 @@ class SettingsDetailFragment : Fragment() {
                 settings.keyAction("back").coerceIn(0, 1)
             ) { settings.setKeyAction("back", it) },
             switchRow(
+                getString(R.string.settings_exit_confirm),
+                settings.exitConfirm(),
+                getString(R.string.settings_exit_confirm_desc)
+            ) { settings.setExitConfirm(it) },
+            switchRow(
                 getString(R.string.settings_gesture_volume),
                 settings.gestureVolumeKey()
             ) { settings.setGestureVolumeKey(it) },
