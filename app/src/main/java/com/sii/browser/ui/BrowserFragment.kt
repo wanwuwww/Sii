@@ -109,6 +109,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var pageLoadingCover: View? = null
     private var homeOverlayActive = false
     private var homeForwardAvailable = false
+    /** 本次导航由主页发起：返回键先回主页，而不是退网页历史。 */
+    private var navFromHome = false
+    private var navFromHomeUrl: String? = null
     private var sniffPrompt: View? = null
     private var sniffPromptResource: com.sii.browser.core.webview.SniffedResource? = null
     private var sniffPromptKey: Any? = null
@@ -304,10 +307,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         forwardButton?.setOnClickListener {
             blurAddressInput()
             if (homeContainer?.visibility == View.VISIBLE) {
-                // 主页覆盖在网页上时，前进等同于“回到被覆盖的网页”（后退的反向操作）。
                 if (homeOverlayActive) {
                     homeOverlayActive = false
                     homeForwardAvailable = false
+                    showWeb()
+                } else if (tabManager.currentWebView?.canGoForward() == true) {
+                    // 返回键从网页回到主页后，前进回到刚才那一页。
+                    tabManager.currentWebView?.goForward()
                     showWeb()
                 } else {
                     Toast.makeText(
@@ -512,6 +518,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         if (AppServices.settings.keyAction("back") == 1) {
             requireActivity().moveTaskToBack(true)
+            return true
+        }
+        if (navFromHome) {
+            // 从主页发起的搜索：返回先回主页，网页留在历史里等下一次返回。
+            navFromHome = false
+            navFromHomeUrl = null
+            homeOverlayActive = false
+            homeForwardAvailable = false
+            showHome(createTab = false)
             return true
         }
         val webView = tabManager.currentWebView
@@ -3506,6 +3521,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     }
                 }
             }
+            navFromHome = false
+            navFromHomeUrl = null
             showHome()
             return
         }
@@ -3560,6 +3577,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             return
         }
         val url = if (httpsOnlyEnabled()) upgradeToHttps(cleanUrl(rawUrl)) else cleanUrl(rawUrl)
+        // 从主页发起的导航：返回键应先回到主页，再退网页历史。
+        navFromHome = homeContainer?.visibility == View.VISIBLE
+        navFromHomeUrl = url
         homeOverlayActive = false
         homeForwardAvailable = false
         if (tabManager.current == null) {
@@ -4239,6 +4259,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (!tabManager.switchTab(index)) return
         homeOverlayActive = false
         homeForwardAvailable = false
+        navFromHome = false
+        navFromHomeUrl = null
         hideSniffPrompt()
         previous?.onPause()
         if (tabManager.current?.url == ABOUT_HOME) {
@@ -7056,8 +7078,20 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
         override fun doUpdateVisitedHistory(webView: SiiWebView?, url: String) {
             homeForwardAvailable = false
-            // 重定向/导航提交即更新标签与地址栏，不等 onPageStarted。
             if (webView == null || url.isBlank() || url == "about:blank") return
+            // 从主页发起后又跳到了别的站，主页就不再是“上一页”。
+            if (navFromHome) {
+                val fromHost = navFromHomeUrl?.let {
+                    runCatching { android.net.Uri.parse(it).host }.getOrNull()
+                }
+                val toHost = runCatching { android.net.Uri.parse(url).host }.getOrNull()
+                if (fromHost != null && toHost != null &&
+                    stripHostPrefix(fromHost.lowercase()) != stripHostPrefix(toHost.lowercase())
+                ) {
+                    navFromHome = false
+                    navFromHomeUrl = null
+                }
+            }
             tabManager.tabs.firstOrNull { it.webView === webView }?.let {
                 it.url = url
                 persistTabs()
