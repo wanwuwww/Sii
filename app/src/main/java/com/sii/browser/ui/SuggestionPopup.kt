@@ -136,7 +136,7 @@ class SuggestionPopup(
 
         val view = ScrollView(context).apply {
             isVerticalScrollBarEnabled = true
-            if (cornerRadiusDp != null) background = panelBackground()
+            if (cornerRadiusDp != null) background = panelBackground(placement.above)
             else setBackgroundResource(R.drawable.bg_suggestion_panel)
             clipToOutline = true
             addView(
@@ -154,7 +154,7 @@ class SuggestionPopup(
         val window = PopupWindow(view, placement.width, placement.height).apply {
             isFocusable = false
             isOutsideTouchable = true
-            elevation = dp(8).toFloat()
+            elevation = dp(4).toFloat()
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setTouchInterceptor { _, event ->
                 if (event.action == android.view.MotionEvent.ACTION_OUTSIDE) {
@@ -328,15 +328,16 @@ class SuggestionPopup(
         root.getLocationOnScreen(rootLocation)
         val frame = Rect()
         anchor.getWindowVisibleDisplayFrame(frame)
-        val margin = dp(8)
+        val edge = dp(8)
         val anchorX = rootLocation[0] + anchorLocation[0]
         val anchorScreenTop = rootLocation[1] + anchorLocation[1]
         val anchorScreenBottom = anchorScreenTop + anchor.height
         val visibleTop = frame.top
         val visibleBottom = frame.bottom
-        val spaceAbove = (anchorScreenTop - visibleTop - margin).coerceAtLeast(0)
-        val spaceBelow = (visibleBottom - anchorScreenBottom - margin).coerceAtLeast(0)
-        val maxScreenHeight = (visibleBottom - visibleTop - margin * 2).coerceAtLeast(dp(80))
+        // 与搜索框零间距：面板直接贴住锚点，视觉上“连体”。
+        val spaceAbove = (anchorScreenTop - visibleTop).coerceAtLeast(0)
+        val spaceBelow = (visibleBottom - anchorScreenBottom).coerceAtLeast(0)
+        val maxScreenHeight = (visibleBottom - visibleTop - edge * 2).coerceAtLeast(dp(80))
 
         val measured = buildColumn(items)
         measure(measured, width, maxScreenHeight)
@@ -351,26 +352,26 @@ class SuggestionPopup(
         val height = min(desired.coerceAtLeast(dp(48)), available.coerceAtLeast(dp(48)))
         // 与锚点左边界对齐（略右于缩放后的视觉边界），超出屏幕再回收。
         var xOffset = 0
-        if (anchorX + width > frame.right - margin) {
-            xOffset = frame.right - margin - width - anchorX
+        if (anchorX + width > frame.right - edge) {
+            xOffset = frame.right - edge - width - anchorX
         }
-        if (anchorX + xOffset < frame.left + margin) {
-            xOffset = frame.left + margin - anchorX
+        if (anchorX + xOffset < frame.left + edge) {
+            xOffset = frame.left + edge - anchorX
         }
-        val yOffset = if (above) {
-            -(anchor.height + margin + height)
-        } else {
-            margin
-        }
+        val yOffset = if (above) -(anchor.height + height) else 0
         return Placement(above, xOffset, yOffset, width, height, measured)
     }
 
-    /** 主页搜索框的建议弹层跟随其圆角设置。 */
-    private fun panelBackground(): GradientDrawable = GradientDrawable().apply {
+    /** 面板背景：只圆外侧两角，贴住搜索框的一侧做直角，视觉上与输入框连成一体。 */
+    private fun panelBackground(above: Boolean): GradientDrawable = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
-        cornerRadius = dp(cornerRadiusDp?.invoke() ?: 22).toFloat()
+        val r = dp(cornerRadiusDp?.invoke() ?: 22).toFloat()
+        cornerRadii = if (above) {
+            floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+        } else {
+            floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r)
+        }
         setColor(ContextCompat.getColor(context, R.color.card))
-        setStroke(dp(1), ContextCompat.getColor(context, R.color.line))
     }
 
     private fun buildColumn(items: List<Suggestion>): LinearLayout {
