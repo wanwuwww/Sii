@@ -25,6 +25,12 @@ class SuggestionPopup(
     private val anchor: View,
     private val minWidthDp: Int = 280,
     private val cornerRadiusDp: (() -> Int)? = null,
+    /** 面板宽度与左侧对齐参照（如悬浮底栏整条胶囊）；为空则取锚点宽度。 */
+    private val widthAnchor: View? = null,
+    /** 面板背景提供器：悬浮样式用玻璃、经典用工具栏同色。 */
+    private val backgroundProvider: (() -> android.graphics.drawable.Drawable?)? = null,
+    /** 与锚点的垂直间隙（dp）。 */
+    private val gapDp: Int = 2,
     private val onPick: (Suggestion) -> Unit
 ) {
     private var popup: PopupWindow? = null
@@ -93,12 +99,13 @@ class SuggestionPopup(
             dismiss(false)
             return
         }
-        // 宽度取锚点布局宽度（不乘聚焦缩放，否则动画期间对不齐）。
+        // 宽度取宿主容器（如悬浮底栏整条）的宽度，保证与胶囊左右对齐。
         val maxWidth = context.resources.displayMetrics.widthPixels - dp(16)
         val minWidth = dp(minWidthDp).coerceAtMost(maxWidth)
-        val width = (anchor.width.takeIf { it > 0 }
-            ?: (context.resources.displayMetrics.widthPixels - dp(32)))
-            .coerceIn(minWidth, maxWidth)
+        val baseWidth = widthAnchor?.width?.takeIf { it > 0 }
+            ?: anchor.width.takeIf { it > 0 }
+            ?: (context.resources.displayMetrics.widthPixels - dp(32))
+        val width = baseWidth.coerceIn(minWidth, maxWidth)
         if (width <= 0) return
         // 锚点已脱离窗口（页面已切走）时不再弹，避免留下关不掉的弹层。
         if (!anchor.isAttachedToWindow || !anchor.isShown) {
@@ -110,7 +117,7 @@ class SuggestionPopup(
         if (popup?.isShowing == true && signature == lastSignature) return
         lastSignature = signature
 
-        val placement = measurePlacement(items, preferAbove, width)
+        val placement = measurePlacement(items, preferAbove, width, alignedLeftScreen())
         val displayItems = if (placement.above) items.reversed() else items
         // 向下展开时测量用的列可以直接复用，避免重复构建整排控件。
         val column = if (placement.above) buildColumn(displayItems) else placement.column
@@ -136,7 +143,7 @@ class SuggestionPopup(
 
         val view = ScrollView(context).apply {
             isVerticalScrollBarEnabled = true
-            if (cornerRadiusDp != null) background = panelBackground(placement.above)
+            if (cornerRadiusDp != null) background = panelBackground()
             else setBackgroundResource(R.drawable.bg_suggestion_panel)
             clipToOutline = true
             addView(
@@ -154,7 +161,7 @@ class SuggestionPopup(
         val window = PopupWindow(view, placement.width, placement.height).apply {
             isFocusable = false
             isOutsideTouchable = true
-            elevation = dp(4).toFloat()
+            elevation = dp(6).toFloat()
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setTouchInterceptor { _, event ->
                 if (event.action == android.view.MotionEvent.ACTION_OUTSIDE) {
@@ -319,7 +326,8 @@ class SuggestionPopup(
     private fun measurePlacement(
         items: List<Suggestion>,
         preferAbove: Boolean,
-        width: Int
+        width: Int,
+        targetLeftScreen: Int?
     ): Placement {
         val anchorLocation = IntArray(2)
         anchor.getLocationInWindow(anchorLocation)
@@ -329,14 +337,15 @@ class SuggestionPopup(
         val frame = Rect()
         anchor.getWindowVisibleDisplayFrame(frame)
         val edge = dp(8)
+        val gap = dp(gapDp)
         val anchorX = rootLocation[0] + anchorLocation[0]
         val anchorScreenTop = rootLocation[1] + anchorLocation[1]
         val anchorScreenBottom = anchorScreenTop + anchor.height
         val visibleTop = frame.top
         val visibleBottom = frame.bottom
-        // 与搜索框零间距：面板直接贴住锚点，视觉上“连体”。
-        val spaceAbove = (anchorScreenTop - visibleTop).coerceAtLeast(0)
-        val spaceBelow = (visibleBottom - anchorScreenBottom).coerceAtLeast(0)
+        // 与搜索框留 2dp 缝，材质同款，看起来是一组下拉面板而不是粘住的盒子。
+        val spaceAbove = (anchorScreenTop - visibleTop - gap).coerceAtLeast(0)
+        val spaceBelow = (visibleBottom - anchorScreenBottom - gap).coerceAtLeast(0)
         val maxScreenHeight = (visibleBottom - visibleTop - edge * 2).coerceAtLeast(dp(80))
 
         val measured = buildColumn(items)
@@ -350,28 +359,37 @@ class SuggestionPopup(
         }
         val available = if (above) spaceAbove else spaceBelow
         val height = min(desired.coerceAtLeast(dp(48)), available.coerceAtLeast(dp(48)))
-        // 与锚点左边界对齐（略右于缩放后的视觉边界），超出屏幕再回收。
-        var xOffset = 0
-        if (anchorX + width > frame.right - edge) {
+        // 与宿主容器（或锚点）左边界对齐，超出屏幕再回收。
+        val targetLeft = targetLeftScreen ?: anchorX
+        var xOffset = targetLeft - anchorX
+        if (anchorX + xOffset + width > frame.right - edge) {
             xOffset = frame.right - edge - width - anchorX
         }
         if (anchorX + xOffset < frame.left + edge) {
             xOffset = frame.left + edge - anchorX
         }
-        val yOffset = if (above) -(anchor.height + height) else 0
+        val yOffset = if (above) -(anchor.height + gap + height) else gap
         return Placement(above, xOffset, yOffset, width, height, measured)
     }
 
-    /** 面板背景：只圆外侧两角，贴住搜索框的一侧做直角，视觉上与输入框连成一体。 */
-    private fun panelBackground(above: Boolean): GradientDrawable = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        val r = dp(cornerRadiusDp?.invoke() ?: 22).toFloat()
-        cornerRadii = if (above) {
-            floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
-        } else {
-            floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r)
+    /** 面板背景：悬浮样式跟随底栏玻璃，经典样式用工具栏同色，四角均圆。 */
+    private fun panelBackground(): android.graphics.drawable.Drawable {
+        backgroundProvider?.invoke()?.let { return it }
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(cornerRadiusDp?.invoke() ?: 22).toFloat()
+            setColor(ContextCompat.getColor(context, R.color.card))
+            setStroke(dp(1), ContextCompat.getColor(context, R.color.line))
         }
-        setColor(ContextCompat.getColor(context, R.color.card))
+    }
+
+    /** 宽度参照容器的左边界（屏幕坐标）；没有参照时返回空。 */
+    private fun alignedLeftScreen(): Int? {
+        val target = widthAnchor ?: return null
+        if (!target.isAttachedToWindow) return null
+        val location = IntArray(2)
+        target.getLocationOnScreen(location)
+        return location[0]
     }
 
     private fun buildColumn(items: List<Suggestion>): LinearLayout {

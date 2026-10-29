@@ -6192,11 +6192,34 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             suggestionPopup?.dismiss()
             return
         }
+        val modern = AppServices.settings.uiStyle() == 1
+        val dock = view?.findViewById<View>(R.id.modern_chrome)
         val popup = suggestionPopup ?: SuggestionPopup(
             requireContext(),
             view?.findViewById<View>(R.id.address_bar) ?: input,
             minWidthDp = 320,
-            cornerRadiusDp = { if (AppServices.settings.uiStyle() == 1) 28 else 22 }
+            cornerRadiusDp = { if (modern) 28 else 22 },
+            widthAnchor = if (modern) dock else null,
+            backgroundProvider = if (modern) {
+                {
+                    GlassStyle.background(
+                        requireContext(),
+                        AppServices.settings.isNightMode(),
+                        dp(28).toFloat(),
+                        AppServices.settings.glassStrength(),
+                        minAlpha = 170
+                    )
+                }
+            } else {
+                {
+                    android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                        cornerRadius = dp(22).toFloat()
+                        setColor(requireContext().getColor(R.color.toolbar_bg))
+                        setStroke(dp(1), requireContext().getColor(R.color.line))
+                    }
+                }
+            }
         ) { item ->
             pickSuggestion(item)
         }.also { suggestionPopup = it }
