@@ -326,6 +326,7 @@
     <string name="download_channel">Downloads</string>
     <string name="download_notification_title">Sii is downloading files</string>
     <string name="download_segments">%1$d segments</string>
+    <string name="download_notification_multi">%1$d tasks · %2$d / %3$d</string>
     <string name="download_preparing">Preparing…</string>
     <string name="menu_download_page">Download this page</string>
     <string name="menu_downloads">Downloads</string>
@@ -809,6 +810,8 @@
     <string name="settings_gesture_double_tap">Double-tap page</string>
     <string name="settings_downloader">Downloader</string>
     <string name="settings_download_protocol">Connection mode</string>
+    <string name="settings_download_parallel">Simultaneous downloads</string>
+    <string name="settings_download_parallel_desc">More tasks use fewer connections each; total stays within 8</string>
     <string name="settings_download_saf_direct">Write directly to download folder</string>
     <string name="settings_download_saf_direct_desc">When off, files are written to app storage first and copied afterwards</string>
     <string name="settings_download">Downloads</string>

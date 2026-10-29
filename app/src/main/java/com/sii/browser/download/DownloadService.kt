@@ -34,6 +34,8 @@ class DownloadService : Service() {
     private var activeTaskId: Long = -1
     /** 当前任务的分段数，仅用于通知栏提示。 */
     private var activeChunks = 0
+    /** 各任务最近一次进度（下载量与总量），多任务时用于通知聚合。 */
+    private val progressByTask = java.util.concurrent.ConcurrentHashMap<Long, LongArray>()
     private var hlsActive = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -42,9 +44,11 @@ class DownloadService : Service() {
         super.onCreate()
         createChannel()
         AppServices.downloadEngine.onTaskProgress = { taskId, downloaded, total ->
+            progressByTask[taskId] = longArrayOf(downloaded, total)
             updateNotification(taskId, downloaded, total)
         }
         AppServices.downloadEngine.onTaskCompleted = { task ->
+            progressByTask.remove(task.id)
             if (task.state == DownloadState.COMPLETED && AppServices.settings.downloadAutoOpen()) {
                 openFile(task)
             }
@@ -55,6 +59,10 @@ class DownloadService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 服务已存时 onCreate 不会重跑，先补一次通知，避免下载已开始但通知还没出现。
+        if (intent?.action == ACTION_DOWNLOAD || intent?.action == ACTION_DOWNLOAD_HLS) {
+            startForeground(NOTIFICATION_ID, buildNotification(-1, 0L, 0L))
+        }
         when (intent?.action) {
             ACTION_DOWNLOAD -> handleDownload(intent)
             ACTION_DOWNLOAD_HLS -> handleDownloadHls(intent)
@@ -157,6 +165,8 @@ class DownloadService : Service() {
             )
             activeTaskId = task.id
             activeChunks = task.chunks
+            progressByTask[task.id] = longArrayOf(0L, total)
+            updateNotification(task.id, 0L, total)
             AppServices.downloadEngine.start(task.id)
             } catch (e: Exception) {
                 maybeStopIdle()
@@ -293,6 +303,8 @@ class DownloadService : Service() {
             )
             activeTaskId = fresh.id
             activeChunks = fresh.chunks
+            progressByTask[fresh.id] = longArrayOf(0L, total)
+            updateNotification(fresh.id, 0L, total)
             AppServices.downloadEngine.start(fresh.id)
         }
     }
@@ -404,14 +416,24 @@ class DownloadService : Service() {
         val segments = if (activeChunks > 1) {
             " · " + getString(R.string.download_segments, activeChunks)
         } else ""
+        val multi = progressByTask.size
+        val sumDownloaded = if (multi > 1) progressByTask.values.sumOf { it[0] } else downloaded
+        val sumTotal = if (multi > 1) progressByTask.values.sumOf { it[1] } else total
+        val shownProgress = if (multi > 1 && sumTotal > 0) {
+            (sumDownloaded * 100 / sumTotal).toInt()
+        } else progress
+        val contentText = when {
+            multi > 1 -> getString(
+                R.string.download_notification_multi, multi, sumDownloaded, sumTotal
+            )
+            taskId > 0 -> "$downloaded / $total$segments"
+            else -> getString(R.string.download_preparing)
+        }
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle(getString(R.string.download_notification_title))
-            .setContentText(
-                if (taskId > 0) "$downloaded / $total$segments"
-                else getString(R.string.download_preparing)
-            )
-            .setProgress(100, progress, total <= 0L)
+            .setContentText(contentText)
+            .setProgress(100, shownProgress, sumTotal <= 0L)
             .setOngoing(true)
             .setContentIntent(contentIntent)
             .build()

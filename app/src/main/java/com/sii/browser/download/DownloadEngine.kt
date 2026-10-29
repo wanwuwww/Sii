@@ -28,6 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
@@ -107,8 +108,8 @@ class DownloadEngine(
         private const val DEFAULT_BUFFER_SIZE = 256 * 1024
         private const val PROGRESS_FLUSH_BYTES = 4L * 1024 * 1024
         private const val MAX_RETRY = 3
-        /** 同时下载的任务数；其余任务保持 PENDING 排队，避免多任务互相拖慢。 */
-        private const val MAX_CONCURRENT_TASKS = 1
+        /** 每次尝试的分块并发预算分母上限（总连接不超过 8）。 */
+        private const val CONNECTION_BUDGET = 8
         private const val CHUNK_MAX_RETRY = 2
         private const val RETRY_DELAY_MS = 3000L
         private const val BROWSER_UA =
@@ -188,7 +189,7 @@ class DownloadEngine(
                 if (desiredRunning[taskId] != true) {
                     return@withLock
                 }
-                if (taskId !in activeTasks && activeTasks.size >= MAX_CONCURRENT_TASKS) {
+                if (taskId !in activeTasks && activeTasks.size >= maxConcurrentTasks()) {
                     // 排队：保持 PENDING，前一个任务结束自动接上。
                     if (repository.taskById(taskId)?.state != DownloadState.COMPLETED) {
                         repository.setState(taskId, DownloadState.PENDING)
@@ -212,7 +213,7 @@ class DownloadEngine(
     /** 全局并发上限：当前任务结束后从队列里接下一个（保持 PENDING 的任务）。 */
     private fun startNextQueued() {
         scope.launch {
-            if (activeTasks.size >= MAX_CONCURRENT_TASKS) return@launch
+            if (activeTasks.size >= maxConcurrentTasks()) return@launch
             val next = desiredRunning.entries
                 .filter { it.value && it.key !in activeTasks }
                 .mapNotNull { entry ->
@@ -225,6 +226,15 @@ class DownloadEngine(
             start(next)
         }
     }
+
+    /** 同时下载的任务数（设置项 1–4，默认 3）。 */
+    private fun maxConcurrentTasks(): Int = runCatching {
+        com.sii.browser.di.AppServices.settings.downloadParallel()
+    }.getOrDefault(3).coerceIn(1, 4)
+
+    /** 当前任务可用的并发段数：总连接预算 8，按活跃任务数平摊。 */
+    private fun chunkBudget(): Int =
+        (CONNECTION_BUDGET / activeTasks.size.coerceAtLeast(1)).coerceIn(1, CONNECTION_BUDGET)
 
     fun pause(taskId: Long) {
         desiredRunning[taskId] = false
@@ -261,6 +271,8 @@ class DownloadEngine(
         if (task.path != path) repository.updatePath(taskId, path)
         val resolved = task.copy(path = path)
         repository.setState(taskId, DownloadState.DOWNLOADING)
+        // 先把当前进度推给通知栏，避免等首个 4MB/1 秒才出现。
+        onTaskProgress?.invoke(taskId, task.downloadedSize, task.totalSize)
         try {
             if (resolved.totalSize <= 0L) {
                 downloadStream(taskId, resolved, sink)
@@ -273,11 +285,12 @@ class DownloadEngine(
                 return
             }
             coroutineScope {
-                // 首块立即开始，其余分块错峰建连；避免同时握手抢占带宽，起步更快。
+                // 首块立即开始，其余分块错峰建连；按活跃任务数分配并发额度。
+                val permits = kotlinx.coroutines.sync.Semaphore(chunkBudget())
                 val jobs = chunks.mapIndexed { index, chunk ->
                     async(start = CoroutineStart.LAZY) {
                         if (index > 0) kotlinx.coroutines.delay(index * 80L)
-                        downloadChunk(resolved, chunk, sink)
+                        permits.withPermit { downloadChunk(resolved, chunk, sink) }
                     }
                 }
                 jobs.forEach { it.start() }

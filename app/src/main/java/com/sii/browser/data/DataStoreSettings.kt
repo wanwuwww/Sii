@@ -1493,6 +1493,12 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setDownloadSafDirect(value: Boolean) =
         putBool(SettingsKeys.DOWNLOAD_SAF_DIRECT, value)
 
+    override fun downloadParallel(): Int =
+        int(SettingsKeys.DOWNLOAD_PARALLEL, 3).coerceIn(1, 4)
+
+    override fun setDownloadParallel(value: Int) =
+        putInt(SettingsKeys.DOWNLOAD_PARALLEL, value.coerceIn(1, 4))
+
     override fun downloadAutoOpen(): Boolean = bool(SettingsKeys.DOWNLOAD_AUTO_OPEN, false)
 
     override fun setDownloadAutoOpen(value: Boolean) = putBool(SettingsKeys.DOWNLOAD_AUTO_OPEN, value)

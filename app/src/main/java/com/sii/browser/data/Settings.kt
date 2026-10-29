@@ -1210,6 +1210,11 @@ interface WebPageSettings {
 
     fun setDownloadSafDirect(value: Boolean)
 
+    /** 同时下载的任务数（1–4，默认 3）。 */
+    fun downloadParallel(): Int
+
+    fun setDownloadParallel(value: Int)
+
     /** 下载完成后自动打开文件。 */
     fun downloadAutoOpen(): Boolean
 

@@ -326,6 +326,7 @@
     <string name="download_channel">下载</string>
     <string name="download_notification_title">Sii 正在下载文件</string>
     <string name="download_segments">%1$d 段</string>
+    <string name="download_notification_multi">%1$d 个任务 · %2$d / %3$d</string>
     <string name="download_preparing">准备中…</string>
     <string name="menu_download_page">下载当前页面</string>
     <string name="menu_downloads">下载列表</string>
@@ -810,6 +811,8 @@
     <string name="settings_gesture_double_tap">双击网页</string>
     <string name="settings_downloader">下载器</string>
     <string name="settings_download_protocol">连接模式</string>
+    <string name="settings_download_parallel">同时下载数</string>
+    <string name="settings_download_parallel_desc">多任务时自动减少每个任务的连接数，总连接不超过 8</string>
     <string name="settings_download_saf_direct">直接写入下载目录</string>
     <string name="settings_download_saf_direct_desc">关闭后先写应用沙箱，完成后再复制到下载目录</string>
     <string name="settings_download">下载</string>

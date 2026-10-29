@@ -758,6 +758,13 @@ class SettingsDetailFragment : Fragment() {
                 settings.downloadProtocol().coerceIn(0, 2),
                 enabled = builtin
             ) { settings.setDownloadProtocol(it) },
+            choiceRow(
+                getString(R.string.settings_download_parallel),
+                DOWNLOAD_PARALLEL_NAMES,
+                settings.downloadParallel().coerceIn(1, 4) - 1,
+                getString(R.string.settings_download_parallel_desc),
+                enabled = builtin
+            ) { index -> settings.setDownloadParallel(index + 1) },
             switchRow(
                 getString(R.string.settings_download_saf_direct),
                 settings.downloadSafDirect(),
@@ -2923,6 +2930,7 @@ class SettingsDetailFragment : Fragment() {
         private val THEME_COLOR_NAMES = arrayOf("默认（蓝）", "绿", "橙", "紫")
         private val DOWNLOADER_NAMES = arrayOf("Sii 内建下载器", "系统下载管理器")
         private val DOWNLOAD_PROTOCOL_NAMES = arrayOf("自动", "HTTP/2", "HTTP/1.1")
+        private val DOWNLOAD_PARALLEL_NAMES = arrayOf("1", "2", "3", "4")
         private val THEME_COLOR_IDS = arrayOf(null, "green", "orange", "purple")
 
         /** 长按菜单项。 */

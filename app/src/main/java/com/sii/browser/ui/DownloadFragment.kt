@@ -40,6 +40,10 @@ class DownloadFragment : Fragment() {
 
     override fun onDestroyView() {
         if (::container.isInitialized) container.removeAllViews()
+        // view 重建后（如从下载设置返回）签名与旧视图不再对应，必须重新建列表。
+        listSignature = ""
+        rowViews.clear()
+        boundTasks.clear()
         super.onDestroyView()
     }
 
