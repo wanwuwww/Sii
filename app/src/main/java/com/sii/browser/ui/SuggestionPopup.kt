@@ -143,8 +143,8 @@ class SuggestionPopup(
         }
         scroll = view
         showingAbove = placement.above
-        view.alpha = 0f
-        view.translationY = if (placement.above) dp(6).toFloat() else -dp(6).toFloat()
+        view.alpha = 1f
+        view.translationY = 0f
         val window = PopupWindow(view, placement.width, placement.height).apply {
             isFocusable = false
             isOutsideTouchable = true
@@ -158,6 +158,7 @@ class SuggestionPopup(
             }
         }
         popup = window
+        activeWindows.add(window)
         lastXOffset = placement.xOffset
         lastYOffset = placement.yOffset
         lastWidth = placement.width
@@ -173,12 +174,6 @@ class SuggestionPopup(
             return
         }
         attachFollow()
-        view.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setDuration(150L)
-            .setInterpolator(android.view.animation.DecelerateInterpolator())
-            .start()
     }
 
     /** 本地结果 → 联网结果时平滑扩展/收缩窗口，避免高度突变造成闪烁。 */
@@ -226,7 +221,7 @@ class SuggestionPopup(
         detachFollow()
         val content = window.contentView
         if (!animated || !window.isShowing || content == null || !content.isAttachedToWindow) {
-            runCatching { window.dismiss() }
+            closeWindow(window)
             return
         }
         content.animate().cancel()
@@ -237,11 +232,11 @@ class SuggestionPopup(
             .alpha(0f)
             .translationY(if (showingAbove) dp(6).toFloat() else -dp(6).toFloat())
             .setDuration(90L)
-            .withEndAction { runCatching { window.dismiss() } }
+            .withEndAction { closeWindow(window) }
             .start()
         // 动画被打断（view 脱离窗口、转场）时也要确保窗口关掉，否则会残留成幽灵弹层。
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            runCatching { if (window.isShowing) window.dismiss() }
+            closeWindow(window)
         }, 200L)
     }
 
@@ -252,7 +247,25 @@ class SuggestionPopup(
         scroll = null
         lastSignature = null
         detachFollow()
-        runCatching { window.dismiss() }
+        closeWindow(window)
+    }
+
+    private fun closeWindow(window: PopupWindow) {
+        runCatching { if (window.isShowing) window.dismiss() }
+        activeWindows.remove(window)
+    }
+
+    companion object {
+        /** 所有曾经显示过的弹窗（含已丢失引用的），页面切换时强制清理。 */
+        private val activeWindows =
+            java.util.Collections.newSetFromMap(java.util.WeakHashMap<PopupWindow, Boolean>())
+
+        fun dismissAll() {
+            activeWindows.toList().forEach { window ->
+                runCatching { if (window.isShowing) window.dismiss() }
+            }
+            activeWindows.clear()
+        }
     }
 
     private class Placement(

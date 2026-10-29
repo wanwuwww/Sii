@@ -5988,8 +5988,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 本地为空时不先渲染（避免先收起再弹出的闪动），等在线结果。
             if (local.isNotEmpty()) onLoaded(local)
             if (!useOnline) return@launch
-            // 网络请求延后 120ms：打字快时不必每字符都发请求。
-            kotlinx.coroutines.delay(120)
             val online = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 onlineCacheGet(query) ?: raceSuggestions(
                     suggestionApis(engine).map { it + android.net.Uri.encode(query) }
@@ -9274,6 +9272,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     }
 
     override fun onPause() {
+        // 离开浏览器页前强制关闭建议弹层，避免被系统返回预览带到下一页。
+        suggestSeq++
+        suggestDebounceJob?.cancel()
+        suggestionsSuppressed = true
+        suggestionPopup?.dismissNow()
+        suggestionPopup = null
+        SuggestionPopup.dismissAll()
         // 离开浏览器页时状态栏恢复默认，避免设置页继续显示网站主题色。
         (activity as? ShellActivity)?.applyStatusBarColor(null)
         if (::tabManager.isInitialized) {
@@ -10242,6 +10247,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         suggestionsSuppressed = true
         suggestionPopup?.dismissNow()
         suggestionPopup = null
+        SuggestionPopup.dismissAll()
         tts?.shutdown()
         tts = null
         speaking = false
