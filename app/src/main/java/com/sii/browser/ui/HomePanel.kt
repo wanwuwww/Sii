@@ -409,12 +409,16 @@ class HomePanel(
                 lockScreenPosition()
                 lockContentHeight()
                 setOthersDimmed(true, includeMainSearch = true)
-            } else if (!searchFocusActive) {
-                setImeSuspend(false)
-                unlockScreenPosition()
-                unlockHomeHeight()
-                restoreContentHeight()
-                setOthersDimmed(false)
+            } else {
+                // 失焦必须收起建议，否则弹层会跟随页面切换成为幽灵窗口。
+                topSuggestionPopup?.dismiss()
+                if (!searchFocusActive) {
+                    setImeSuspend(false)
+                    unlockScreenPosition()
+                    unlockHomeHeight()
+                    restoreContentHeight()
+                    setOthersDimmed(false)
+                }
             }
         }
         topSearchInput.setOnEditorActionListener { _, actionId, event ->
@@ -489,6 +493,10 @@ class HomePanel(
     }
 
     private fun showTopSuggestions(items: List<Suggestion>) {
+        if (!topSearchInput.hasFocus()) {
+            topSuggestionPopup?.dismiss()
+            return
+        }
         if (items.isEmpty()) {
             topSuggestionPopup?.dismiss()
             return
@@ -1088,6 +1096,11 @@ class HomePanel(
     }
 
     private fun showSuggestions(items: List<Suggestion>, preferAbove: Boolean = false) {
+        // 焦点已不在搜索框时不能再弹：异步结果晚到会留下无人关闭的幽灵弹层。
+        if (!searchInput.hasFocus()) {
+            suggestionPopup?.dismiss()
+            return
+        }
         // 本地结果为空时只收起弹层，不置 suppressed，保持后续联网结果可用。
         if (items.isEmpty()) {
             suggestionPopup?.dismiss()

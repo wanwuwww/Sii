@@ -100,6 +100,11 @@ class SuggestionPopup(
             ?: (context.resources.displayMetrics.widthPixels - dp(32)))
             .coerceIn(minWidth, maxWidth)
         if (width <= 0) return
+        // 锚点已脱离窗口（页面已切走）时不再弹，避免留下关不掉的弹层。
+        if (!anchor.isAttachedToWindow || !anchor.isShown) {
+            DiagLog.record("suggest", "skip-detached anchor=${anchor.id}")
+            return
+        }
         val signature = items.joinToString("|") { it.kind.name + ":" + it.value } +
             ":" + preferAbove
         if (popup?.isShowing == true && signature == lastSignature) return
