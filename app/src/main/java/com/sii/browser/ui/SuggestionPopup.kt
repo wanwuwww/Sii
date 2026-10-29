@@ -16,6 +16,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.sii.browser.R
+import com.sii.browser.core.mcp.DiagLog
 import kotlin.math.min
 
 /** 地址栏和主页搜索框共用的建议弹层：原地更新、轻量淡入、自动翻转和滚动。 */
@@ -159,6 +160,12 @@ class SuggestionPopup(
         }
         popup = window
         activeWindows.add(window)
+        DiagLog.record(
+            "suggest",
+            "show id=${Integer.toHexString(System.identityHashCode(window))} " +
+                "above=${placement.above} anchor=${anchor.id} n=${items.size}"
+        )
+        activeWindows.add(window)
         lastXOffset = placement.xOffset
         lastYOffset = placement.yOffset
         lastWidth = placement.width
@@ -171,6 +178,7 @@ class SuggestionPopup(
             scroll = null
             lastSignature = null
             detachFollow()
+            DiagLog.record("suggest", "show-fail anchor=${anchor.id}")
             return
         }
         attachFollow()
@@ -215,6 +223,11 @@ class SuggestionPopup(
 
     fun dismiss(animated: Boolean = true) {
         val window = popup ?: return
+        DiagLog.record(
+            "suggest",
+            "dismiss id=${Integer.toHexString(System.identityHashCode(window))} " +
+                "animated=$animated showing=${window.isShowing}"
+        )
         popup = null
         scroll = null
         lastSignature = null
@@ -243,6 +256,11 @@ class SuggestionPopup(
     /** 生命周期路径用：不等动画，立即关闭。 */
     fun dismissNow() {
         val window = popup ?: return
+        DiagLog.record(
+            "suggest",
+            "dismiss-now id=${Integer.toHexString(System.identityHashCode(window))} " +
+                "showing=${window.isShowing}"
+        )
         popup = null
         scroll = null
         lastSignature = null
@@ -251,8 +269,13 @@ class SuggestionPopup(
     }
 
     private fun closeWindow(window: PopupWindow) {
-        runCatching { if (window.isShowing) window.dismiss() }
+        val wasShowing = runCatching { window.isShowing }.getOrDefault(false)
+        runCatching { if (wasShowing) window.dismiss() }
         activeWindows.remove(window)
+        DiagLog.record(
+            "suggest",
+            "close id=${Integer.toHexString(System.identityHashCode(window))} wasShowing=$wasShowing"
+        )
     }
 
     companion object {
@@ -261,10 +284,21 @@ class SuggestionPopup(
             java.util.Collections.newSetFromMap(java.util.WeakHashMap<PopupWindow, Boolean>())
 
         fun dismissAll() {
-            activeWindows.toList().forEach { window ->
+            val list = activeWindows.toList()
+            val showing = list.count { runCatching { it.isShowing }.getOrDefault(false) }
+            DiagLog.record("suggest", "dismiss-all tracked=${list.size} showing=$showing")
+            list.forEach { window ->
                 runCatching { if (window.isShowing) window.dismiss() }
             }
             activeWindows.clear()
+        }
+
+        /** 诊断用：当前跟踪的窗口数与仍在显示的数量。 */
+        fun debugState(): String {
+            val list = activeWindows.toList()
+            val ids = list.filter { runCatching { it.isShowing }.getOrDefault(false) }
+                .map { Integer.toHexString(System.identityHashCode(it)) }
+            return "tracked=${list.size} showing=${ids.size} ids=${ids.joinToString(",")}"
         }
     }
 

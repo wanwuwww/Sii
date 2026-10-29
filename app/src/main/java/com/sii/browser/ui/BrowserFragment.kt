@@ -7377,6 +7377,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .put("address_editing", addressEditing)
             .put("home_visible", homeContainer?.visibility == View.VISIBLE)
             .put("home_overlay", homeOverlayActive)
+            .put("suggest_popup", SuggestionPopup.debugState())
             .put("nav_from_home", navFromHome)
             .put("tab_index", tabManager.currentIndex)
             .put("tab_count", tabManager.size)
