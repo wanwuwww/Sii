@@ -121,7 +121,7 @@ class HomePanel(
                     suggestionsSuppressed = false
                     suggestJob?.cancel()
                     suggestJob = scope.launch {
-                        kotlinx.coroutines.delay(300)
+                        kotlinx.coroutines.delay(80)
                         if (suggestionsSuppressed) return@launch
                         onSuggest(query) { items ->
                             if (suggestionsSuppressed) return@onSuggest
@@ -442,7 +442,7 @@ class HomePanel(
                 topSuggestionsSuppressed = false
                 topSuggestJob?.cancel()
                 topSuggestJob = scope.launch {
-                    kotlinx.coroutines.delay(300)
+                    kotlinx.coroutines.delay(80)
                     if (topSuggestionsSuppressed) return@launch
                     onSuggest(query) { items ->
                         if (topSuggestionsSuppressed) return@onSuggest
@@ -508,7 +508,7 @@ class HomePanel(
             return
         }
         val popup = topSuggestionPopup ?: SuggestionPopup(
-            context, topSearchBox, horizontalShiftDp = 8
+            context, topSearchBox, horizontalShiftDp = 5
         ) { item -> pickTopSuggestion(item) }.also { topSuggestionPopup = it }
         popup.show(sorted)
     }
@@ -1117,7 +1117,7 @@ class HomePanel(
             searchBox,
             minWidthDp = 0,
             cornerRadiusDp = { searchCornerRadiusDp() },
-            horizontalShiftDp = 8
+            horizontalShiftDp = 5
         ) { item ->
             pickSuggestion(item)
         }.also { suggestionPopup = it }

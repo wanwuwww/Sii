@@ -189,6 +189,16 @@ class SuggestionPopup(
             return
         }
         attachFollow()
+        // 首次出现：从下方 12dp 上滑 + 淡入（仅窗口创建时播一次，结果更新不重播）。
+        view.animate().cancel()
+        view.alpha = 0f
+        view.translationY = dp(12).toFloat()
+        view.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(130L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
     }
 
     /** 本地结果 → 联网结果时平滑扩展/收缩窗口，避免高度突变造成闪烁。 */

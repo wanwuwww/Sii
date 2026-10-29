@@ -4608,7 +4608,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             onSearch = { navigateFromHome(it) },
             onOpen = { loadUrlFor(it) },
             onScan = { startScan() },
-            onSuggest = { query, callback -> loadSuggestions(query, callback) }
+            onSuggest = { query, callback ->
+                // 主页：本地建议 80ms 先出，联网建议再等 170ms（共 250ms）。
+                loadSuggestions(query, onlineDelayMs = 170L, onLoaded = callback)
+            }
         )
         host.addView(
             panel.view,
@@ -5969,7 +5972,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     /** 地址栏搜索建议：本地（历史/书签）+ 搜索引擎建议合并，仅在「搜索建议」开启且非 URL 时请求。 */
     /** 地址栏与主页搜索框共用：本地历史/书签 + 联网联想词。 */
-    private fun loadSuggestions(query: String, onLoaded: (List<Suggestion>) -> Unit) {
+    private fun loadSuggestions(
+        query: String,
+        onlineDelayMs: Long = 0L,
+        onLoaded: (List<Suggestion>) -> Unit
+    ) {
         val settings = AppServices.settings
         val useHistory = settings.searchSuggestHistory()
         val useBookmarks = settings.searchSuggestBookmarks()
@@ -5988,6 +5995,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 本地为空时不先渲染（避免先收起再弹出的闪动），等在线结果。
             if (local.isNotEmpty()) onLoaded(local)
             if (!useOnline) return@launch
+            if (onlineDelayMs > 0L) kotlinx.coroutines.delay(onlineDelayMs)
             val online = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 onlineCacheGet(query) ?: raceSuggestions(
                     suggestionApis(engine).map { it + android.net.Uri.encode(query) }
