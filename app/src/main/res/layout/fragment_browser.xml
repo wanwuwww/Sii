@@ -533,6 +533,16 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- 搜索建议覆盖层（页面内，不创建独立窗口） -->
+    <FrameLayout
+        android:id="@+id/suggest_layer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:elevation="9dp"
+        android:visibility="gone" />
+
     <!-- 标签面板（覆盖层，不参与主体排版） -->
     <FrameLayout
         android:id="@+id/tabs_overlay"

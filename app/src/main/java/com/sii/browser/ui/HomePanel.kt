@@ -61,8 +61,9 @@ class HomePanel(
     private var editing = false
     private var lastSiteStyle: String? = null
     private var sites: List<FavoriteItem> = emptyList()
-    private var suggestionPopup: SuggestionPopup? = null
-    private var topSuggestionPopup: SuggestionPopup? = null
+    /** 页面内建议面板（由浏览器页注入）：首页不再自建 PopupWindow。 */
+    var onInlineSuggestions: ((View, View?, List<Suggestion>, Boolean, (Suggestion) -> Unit) -> Unit)? = null
+    var onHideInlineSuggestions: (() -> Unit)? = null
     private var topSuggestJob: Job? = null
     private var topSuggestionsSuppressed = false
     private var suggestionsSuppressed = false
@@ -411,7 +412,7 @@ class HomePanel(
                 setOthersDimmed(true, includeMainSearch = true)
             } else {
                 // 失焦必须收起建议，否则弹层会跟随页面切换成为幽灵窗口。
-                topSuggestionPopup?.dismiss()
+                hideInlineSuggestions()
                 if (!searchFocusActive) {
                     setImeSuspend(false)
                     unlockScreenPosition()
@@ -436,7 +437,7 @@ class HomePanel(
                 val query = s?.toString().orEmpty().trim()
                 if (query.isEmpty()) {
                     topSuggestJob?.cancel()
-                    topSuggestionPopup?.dismiss()
+                    hideInlineSuggestions()
                     return
                 }
                 topSuggestionsSuppressed = false
@@ -487,30 +488,30 @@ class HomePanel(
         topSuggestionsSuppressed = true
         hideKeyboard(topSearchInput)
         topSearchInput.clearFocus()
-        topSuggestionPopup?.dismiss()
+        hideInlineSuggestions()
         val text = topSearchInput.text.toString().trim()
         if (text.isNotEmpty()) onSearch(text)
     }
 
     private fun showTopSuggestions(items: List<Suggestion>) {
         if (!topSearchInput.hasFocus()) {
-            topSuggestionPopup?.dismiss()
+            hideInlineSuggestions()
             return
         }
         if (items.isEmpty()) {
-            topSuggestionPopup?.dismiss()
+            hideInlineSuggestions()
             return
         }
         val count = AppServices.settings.suggestionCount().coerceIn(3, 10)
         val sorted = sortSuggestions(items, AppServices.settings.suggestOrder(), count)
         if (sorted.isEmpty()) {
-            topSuggestionPopup?.dismiss()
+            hideInlineSuggestions()
             return
         }
-        val popup = topSuggestionPopup ?: SuggestionPopup(
-            context, topSearchBox
-        ) { item -> pickTopSuggestion(item) }.also { topSuggestionPopup = it }
-        popup.show(sorted)
+        val popupItems = sorted
+        onInlineSuggestions?.invoke(topSearchBox, topSearchBox, popupItems, false) { item ->
+            pickTopSuggestion(item)
+        }
     }
 
     private fun pickTopSuggestion(item: Suggestion) {
@@ -527,7 +528,7 @@ class HomePanel(
         top.visibility = if (show) View.VISIBLE else View.GONE
         if (!show) {
             topSearchInput.clearFocus()
-            topSuggestionPopup?.dismiss(false)
+            hideInlineSuggestions()
         }
     }
 
@@ -1034,7 +1035,7 @@ class HomePanel(
         topSearchInput.clearFocus()
         hideKeyboard()
         hideSuggestions()
-        topSuggestionPopup?.dismiss()
+        hideInlineSuggestions()
     }
 
     /** 主页搜索框是否持有焦点。 */
@@ -1089,7 +1090,7 @@ class HomePanel(
         topSuggestionsSuppressed = true
         hideSuggestions()
         topSuggestJob?.cancel()
-        topSuggestionPopup?.dismiss(false)
+        hideInlineSuggestions()
         searchInput.setText("")
         topSearchInput.setText("")
         topSearchInput.clearFocus()
@@ -1098,29 +1099,24 @@ class HomePanel(
     private fun showSuggestions(items: List<Suggestion>, preferAbove: Boolean = false) {
         // 焦点已不在搜索框时不能再弹：异步结果晚到会留下无人关闭的幽灵弹层。
         if (!searchInput.hasFocus()) {
-            suggestionPopup?.dismiss()
+            hideInlineSuggestions()
             return
         }
         // 本地结果为空时只收起弹层，不置 suppressed，保持后续联网结果可用。
         if (items.isEmpty()) {
-            suggestionPopup?.dismiss()
+            hideInlineSuggestions()
             return
         }
         val count = AppServices.settings.suggestionCount().coerceIn(3, 10)
         val sorted = sortSuggestions(items, AppServices.settings.suggestOrder(), count)
         if (sorted.isEmpty()) {
-            suggestionPopup?.dismiss()
+            hideInlineSuggestions()
             return
         }
-        val popup = suggestionPopup ?: SuggestionPopup(
-            context,
-            searchBox,
-            minWidthDp = 0,
-            cornerRadiusDp = { searchCornerRadiusDp() }
-        ) { item ->
+        val popupItems = sorted
+        onInlineSuggestions?.invoke(searchBox, searchBox, popupItems, preferAbove) { item ->
             pickSuggestion(item)
-        }.also { suggestionPopup = it }
-        popup.show(sorted, preferAbove)
+        }
     }
 
     private fun showClipboardSuggestion() {
@@ -1172,7 +1168,11 @@ class HomePanel(
 
     private fun hideSuggestions() {
         suggestionsSuppressed = true
-        suggestionPopup?.dismiss()
+        hideInlineSuggestions()
+    }
+
+    private fun hideInlineSuggestions() {
+        onHideInlineSuggestions?.invoke()
     }
 
     /** 浏览器离开主页时收起主页建议浮层。 */
@@ -1185,8 +1185,7 @@ class HomePanel(
         searchFocusAnimator?.cancel()
         searchFocusAnimator = null
         topSuggestJob?.cancel()
-        topSuggestionPopup?.dismiss(false)
-        topSuggestionPopup = null
+        hideInlineSuggestions()
         stopClock()
         bgJob?.cancel()
         bgJob = null

@@ -203,6 +203,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
         }
         view.post { restoreTranslateUi() }
+        suggestionPanel = SuggestionPanelView(
+            requireContext(),
+            view.findViewById(R.id.suggest_layer)
+        ).also { panel -> panel.onPick = { item -> pickSuggestion(item) } }
         siteInfoButton?.setOnClickListener { anchor -> showSiteInfoMenu(anchor) }
         progressBar = view.findViewById(R.id.progress_bar)
         tabStrip = view.findViewById(R.id.tab_strip)
@@ -4618,6 +4622,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             )
         )
         panel.bind(latestFavorites)
+        panel.onInlineSuggestions = { anchor, widthAnchor, items, above, picker ->
+            suggestionPanel?.let { host ->
+                // 主页两条搜索框用卡片色，与各自输入框同一套外观。
+                host.backgroundProvider = null
+                host.show(anchor, widthAnchor, items, above, 22, picker)
+            }
+        }
+        panel.onHideInlineSuggestions = { suggestionPanel?.hide() }
         homePanel = panel
     }
 
@@ -6181,49 +6193,50 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             hideSuggestions()
             return
         }
-        // 本地结果为空时只收起弹层，不要标记 suppressed，否则后续联网结果会被丢弃。
+        val panel = suggestionPanel ?: return
+        // 本地结果为空时只收起面板，不要标记 suppressed，否则后续联网结果会被丢弃。
         if (items.isEmpty()) {
-            suggestionPopup?.dismiss()
+            panel.hide()
             return
         }
         val count = AppServices.settings.suggestionCount().coerceIn(3, 10)
         val sorted = sortSuggestions(items, AppServices.settings.suggestOrder(), count)
         if (sorted.isEmpty()) {
-            suggestionPopup?.dismiss()
+            panel.hide()
             return
         }
         val modern = AppServices.settings.uiStyle() == 1
         val dock = view?.findViewById<View>(R.id.modern_chrome)
-        val popup = suggestionPopup ?: SuggestionPopup(
-            requireContext(),
-            view?.findViewById<View>(R.id.address_bar) ?: input,
-            minWidthDp = 320,
-            cornerRadiusDp = { if (modern) 28 else 22 },
-            widthAnchor = if (modern) dock else null,
-            backgroundProvider = if (modern) {
-                {
-                    GlassStyle.background(
-                        requireContext(),
-                        AppServices.settings.isNightMode(),
-                        dp(28).toFloat(),
-                        AppServices.settings.glassStrength(),
-                        minAlpha = 170
-                    )
-                }
-            } else {
-                {
-                    android.graphics.drawable.GradientDrawable().apply {
-                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                        cornerRadius = dp(22).toFloat()
-                        setColor(requireContext().getColor(R.color.toolbar_bg))
-                        setStroke(dp(1), requireContext().getColor(R.color.line))
-                    }
+        val anchor = view?.findViewById<View>(R.id.address_bar) ?: input
+        panel.backgroundProvider = if (modern) {
+            {
+                GlassStyle.background(
+                    requireContext(),
+                    AppServices.settings.isNightMode(),
+                    dp(28).toFloat(),
+                    AppServices.settings.glassStrength(),
+                    minAlpha = 170
+                )
+            }
+        } else {
+            {
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(22).toFloat()
+                    setColor(requireContext().getColor(R.color.toolbar_bg))
+                    setStroke(dp(1), requireContext().getColor(R.color.line))
                 }
             }
-        ) { item ->
-            pickSuggestion(item)
-        }.also { suggestionPopup = it }
-        popup.show(sorted, preferAbove)
+        }
+        // 悬浮样式以整条胶囊为锚点：宽度一致、从胶囊上沿往上展开，不会压在底栏上。
+        val verticalAnchor = if (modern) (dock ?: anchor) else anchor
+        panel.show(
+            anchor = verticalAnchor,
+            widthAnchor = if (modern) dock else null,
+            items = sorted,
+            preferAbove = preferAbove || modern,
+            radiusDp = if (modern) 28 else 22
+        )
     }
 
     private fun pickSuggestion(item: Suggestion) {
@@ -6279,7 +6292,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         suggestSeq++
         suggestionsSuppressed = true
         suggestDebounceJob?.cancel()
-        suggestionPopup?.dismiss()
+        suggestionPanel?.hide()
     }
 
     private fun dpToPx(value: Int): Int =
@@ -7400,7 +7413,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .put("address_editing", addressEditing)
             .put("home_visible", homeContainer?.visibility == View.VISIBLE)
             .put("home_overlay", homeOverlayActive)
-            .put("suggest_popup", SuggestionPopup.debugState())
+            .put("suggest_popup", suggestionPanel?.debugState() ?: "inline showing=0")
             .put("nav_from_home", navFromHome)
             .put("tab_index", tabManager.currentIndex)
             .put("tab_count", tabManager.size)
@@ -9300,9 +9313,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         suggestSeq++
         suggestDebounceJob?.cancel()
         suggestionsSuppressed = true
-        suggestionPopup?.dismissNow()
-        suggestionPopup = null
-        SuggestionPopup.dismissAll()
+        suggestionPanel?.hide()
         // 离开浏览器页时状态栏恢复默认，避免设置页继续显示网站主题色。
         (activity as? ShellActivity)?.applyStatusBarColor(null)
         if (::tabManager.isInitialized) {
@@ -10269,9 +10280,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         suggestSeq++
         suggestDebounceJob?.cancel()
         suggestionsSuppressed = true
-        suggestionPopup?.dismissNow()
-        suggestionPopup = null
-        SuggestionPopup.dismissAll()
+        suggestionPanel?.hide()
+        suggestionPanel = null
         tts?.shutdown()
         tts = null
         speaking = false
@@ -10500,6 +10510,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     override fun onWindowFocusGained(hasFocus: Boolean) = Unit
 
     override fun onGlobalTouch(event: android.view.MotionEvent) {
+        // 点建议面板以外的地方收起建议（点面板本身不收起，交给行点击）。
+        if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN &&
+            suggestionPanel?.isShowing() == true &&
+            suggestionPanel?.contains(event.rawX, event.rawY) != true
+        ) {
+            hideSuggestions()
+        }
         if (homeContainer?.visibility != View.VISIBLE) return
         homePanel?.onGlobalTouch(event)
     }
@@ -10526,7 +10543,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         return false
     }
 
-    private var suggestionPopup: SuggestionPopup? = null
+    private var suggestionPanel: SuggestionPanelView? = null
     private var suggestSeq = 0
     private var suggestionsSuppressed = false
     private var suggestDebounceJob: kotlinx.coroutines.Job? = null
