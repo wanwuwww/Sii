@@ -5909,7 +5909,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 val seq = ++suggestSeq
                 suggestDebounceJob?.cancel()
                 suggestDebounceJob = viewLifecycleOwner.lifecycleScope.launch {
-                    kotlinx.coroutines.delay(180)
+                    kotlinx.coroutines.delay(80)
                     if (!isAdded || seq != suggestSeq || suggestionsSuppressed) return@launch
                     if (addressInput?.hasFocus() != true) return@launch
                     loadSuggestions(query) { items ->
@@ -5981,46 +5981,103 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             return
         }
         val engine = settings.searchEngineUrl().orEmpty()
-        val targets = suggestionApis(engine).map {
-            it + android.net.Uri.encode(query)
-        }
         viewLifecycleOwner.lifecycleScope.launch {
-            val local = if (useHistory || useBookmarks) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    runCatching {
-                        val history = if (useHistory) {
-                            AppServices.historyRepository.recent(500).first()
-                                .filter { it.url.contains(query, true) || it.title.contains(query, true) }
-                                .map { Suggestion(it.title.ifEmpty { it.url }, it.url, SuggestionKind.HISTORY, it.url) }
-                        } else emptyList()
-                        val bookmarks = if (useBookmarks) {
-                            AppServices.bookmarkRepository.allItemsOnce()
-                                .filter { it.url.contains(query, true) || it.title.contains(query, true) }
-                                .map { Suggestion(it.title.ifEmpty { it.url }, it.url, SuggestionKind.BOOKMARK, it.url) }
-                        } else emptyList()
-                        (bookmarks + history).distinctBy { it.value }
-                    }.getOrDefault(emptyList<Suggestion>())
-                }
-            } else emptyList()
-            // 本地结果先显示，联网结果到达后再合并，避免网络慢时看不到历史/书签。
-            onLoaded(local.distinctBy { it.value })
-            if (!useOnline) return@launch
-            val online = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                coroutineScope {
-                    val results = targets.map { target ->
-                        async {
-                            runCatching { fetchSuggestions(target) }.getOrDefault(emptyList())
-                        }
-                    }
-                    awaitAll(*results.toTypedArray())
-                        .firstOrNull { it.isNotEmpty() } ?: emptyList()
-                }
+            val local = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                localSuggestions(query, useHistory, useBookmarks)
             }
+            // 本地为空时不先渲染（避免先收起再弹出的闪动），等在线结果。
+            if (local.isNotEmpty()) onLoaded(local)
+            if (!useOnline) return@launch
+            // 网络请求延后 120ms：打字快时不必每字符都发请求。
+            kotlinx.coroutines.delay(120)
+            val online = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                onlineCacheGet(query) ?: raceSuggestions(
+                    suggestionApis(engine).map { it + android.net.Uri.encode(query) }
+                ).also { if (it.isNotEmpty()) putOnlineCache(query, it) }
+            }
+            if (online.isEmpty()) return@launch
             onLoaded(
                 (local + online.map { Suggestion(it, it, SuggestionKind.SEARCH) })
                     .distinctBy { it.value }
             )
         }
+    }
+
+    /** 本地建议：历史/书签缓存 30 秒，按键时只做内存过滤。 */
+    private suspend fun localSuggestions(
+        query: String,
+        useHistory: Boolean,
+        useBookmarks: Boolean
+    ): List<Suggestion> {
+        val now = System.currentTimeMillis()
+        if (useHistory && (suggestHistoryCache.isEmpty() || now - suggestHistoryCacheAt > 30_000L)) {
+            suggestHistoryCache = runCatching {
+                AppServices.historyRepository.recent(300).first()
+                    .map { (it.title ?: "") to it.url }
+            }.getOrDefault(emptyList())
+            suggestHistoryCacheAt = now
+        }
+        if (useBookmarks && (suggestBookmarkCache.isEmpty() || now - suggestBookmarkCacheAt > 30_000L)) {
+            suggestBookmarkCache = runCatching {
+                AppServices.bookmarkRepository.allItemsOnce().map { (it.title ?: "") to it.url }
+            }.getOrDefault(emptyList())
+            suggestBookmarkCacheAt = now
+        }
+        val history = if (useHistory) suggestHistoryCache.asSequence()
+            .filter { it.first.contains(query, true) || it.second.contains(query, true) }
+            .take(10)
+            .map { Suggestion(it.first.ifEmpty { it.second }, it.second, SuggestionKind.HISTORY, it.second) }
+            .toList() else emptyList()
+        val bookmarks = if (useBookmarks) suggestBookmarkCache.asSequence()
+            .filter { it.first.contains(query, true) || it.second.contains(query, true) }
+            .take(10)
+            .map { Suggestion(it.first.ifEmpty { it.second }, it.second, SuggestionKind.BOOKMARK, it.second) }
+            .toList() else emptyList()
+        return (bookmarks + history).distinctBy { it.value }
+    }
+
+    /** 在线建议竞速：哪个接口先返回非空就用哪个，不再等最慢的接口超时。 */
+    private suspend fun raceSuggestions(targets: List<String>): List<String> {
+        if (targets.isEmpty()) return emptyList()
+        return kotlinx.coroutines.coroutineScope {
+            val channel = kotlinx.coroutines.channels.Channel<List<String>>(
+                kotlinx.coroutines.channels.Channel.UNLIMITED
+            )
+            val requests = targets.map { target ->
+                launch {
+                    val result = runCatching { fetchSuggestions(target) }.getOrDefault(emptyList())
+                    runCatching { channel.send(result) }
+                }
+            }
+            val first = kotlinx.coroutines.withTimeoutOrNull(1200L) {
+                while (true) {
+                    val result = channel.receive()
+                    if (result.isNotEmpty()) return@withTimeoutOrNull result
+                }
+                @Suppress("UNREACHABLE_CODE")
+                emptyList()
+            } ?: emptyList()
+            // 已经拿到首选结果，取消还没回来的请求（coroutineScope 会等子协程，必须显式取消）。
+            requests.forEach { it.cancel() }
+            channel.close()
+            first
+        }
+    }
+
+    private fun onlineCacheGet(query: String): List<String>? {
+        val entry = suggestOnlineCache[query] ?: return null
+        if (System.currentTimeMillis() - entry.first > 120_000L) {
+            suggestOnlineCache.remove(query)
+            return null
+        }
+        return entry.second
+    }
+
+    private fun putOnlineCache(query: String, result: List<String>) {
+        if (suggestOnlineCache.size >= 32) {
+            suggestOnlineCache.keys.firstOrNull()?.let { suggestOnlineCache.remove(it) }
+        }
+        suggestOnlineCache[query] = System.currentTimeMillis() to result
     }
 
     /** 联想词接口：优先当前引擎，失败时回退到其他可用接口。 */
@@ -6039,13 +6096,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     private val suggestionClient by lazy {
         okhttp3.OkHttpClient.Builder()
-            .connectTimeout(1500, java.util.concurrent.TimeUnit.MILLISECONDS)
-            .readTimeout(1500, java.util.concurrent.TimeUnit.MILLISECONDS)
-            .callTimeout(2500, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .connectTimeout(800, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .readTimeout(800, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .callTimeout(1200, java.util.concurrent.TimeUnit.MILLISECONDS)
             .build()
     }
 
-    private fun fetchSuggestions(url: String): List<String> {
+    private suspend fun fetchSuggestions(url: String): List<String> {
         val uri = runCatching { android.net.Uri.parse(url) }.getOrNull()
         val referer = when {
             uri?.host?.contains("baidu") == true -> "https://www.baidu.com/"
@@ -6064,33 +6121,49 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
             .apply { if (referer != null) header("Referer", referer) }
             .build()
-        val response = suggestionClient.newCall(request).execute()
-        response.use {
-            if (!it.isSuccessful) return emptyList()
-            val body = it.body?.string().orEmpty().trim()
-            if (body.isEmpty()) return emptyList()
-            val out = mutableListOf<String>()
-            // 百度 sugrec：{"g":[{"q":"…"}]}；Google/Bing：["q",["…"]]
-            runCatching {
-                val g = if (body.startsWith("{")) {
-                    org.json.JSONObject(body).optJSONArray("g")
-                } else null
-                if (g != null) {
-                    for (i in 0 until g.length()) {
-                        g.optJSONObject(i)?.optString("q")
-                            ?.takeIf { it.isNotEmpty() }?.let { out.add(it) }
-                    }
-                } else if (body.startsWith("[")) {
-                    val arr = org.json.JSONArray(body).optJSONArray(1)
-                    if (arr != null) {
-                        for (i in 0 until arr.length()) {
-                            arr.optString(i).takeIf { it.isNotEmpty() }?.let { out.add(it) }
-                        }
+        val call = suggestionClient.newCall(request)
+        // 用 enqueue + suspendCancellableCoroutine：竞速被取消时能真正中断请求。
+        return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            cont.invokeOnCancellation { runCatching { call.cancel() } }
+            call.enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                    if (!cont.isCancelled) cont.resumeWith(Result.success(emptyList()))
+                }
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    val result = runCatching { response.use { parseSuggestionBody(it) } }
+                        .getOrDefault(emptyList())
+                    if (!cont.isCancelled) cont.resumeWith(Result.success(result))
+                }
+            })
+        }
+    }
+
+    private fun parseSuggestionBody(response: okhttp3.Response): List<String> {
+        if (!response.isSuccessful) return emptyList()
+        val body = response.body?.string().orEmpty().trim()
+        if (body.isEmpty()) return emptyList()
+        val out = mutableListOf<String>()
+        // 百度 sugrec：{"g":[{"q":"…"}]}；Google/Bing：["q",["…"]]
+        runCatching {
+            val g = if (body.startsWith("{")) {
+                org.json.JSONObject(body).optJSONArray("g")
+            } else null
+            if (g != null) {
+                for (i in 0 until g.length()) {
+                    g.optJSONObject(i)?.optString("q")
+                        ?.takeIf { it.isNotEmpty() }?.let { out.add(it) }
+                }
+            } else if (body.startsWith("[")) {
+                val arr = org.json.JSONArray(body).optJSONArray(1)
+                if (arr != null) {
+                    for (i in 0 until arr.length()) {
+                        arr.optString(i).takeIf { it.isNotEmpty() }?.let { out.add(it) }
                     }
                 }
             }
-            return out.distinct()
         }
+        return out.distinct()
     }
 
     private fun showPendingAddressClipboard() {
@@ -10163,6 +10236,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         restorePromptBar = null
         view?.removeCallbacks(applyScrollDirection)
         MenuPopup.dismiss()
+        // 建议弹层是独立 PopupWindow，必须在这里强制关掉，否则会漂到其他页面。
+        suggestSeq++
+        suggestDebounceJob?.cancel()
+        suggestionsSuppressed = true
+        suggestionPopup?.dismissNow()
+        suggestionPopup = null
         tts?.shutdown()
         tts = null
         speaking = false
@@ -10421,6 +10500,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var suggestSeq = 0
     private var suggestionsSuppressed = false
     private var suggestDebounceJob: kotlinx.coroutines.Job? = null
+    /** 历史/书签在内存里的建议缓存（30 秒），避免每次按键都查库。 */
+    private var suggestHistoryCache: List<Pair<String, String>> = emptyList()
+    private var suggestHistoryCacheAt = 0L
+    private var suggestBookmarkCache: List<Pair<String, String>> = emptyList()
+    private var suggestBookmarkCacheAt = 0L
+    /** 在线建议结果缓存（同 query 两分钟内复用）。 */
+    private val suggestOnlineCache = LinkedHashMap<String, Pair<Long, List<String>>>()
     private var addressTextProgrammatic = false
 
     private companion object {

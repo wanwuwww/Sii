@@ -224,11 +224,11 @@ class SuggestionPopup(
         scroll = null
         lastSignature = null
         detachFollow()
-        if (!animated || !window.isShowing) {
-            window.dismiss()
+        val content = window.contentView
+        if (!animated || !window.isShowing || content == null || !content.isAttachedToWindow) {
+            runCatching { window.dismiss() }
             return
         }
-        val content = window.contentView
         content.animate().cancel()
         resizeAnimator?.cancel()
         resizeAnimator = null
@@ -237,8 +237,22 @@ class SuggestionPopup(
             .alpha(0f)
             .translationY(if (showingAbove) dp(6).toFloat() else -dp(6).toFloat())
             .setDuration(90L)
-            .withEndAction { window.dismiss() }
+            .withEndAction { runCatching { window.dismiss() } }
             .start()
+        // 动画被打断（view 脱离窗口、转场）时也要确保窗口关掉，否则会残留成幽灵弹层。
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            runCatching { if (window.isShowing) window.dismiss() }
+        }, 200L)
+    }
+
+    /** 生命周期路径用：不等动画，立即关闭。 */
+    fun dismissNow() {
+        val window = popup ?: return
+        popup = null
+        scroll = null
+        lastSignature = null
+        detachFollow()
+        runCatching { window.dismiss() }
     }
 
     private class Placement(
