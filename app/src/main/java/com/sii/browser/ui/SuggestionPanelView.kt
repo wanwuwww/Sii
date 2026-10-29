@@ -10,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import com.sii.browser.R
+import com.sii.browser.core.mcp.DiagLog
 
 /**
  * 页面内搜索建议面板：不创建独立窗口，直接挂在浏览器根布局的覆盖层里，
@@ -65,6 +66,11 @@ class SuggestionPanelView(
         this.preferAbove = preferAbove
         this.radiusDp = radiusDp
         this.picker = onItemPick
+        DiagLog.record(
+            "suggest",
+            "inline-show anchor=${anchor.id} items=${items.size} " +
+                "layer=${layer.width}x${layer.height} above=$preferAbove"
+        )
 
         val column = SuggestionRows.column(context, items) { item ->
             hide()
@@ -83,12 +89,13 @@ class SuggestionPanelView(
         layer.visibility = View.VISIBLE
         panel = view
         attachFollow(anchor)
+        // 覆盖层刚从 GONE 恢复时，这一帧宽高可能还是 0，下一帧再定位。
         reposition()
+        layer.post { if (panel === view) reposition() }
     }
 
     fun hide() {
         layer.removeAllViews()
-        layer.visibility = View.GONE
         panel = null
         signature = null
         anchor = null
@@ -96,10 +103,13 @@ class SuggestionPanelView(
         detachFollow()
     }
 
-    fun isShowing(): Boolean = layer.visibility == View.VISIBLE && panel != null
+    fun isShowing(): Boolean = panel != null
 
     fun debugState(): String =
-        if (isShowing()) "inline showing=1 x=${panel?.left} y=${panel?.top}" else "inline showing=0"
+        if (isShowing()) {
+            "inline showing=1 layer=${layer.width}x${layer.height} " +
+                "panel=${panel?.width}x${panel?.height} at=${panel?.left},${panel?.top}"
+        } else "inline showing=0"
 
     /** 面板是否命中屏幕坐标（用于点面板外部时收起建议）。 */
     fun contains(x: Float, y: Float): Boolean {
@@ -132,8 +142,13 @@ class SuggestionPanelView(
     private fun reposition() {
         val view = panel ?: return
         val a = anchor ?: return
-        if (!a.isAttachedToWindow || layer.width <= 0 || layer.height <= 0) {
+        if (!a.isAttachedToWindow) {
             hide()
+            return
+        }
+        if (layer.width <= 0 || layer.height <= 0) {
+            DiagLog.record("suggest", "inline-wait layer=${layer.width}x${layer.height}")
+            layer.post { reposition() }
             return
         }
         val layerLoc = IntArray(2)
