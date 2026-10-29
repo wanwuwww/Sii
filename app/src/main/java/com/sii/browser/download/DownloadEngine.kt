@@ -12,6 +12,7 @@ import com.sii.browser.data.db.DownloadTask
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -54,6 +55,8 @@ class DownloadEngine(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = java.util.concurrent.ConcurrentHashMap<Long, Job>()
+    /** 正在占用下载额度的任务。 */
+    private val activeTasks = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
     private val http2Client: OkHttpClient by lazy {
         client.newBuilder()
@@ -104,6 +107,8 @@ class DownloadEngine(
         private const val DEFAULT_BUFFER_SIZE = 256 * 1024
         private const val PROGRESS_FLUSH_BYTES = 4L * 1024 * 1024
         private const val MAX_RETRY = 3
+        /** 同时下载的任务数；其余任务保持 PENDING 排队，避免多任务互相拖慢。 */
+        private const val MAX_CONCURRENT_TASKS = 1
         private const val CHUNK_MAX_RETRY = 2
         private const val RETRY_DELAY_MS = 3000L
         private const val BROWSER_UA =
@@ -183,9 +188,41 @@ class DownloadEngine(
                 if (desiredRunning[taskId] != true) {
                     return@withLock
                 }
+                if (taskId !in activeTasks && activeTasks.size >= MAX_CONCURRENT_TASKS) {
+                    // 排队：保持 PENDING，前一个任务结束自动接上。
+                    if (repository.taskById(taskId)?.state != DownloadState.COMPLETED) {
+                        repository.setState(taskId, DownloadState.PENDING)
+                    }
+                    return@withLock
+                }
                 repository.setState(taskId, DownloadState.DOWNLOADING)
-                jobs[taskId] = scope.launch { run(taskId) }
+                activeTasks.add(taskId)
+                jobs[taskId] = scope.launch {
+                    try {
+                        run(taskId)
+                    } finally {
+                        activeTasks.remove(taskId)
+                        startNextQueued()
+                    }
+                }
             }
+        }
+    }
+
+    /** 全局并发上限：当前任务结束后从队列里接下一个（保持 PENDING 的任务）。 */
+    private fun startNextQueued() {
+        scope.launch {
+            if (activeTasks.size >= MAX_CONCURRENT_TASKS) return@launch
+            val next = desiredRunning.entries
+                .filter { it.value && it.key !in activeTasks }
+                .mapNotNull { entry ->
+                    val state = runCatching { repository.taskById(entry.key)?.state }.getOrNull()
+                    if (state == DownloadState.PENDING || state == DownloadState.DOWNLOADING) {
+                        entry.key
+                    } else null
+                }
+                .firstOrNull() ?: return@launch
+            start(next)
         }
     }
 
@@ -279,9 +316,12 @@ class DownloadEngine(
                 com.sii.browser.di.AppServices.settings.downloadProtocol()
             }.getOrDefault(0)
             if (mode == 0 && degradedHosts.add(hostOf(task.url))) {
+                // 延迟重排：等当前协程退出（finally 释放并发额度）后再重新开始。
                 if (desiredRunning[taskId] == true) {
-                    kotlinx.coroutines.delay(300)
-                    start(taskId)
+                    scope.launch {
+                        kotlinx.coroutines.delay(300)
+                        if (desiredRunning[taskId] == true) start(taskId)
+                    }
                 }
                 return
             }
@@ -289,9 +329,9 @@ class DownloadEngine(
                 runCatching { com.sii.browser.di.AppServices.settings.downloadRetry() }.getOrDefault(false)
             if (retried) {
                 attempts[taskId] = attempts.getOrDefault(taskId, 0) + 1
-                kotlinx.coroutines.delay(RETRY_DELAY_MS)
-                if (desiredRunning[taskId] == true) {
-                    start(taskId)
+                scope.launch {
+                    kotlinx.coroutines.delay(RETRY_DELAY_MS)
+                    if (desiredRunning[taskId] == true) start(taskId)
                 }
             } else {
                 repository.markFailed(taskId, e.message)
@@ -396,17 +436,24 @@ class DownloadEngine(
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             var downloaded = 0L
             var lastFlush = 0L
-            while (true) {
-                currentCoroutineContext().ensureActive()
-                val read = input.read(buffer)
-                if (read < 0) break
-                sink.writeAt(buffer, downloaded, read)
-                downloaded += read
-                if (downloaded - lastFlush >= 256 * 1024L) {
-                    repository.updateProgress(taskId, downloaded)
-                    onTaskProgress?.invoke(taskId, downloaded, 0L)
-                    lastFlush = downloaded
+            try {
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    sink.writeAt(buffer, downloaded, read)
+                    downloaded += read
+                    if (downloaded - lastFlush >= 256 * 1024L) {
+                        repository.updateProgress(taskId, downloaded)
+                        onTaskProgress?.invoke(taskId, downloaded, 0L)
+                        lastFlush = downloaded
+                    }
                 }
+            } catch (e: CancellationException) {
+                withContext(NonCancellable) {
+                    runCatching { repository.updateProgress(taskId, downloaded) }
+                }
+                throw e
             }
             if (downloaded <= 0L) throw IOException("empty body")
             repository.updateProgress(taskId, downloaded)
@@ -520,7 +567,7 @@ class DownloadEngine(
         var attempt = 0
         while (true) {
             try {
-                streamChunk(task, chunk, downloaded, sink)
+                streamChunk(task, chunk, downloaded, sink) { current -> downloaded = current }
                 return
             } catch (e: CancellationException) {
                 throw e
@@ -536,50 +583,61 @@ class DownloadEngine(
         task: DownloadTask,
         chunk: DownloadChunk,
         startDownloaded: Long,
-        sink: Sink
+        sink: Sink,
+        onProgress: (Long) -> Unit
     ) {
         var downloaded = startDownloaded
-        val start = chunk.start + downloaded
-        val end = chunk.start + chunk.length - 1
-        val request = requestBuilder(task.url)
-            .header("Range", "bytes=$start-$end")
-            .build()
-        val call = clientFor(task.url).newCall(request)
-        val resp = awaitResponse(call)
-        resp.use { response ->
-            if (response.code != 206) {
-                throw IOException("HTTP ${response.code} (range unsupported)")
-            }
-            val contentRange = response.header("Content-Range")
-            if (contentRange != null) {
-                val rangeStart = contentRange.substringAfter("bytes ", "")
-                    .substringBefore('-').toLongOrNull()
-                if (rangeStart != null && rangeStart != start) {
-                    throw IOException("range mismatch")
+        try {
+            val start = chunk.start + downloaded
+            val end = chunk.start + chunk.length - 1
+            val request = requestBuilder(task.url)
+                .header("Range", "bytes=$start-$end")
+                .build()
+            val call = clientFor(task.url).newCall(request)
+            val resp = awaitResponse(call)
+            resp.use { response ->
+                if (response.code != 206) {
+                    throw IOException("HTTP ${response.code} (range unsupported)")
                 }
-            }
-            val body = response.body ?: throw IOException("empty body")
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-            var lastFlush = downloaded
-            var lastFlushAt = android.os.SystemClock.elapsedRealtime()
-            val input = body.byteStream()
-            while (true) {
-                currentCoroutineContext().ensureActive()
-                val read = input.read(buffer)
-                if (read < 0) break
-                sink.writeAt(buffer, chunk.start + downloaded, read)
-                downloaded += read
-                val now = android.os.SystemClock.elapsedRealtime()
-                // 进度落库不能太频繁：4MB 或 1 秒一次，减少低端机上的随机 I/O。
-                if (downloaded - lastFlush >= PROGRESS_FLUSH_BYTES || now - lastFlushAt >= 1000L) {
-                    repository.updateChunkProgress(chunk.id, downloaded)
-                    publishTaskProgress(task.id)
-                    lastFlush = downloaded
-                    lastFlushAt = now
+                val contentRange = response.header("Content-Range")
+                if (contentRange != null) {
+                    val rangeStart = contentRange.substringAfter("bytes ", "")
+                        .substringBefore('-').toLongOrNull()
+                    if (rangeStart != null && rangeStart != start) {
+                        throw IOException("range mismatch")
+                    }
                 }
+                val body = response.body ?: throw IOException("empty body")
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var lastFlush = downloaded
+                var lastFlushAt = android.os.SystemClock.elapsedRealtime()
+                val input = body.byteStream()
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    sink.writeAt(buffer, chunk.start + downloaded, read)
+                    downloaded += read
+                    onProgress(downloaded)
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    // 进度落库不能太频繁：4MB 或 1 秒一次，减少低端机上的随机 I/O。
+                    if (downloaded - lastFlush >= PROGRESS_FLUSH_BYTES || now - lastFlushAt >= 1000L) {
+                        repository.updateChunkProgress(chunk.id, downloaded)
+                        publishTaskProgress(task.id)
+                        lastFlush = downloaded
+                        lastFlushAt = now
+                    }
+                }
+                repository.updateChunkProgress(chunk.id, downloaded)
+                publishTaskProgress(task.id)
             }
-            repository.updateChunkProgress(chunk.id, downloaded)
-            publishTaskProgress(task.id)
+        } catch (e: CancellationException) {
+            // 暂停/删除时把最后已写入的字节落库，恢复时不必重下这一段。
+            withContext(NonCancellable) {
+                runCatching { repository.updateChunkProgress(chunk.id, downloaded) }
+            }
+            onProgress(downloaded)
+            throw e
         }
     }
 
@@ -587,7 +645,7 @@ class DownloadEngine(
     private suspend fun publishTaskProgress(taskId: Long) {
         val now = android.os.SystemClock.elapsedRealtime()
         val last = lastProgressAt[taskId] ?: 0L
-        if (now - last < 500) return
+        if (now - last < 1000) return
         lastProgressAt[taskId] = now
         val total = repository.sumDownloaded(taskId)
         val current = repository.taskById(taskId) ?: return
