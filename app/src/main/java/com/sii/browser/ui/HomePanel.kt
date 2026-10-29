@@ -508,7 +508,7 @@ class HomePanel(
             return
         }
         val popup = topSuggestionPopup ?: SuggestionPopup(
-            context, topSearchBox
+            context, topSearchBox, horizontalShiftDp = 8
         ) { item -> pickTopSuggestion(item) }.also { topSuggestionPopup = it }
         popup.show(sorted)
     }
@@ -1116,7 +1116,8 @@ class HomePanel(
             context,
             searchBox,
             minWidthDp = 0,
-            cornerRadiusDp = { searchCornerRadiusDp() }
+            cornerRadiusDp = { searchCornerRadiusDp() },
+            horizontalShiftDp = 8
         ) { item ->
             pickSuggestion(item)
         }.also { suggestionPopup = it }

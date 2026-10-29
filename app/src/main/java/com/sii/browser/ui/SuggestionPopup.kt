@@ -25,6 +25,8 @@ class SuggestionPopup(
     private val anchor: View,
     private val minWidthDp: Int = 280,
     private val cornerRadiusDp: (() -> Int)? = null,
+    /** 水平微调：正值向右、负值向左（相对锚点左边界，屏幕边缘仍会回收）。 */
+    private val horizontalShiftDp: Int = 0,
     private val onPick: (Suggestion) -> Unit
 ) {
     private var popup: PopupWindow? = null
@@ -350,7 +352,7 @@ class SuggestionPopup(
         val available = if (above) spaceAbove else spaceBelow
         val height = min(desired.coerceAtLeast(dp(48)), available.coerceAtLeast(dp(48)))
         // 与锚点左边界对齐（略右于缩放后的视觉边界），超出屏幕再回收。
-        var xOffset = 0
+        var xOffset = dp(horizontalShiftDp)
         if (anchorX + width > frame.right - margin) {
             xOffset = frame.right - margin - width - anchorX
         }
