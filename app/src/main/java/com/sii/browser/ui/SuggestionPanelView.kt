@@ -36,9 +36,24 @@ class SuggestionPanelView(
     /** 悬浮样式传入玻璃背景，经典/主页默认用卡片色。 */
     var backgroundProvider: (() -> android.graphics.drawable.Drawable?)? = null
 
+    /** 键盘遮挡高度（屏幕底部像素），用于计算可见区域。 */
+    var imeBottomProvider: (() -> Int)? = null
+
     private val follow = ViewTreeObserver.OnPreDrawListener {
         reposition()
         true
+    }
+
+    init {
+        // 键盘弹出/收起、窗口尺寸变化时重新定位。
+        layer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            if (panel != null) reposition()
+        }
+    }
+
+    /** 外部（IME insets 变化）触发的重排。 */
+    fun refresh() {
+        if (panel != null) reposition()
     }
 
     fun show(
@@ -157,29 +172,45 @@ class SuggestionPanelView(
         a.getLocationOnScreen(anchorLoc)
         val anchorX = anchorLoc[0] - layerLoc[0]
         val anchorY = anchorLoc[1] - layerLoc[1]
-        val width = (widthAnchor?.width?.takeIf { it > 0 } ?: a.width).coerceAtLeast(dp(120))
-        val left = widthAnchor?.let { target ->
+        val edge = dp(8)
+        val gap = dp(2)
+
+        // 可用区域要扣除键盘：home 搜索会 suspend IME padding，窗口本身不会缩。
+        val frame = android.graphics.Rect()
+        a.getWindowVisibleDisplayFrame(frame)
+        val visibleTop = (frame.top - layerLoc[1]).coerceAtLeast(0)
+        val imeBottom = imeBottomProvider?.invoke() ?: 0
+        val visibleBottom = minOf(
+            (frame.bottom - layerLoc[1]).coerceIn(0, layer.height),
+            (layer.height - imeBottom).coerceIn(0, layer.height)
+        )
+        val maxHeight = (visibleBottom - visibleTop - edge * 2).coerceAtLeast(dp(80))
+
+        val maxWidth = (layer.width - edge * 2).coerceAtLeast(dp(120))
+        val width = ((widthAnchor?.width?.takeIf { it > 0 } ?: a.width)).coerceAtLeast(dp(120))
+            .coerceAtMost(maxWidth)
+        val rawLeft = widthAnchor?.let { target ->
             val loc = IntArray(2)
             target.getLocationOnScreen(loc)
             loc[0] - layerLoc[0]
         } ?: anchorX
+        val left = rawLeft.coerceIn(edge, (layer.width - width - edge).coerceAtLeast(edge))
 
-        val gap = dp(2)
-        val maxHeight = (layer.height - dp(16)).coerceAtLeast(dp(80))
         view.measure(
             View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST)
         )
-        val height = view.measuredHeight.coerceAtLeast(dp(48))
-        val spaceBelow = layer.height - (anchorY + a.height)
-        val above = preferAbove || (spaceBelow < height && anchorY > height)
+        val height = view.measuredHeight.coerceIn(dp(48), maxHeight)
+        val spaceAbove = (anchorY - visibleTop).coerceAtLeast(0)
+        val spaceBelow = (visibleBottom - (anchorY + a.height)).coerceAtLeast(0)
+        val above = preferAbove || (spaceBelow < height && spaceAbove > spaceBelow)
         val top = if (above) anchorY - height - gap else anchorY + a.height + gap
         val params = (view.layoutParams as? FrameLayout.LayoutParams)
             ?: FrameLayout.LayoutParams(width, height)
         params.width = width
         params.height = height
-        params.leftMargin = left.coerceIn(0, (layer.width - width).coerceAtLeast(0))
-        params.topMargin = top.coerceIn(0, (layer.height - height).coerceAtLeast(0))
+        params.leftMargin = left
+        params.topMargin = top.coerceIn(visibleTop, (visibleBottom - height).coerceAtLeast(visibleTop))
         view.layoutParams = params
     }
 
@@ -189,7 +220,6 @@ class SuggestionPanelView(
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(radiusDp).toFloat()
             setColor(ContextCompat.getColor(context, R.color.card))
-            setStroke(dp(1), ContextCompat.getColor(context, R.color.line))
         }
     }
 

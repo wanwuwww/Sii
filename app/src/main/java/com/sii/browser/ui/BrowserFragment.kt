@@ -206,7 +206,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         suggestionPanel = SuggestionPanelView(
             requireContext(),
             view.findViewById(R.id.suggest_layer)
-        ).also { panel -> panel.onPick = { item -> pickSuggestion(item) } }
+        ).also { panel ->
+            panel.onPick = { item -> pickSuggestion(item) }
+            panel.imeBottomProvider = { imeInsetBottom }
+        }
         siteInfoButton?.setOnClickListener { anchor -> showSiteInfoMenu(anchor) }
         progressBar = view.findViewById(R.id.progress_bar)
         tabStrip = view.findViewById(R.id.tab_strip)
@@ -219,6 +222,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             imeInsetBottom = insets.getInsets(
                 androidx.core.view.WindowInsetsCompat.Type.ime()
             ).bottom
+            suggestionPanel?.refresh()
             if (!imeInsetVisible && !addressEditing && AppServices.addressEditImeSuspend) {
                 AppServices.addressEditImeSuspend = false
                 (activity as? ShellActivity)?.refreshImeInsets()
