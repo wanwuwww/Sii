@@ -5,7 +5,9 @@ package com.sii.browser.ui
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
@@ -823,6 +825,37 @@ class HomePanel(
     private fun surfaceAlpha(min: Int): Int =
         (255 - AppServices.settings.glassStrength()).coerceIn(min, 255)
 
+    /**
+     * 假阴影背景：外层 halo 描边充当阴影，内层卡片保持半透明。
+     *
+     * 系统 elevation 的阴影画在 View 背后，会透过半透明填充形成内圈灰；
+     * 这种画法把阴影放在描边之外，内部保持纯净。
+     */
+    private fun haloBackground(
+        radiusDp: Int,
+        fill: Int,
+        stroke: Int,
+        haloDp: Int,
+        dark: Boolean
+    ): Drawable {
+        val radius = dp(radiusDp).toFloat()
+        val halo = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius + dp(haloDp)
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(haloDp), if (dark) 0x14FFFFFF else 0x0D000000)
+        }
+        val body = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+            setColor(fill)
+            setStroke(dp(1), stroke)
+        }
+        return LayerDrawable(arrayOf(halo, body)).apply {
+            setLayerInset(1, dp(haloDp), dp(haloDp), dp(haloDp), dp(haloDp))
+        }
+    }
+
     /** 常用网站卡片背景：关闭后站点直接浮在主页背景上。 */
     private fun applySitesCardBg(card: View?) {
         card ?: return
@@ -840,22 +873,12 @@ class HomePanel(
                 cornerRadius = dp(24).toFloat()
                 setColor((alpha shl 24) or (themeFill and 0x00FFFFFF))
             }
-            // 卡片不走玻璃：白/深色卡 + 细描边 + 投影；只有填充 alpha 随玻璃强度变化。
-            else -> GradientDrawable().apply {
-                cornerRadius = dp(24).toFloat()
-                setColor(fill)
-                setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
-            }
+            // 卡片不走玻璃：半透明卡 + 细描边 + 描边外的 halo 假阴影。
+            else -> haloBackground(
+                24, fill, if (dark) 0x1FFFFFFF else 0x14000000, 3, dark
+            )
         }
-        // LayerDrawable 不自带 outline，不补轮廓时 elevation 投影不显示，卡片会“贴”在主页上。
-        val cardRadius = dp(24).toFloat()
-        card.outlineProvider = object : android.view.ViewOutlineProvider() {
-            override fun getOutline(v: View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, v.width, v.height, cardRadius)
-            }
-        }
-        card.elevation = if (!on || card.background == null) 0f
-        else if (dark) dp(6).toFloat() else dp(8).toFloat()
+        card.elevation = 0f
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -880,28 +903,13 @@ class HomePanel(
             dark -> 0x24FFFFFF
             else -> context.getColor(R.color.line)
         }
-        // 搜索框不走玻璃：白/深色卡 + 细描边 + 投影；只有填充 alpha 随玻璃强度变化。
+        // 搜索框不走玻璃：半透明卡 + 细描边 + 描边外的 halo 假阴影（内部无灰）。
         val alpha = surfaceAlpha(175)
         val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
-        box.background = GradientDrawable().apply {
-            cornerRadius = dp(radius).toFloat()
-            setColor((alpha shl 24) or (baseColor and 0x00FFFFFF))
-            setStroke(dp(1), strokeColor)
-        }
-        // 与玻璃背景不同，这里背景是 GradientDrawable 自带上 outline，但统一显式设置更稳。
-        val radiusPx = dp(radius).toFloat()
-        box.outlineProvider = object : android.view.ViewOutlineProvider() {
-            override fun getOutline(v: View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, v.width, v.height, radiusPx)
-            }
-        }
-        box.elevation = if (modern) {
-            dp(if (focused) 12 else 6).toFloat()
-        } else if (focused) {
-            dp(8).toFloat()
-        } else {
-            searchBoxElevation
-        }
+        box.background = haloBackground(
+            radius, (alpha shl 24) or (baseColor and 0x00FFFFFF), strokeColor, 2, dark
+        )
+        box.elevation = 0f
         val padV = when (AppServices.settings.homeSearchHeight()) {
             0 -> 2
             2 -> 8
