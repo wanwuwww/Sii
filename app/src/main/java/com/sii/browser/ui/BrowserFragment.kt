@@ -9603,57 +9603,60 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /**
      * 页面加载进度条：悬浮样式贴在窗口顶部（叠在网页上，不占布局高度），经典样式在地址栏下方。
      */
+    /**
+     * 页面加载进度条：悬浮样式贴在悬浮胶囊顶部（随胶囊一起收起/隐藏），经典样式在地址栏下方。
+     *
+     * 必须用 [progressBar] 字段而不是 findViewById：切样式时它已被移出视图树，
+     * 此时在树里搜不到，会导致进度条永久消失。
+     */
     private fun attachProgressBar(modern: Boolean) {
-        val root = view as? ViewGroup ?: return
-        val bar = root.findViewById<View>(R.id.progress_bar) ?: return
+        val bar = progressBar ?: return
         if (modern) {
-            val current = bar.layoutParams as? FrameLayout.LayoutParams
-            if (bar.parent === root && current != null &&
-                current.gravity == android.view.Gravity.TOP
-            ) {
+            val dock = view?.findViewById<LinearLayout>(R.id.modern_chrome) ?: return
+            val current = bar.layoutParams as? LinearLayout.LayoutParams
+            if (bar.parent === dock && current != null) {
                 if (current.height != dp(3)) {
                     current.height = dp(3)
                     bar.layoutParams = current
                 }
-                applyProgressTrack(bar)
-                return
-            }
-            (bar.parent as? ViewGroup)?.removeView(bar)
-            root.addView(
-                bar,
-                FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(3),
-                    android.view.Gravity.TOP
+            } else {
+                (bar.parent as? ViewGroup)?.removeView(bar)
+                dock.addView(
+                    bar,
+                    0,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(3)
+                    ).apply { bottomMargin = dp(2) }
                 )
-            )
-            bar.elevation = dp(2).toFloat()
+            }
+            bar.elevation = 0f
             applyProgressTrack(bar)
             return
         }
-        val content = root.findViewById<LinearLayout>(R.id.browser_content) ?: return
-        if (bar.parent === content) {
-            val current = bar.layoutParams as? LinearLayout.LayoutParams
-            if (current != null && current.height != dp(3)) {
+        val content = view?.findViewById<LinearLayout>(R.id.browser_content) ?: return
+        val current = bar.layoutParams as? LinearLayout.LayoutParams
+        if (bar.parent === content && current != null) {
+            if (current.height != dp(3)) {
                 current.height = dp(3)
                 bar.layoutParams = current
             }
-            bar.elevation = 0f
-            return
+        } else {
+            (bar.parent as? ViewGroup)?.removeView(bar)
+            content.addView(
+                bar,
+                2.coerceAtMost(content.childCount),
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3))
+            )
         }
-        (bar.parent as? ViewGroup)?.removeView(bar)
-        content.addView(
-            bar,
-            2.coerceAtMost(content.childCount),
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3))
-        )
         bar.elevation = 0f
         bar.background = null
     }
 
-    /** 顶部进度条的轨道底色：未加载部分也看得见，才知道这是进度条。 */
+    /** 进度条轨道底色：未加载部分也看得见，才知道这是进度条。 */
     private fun applyProgressTrack(bar: View) {
         bar.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = dp(2).toFloat()
             setColor(withAlpha(requireContext().getColor(R.color.line), 0.6f))
         }
     }
