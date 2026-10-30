@@ -104,6 +104,9 @@ class HomePreviewShell(
     /** 新版预览：单行玻璃底栏，颜色跟随日夜。 */
     private fun buildModernDock(): View {
         val night = AppServices.settings.isNightMode()
+        val dockTint = if (previewWeb && AppServices.settings.homeBgApplyToolbar()) {
+            ThemePalette.chromeBase(context)
+        } else null
         val primary = if (night) Color.WHITE
         else ContextCompat.getColor(context, R.color.text_primary)
         val wrap = FrameLayout(context).apply {
@@ -115,7 +118,7 @@ class HomePreviewShell(
             setPadding(dp(8), dp(4), dp(6), dp(4))
             background = GradientDrawable().apply {
                 cornerRadius = dp(28).toFloat()
-                setColor(if (night) 0xFA1B1E23.toInt() else 0xFAFFFFFF.toInt())
+                setColor(dockTint ?: if (night) 0xFA1B1E23.toInt() else 0xFAFFFFFF.toInt())
                 setStroke(dp(1), if (night) 0x24FFFFFF else 0x1A000000)
             }
             setOnClickListener { onToolbarClick() }
@@ -530,7 +533,8 @@ class HomePreviewShell(
 
     private fun chromeColor(): Int {
         val s = AppServices.settings
-        return if (s.homeBgApplyToolbar()) panel.backgroundColor()
+        // 「应用到工具栏」只作用于网页态，预览里对应「模拟网页」。
+        return if (previewWeb && s.homeBgApplyToolbar()) ThemePalette.chromeBase(context)
         else ContextCompat.getColor(context, R.color.toolbar_bg)
     }
 

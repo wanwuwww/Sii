@@ -16,12 +16,12 @@ import com.sii.browser.di.AppServices
  */
 object GlassStyle {
 
-    fun fill(context: Context, dark: Boolean, strength: Int, minAlpha: Int = 150): Int {
+    fun fill(context: Context, dark: Boolean, strength: Int, minAlpha: Int = 150, base: Int? = null): Int {
         val s = strength.coerceIn(0, 100)
         // 强度越高越通透：0 完全不透明，100 减 100 个 alpha，再由 minAlpha 保底。
         val alpha = (255 - s).coerceIn(minAlpha.coerceIn(0, 255), 255)
-        val base = if (dark) 0x1B1E23 else 0xFFFFFF
-        return (alpha shl 24) or base
+        val rgb = base?.let { it and 0x00FFFFFF } ?: if (dark) 0x1B1E23 else 0xFFFFFF
+        return (alpha shl 24) or rgb
     }
 
     fun stroke(dark: Boolean, strength: Int): Int {
@@ -37,7 +37,8 @@ object GlassStyle {
         radiusPx: Float,
         strength: Int,
         topOnly: Boolean = false,
-        minAlpha: Int = 150
+        minAlpha: Int = 150,
+        base: Int? = null
     ): GradientDrawable = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         cornerRadii = if (topOnly) {
@@ -48,7 +49,7 @@ object GlassStyle {
                 radiusPx, radiusPx, radiusPx, radiusPx
             )
         }
-        setColor(fill(context, dark, strength, minAlpha))
+        setColor(fill(context, dark, strength, minAlpha, base))
         setStroke(context.resources.displayMetrics.density.toInt().coerceAtLeast(1), stroke(dark, strength))
     }
 }

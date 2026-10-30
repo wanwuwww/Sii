@@ -2410,6 +2410,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (hide) View.GONE else View.VISIBLE
         view?.findViewById<View>(R.id.bottom_bar)?.visibility =
             if (hide) View.GONE else View.VISIBLE
+        // 进度条在悬浮样式下贴在窗口顶部，全屏时得单独收起，退出后由加载事件重新显示。
+        if (hide) view?.findViewById<View>(R.id.progress_bar)?.visibility = View.GONE
         if (hide) {
             tabBar?.visibility = View.GONE
         } else {
@@ -2558,7 +2560,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         when (AppServices.settings.addressStyle().coerceIn(0, 2)) {
             1 -> {
                 input.setBackgroundResource(R.drawable.bg_address_underline)
-                input.setPadding(dp(4), 0, dp(8), 0)
+                input.setPadding(dp(4), 0, dp(4), 0)
             }
             2 -> {
                 input.setBackgroundResource(R.drawable.bg_address_field)
@@ -2566,7 +2568,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
             else -> {
                 input.background = null
-                input.setPadding(dp(4), 0, dp(8), 0)
+                input.setPadding(dp(4), 0, dp(4), 0)
             }
         }
     }
@@ -3511,6 +3513,19 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 )
             }
         }
+        // 悬浮工具行按可用宽度让位；经典样式下「文A」槽位收窄，翻译后恢复 40dp 容纳 Orig/Trans。
+        if (AppServices.settings.uiStyle() == 1) {
+            applyModernToolVisibility()
+        } else {
+            val lp = tool.layoutParams as? android.widget.LinearLayout.LayoutParams
+            if (lp != null) {
+                val width = dp(if (translateFabState >= 3) 40 else 30)
+                if (lp.width != width) {
+                    lp.width = width
+                    tool.layoutParams = lp
+                }
+            }
+        }
     }
 
     /** 翻译按钮长时间不操作就收起，本次页面不再自动出现。 */
@@ -4230,15 +4245,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     /** 主页背景色应用到工具栏/状态栏/菜单面板；离开主页或使用背景图时恢复。 */
     private fun applyHomeChromeTint() {
         val isHome = homeContainer?.visibility == View.VISIBLE
-        val bar = view?.findViewById<View>(R.id.bottom_bar)
         val panel = view?.findViewById<View>(R.id.menu_panel)
         val shell = activity as? ShellActivity
         val s = AppServices.settings
         val color = if (isHome && s.homeBackground() == null) homePanel?.backgroundColor() else null
         if (color != null) {
-            if (s.homeBgApplyToolbar() && AppServices.settings.uiStyle() != 1) {
-                bar?.setBackgroundColor(color)
-            }
             if (s.homeBgApplyMenu() && AppServices.settings.uiStyle() != 1) {
                 panel?.backgroundTintList =
                     android.content.res.ColorStateList.valueOf(color)
@@ -4349,6 +4360,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         } else null
 
         val modern = AppServices.settings.uiStyle() == 1
+        // 「应用到工具栏」只作用于网页态：主页保持默认底色，回网页时换成主色淡底。
+        val pageTint = if (!enabled && !hasImage && AppServices.settings.homeBgApplyToolbar()) {
+            ThemePalette.chromeBase(requireContext())
+        } else null
         val barIds = intArrayOf(
             R.id.address_bar, R.id.bottom_bar, R.id.tab_bar, R.id.search_toolbar_scroll
         )
@@ -4364,10 +4379,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         } else {
             view?.findViewById<View>(R.id.address_bar)?.visibility =
                 if (enabled) View.GONE else View.VISIBLE
+            val chromeColor = when {
+                hasImage -> android.graphics.Color.TRANSPARENT
+                pageTint != null -> pageTint
+                else -> toolbarColor
+            }
             barIds.forEach { id ->
-                view?.findViewById<View>(id)?.setBackgroundColor(
-                    if (hasImage) android.graphics.Color.TRANSPARENT else toolbarColor
-                )
+                view?.findViewById<View>(id)?.setBackgroundColor(chromeColor)
             }
             if (hasImage) {
                 val light = shell?.chromeImageIsLight() ?: !AppServices.settings.isNightMode()
@@ -4384,8 +4402,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 barIds.forEach { id -> clearChromeShadow(view?.findViewById<View>(id)) }
             }
         }
+        applyDockGlass()
         view?.findViewById<View>(R.id.browser_root)?.setBackgroundColor(
-            if (hasImage) android.graphics.Color.TRANSPARENT else toolbarColor
+            if (hasImage) android.graphics.Color.TRANSPARENT else pageTint ?: toolbarColor
         )
     }
 
@@ -6870,6 +6889,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val foreground = color?.let { contrastOn(it) } ?: context.getColor(R.color.text_primary)
         // 与状态栏、工具栏同帧直接变色。
         bar.setBackgroundColor(color ?: fallback)
+        // 「圆角外框」的输入框自带浅色底，染色后必须一起去掉，否则浅底浅字。
+        if (color == null) {
+            applyAddressStyle()
+        } else if (AppServices.settings.addressStyle() == 2) {
+            addressInput?.background = null
+            addressInput?.setPadding(dp(4), 0, dp(4), 0)
+        }
         addressInput?.setTextColor(foreground)
         addressInput?.setHintTextColor(
             if (color != null) withAlpha(foreground, 0.6f)
@@ -6921,13 +6947,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         return base or 0xFF000000.toInt()
     }
 
-    /** 主题色背景上的前景色：亮底用深色字，暗底用浅色字。 */
+    /** 主题色背景上的前景色：按 WCAG 对比度在深/浅两级取对比更高者。 */
     private fun contrastOn(color: Int): Int {
-        val r = android.graphics.Color.red(color) / 255.0
-        val g = android.graphics.Color.green(color) / 255.0
-        val b = android.graphics.Color.blue(color) / 255.0
-        val luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        return if (luminance > 0.6) 0xFF1A1A1E.toInt() else 0xFFE8EAED.toInt()
+        val light = 0xFFF2F3F5.toInt()
+        val dark = 0xFF16181B.toInt()
+        return if (androidx.core.graphics.ColorUtils.calculateContrast(light, color) >=
+            androidx.core.graphics.ColorUtils.calculateContrast(dark, color)
+        ) light else dark
     }
 
     private fun withAlpha(color: Int, alpha: Float): Int {
@@ -9027,6 +9053,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyUiStyle(true)
         if (!::tabManager.isInitialized) return
         // 从设置页返回时重新应用主题色与强制背景色，避免开关要等切后台/截图才生效。
+        applyHomeChrome(homeContainer?.visibility == View.VISIBLE)
         applySiteThemeColor(currentThemeColor())
         view?.post { refreshTranslateFabForSite() }
         AppServices.pendingOpenUrl?.let { url ->
@@ -9499,10 +9526,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val already = if (modernStyle) address.parent === addressHost else address.parent === content
         if (already) {
             if (modernStyle) {
-                applyModernChrome(root, address, bottom, progress, dock, addressHost, toolRow)
+                applyModernChrome(root, address, bottom, dock, addressHost, toolRow)
             } else {
-                applyClassicChrome(root, address, bottom, progress, dock)
+                applyClassicChrome(root, address, bottom, dock)
             }
+            attachProgressBar(modernStyle)
             applyQuickEnginePosition()
             root.post { applyFloatingBarLift() }
             applyPageFullscreenChrome()
@@ -9521,21 +9549,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     dp(44)
                 )
             )
-            progress?.let {
-                addressHost.addView(
-                    it,
-                    FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        dp(2),
-                        android.view.Gravity.BOTTOM
-                    )
-                )
-            }
             toolRow.addView(
                 bottom,
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44))
             )
-            applyModernChrome(root, address, bottom, progress, dock, addressHost, toolRow)
+            applyModernChrome(root, address, bottom, dock, addressHost, toolRow)
             dock.visibility = View.VISIBLE
             if (animate) {
                 dock.alpha = 0f
@@ -9558,22 +9576,64 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
             )
-            progress?.let {
-                content.addView(
-                    it,
-                    2.coerceAtMost(content.childCount),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3))
-                )
-            }
-            applyClassicChrome(root, address, bottom, progress, dock)
+            applyClassicChrome(root, address, bottom, dock)
             applyToolbarPosition()
             applyTabBarPosition()
         }
+        attachProgressBar(modernStyle)
         updateAddressBarForCurrent()
         updateNavigationState()
         applyQuickEnginePosition()
         root.post { applyFloatingBarLift() }
         applyPageFullscreenChrome()
+    }
+
+    /**
+     * 页面加载进度条：悬浮样式贴在窗口顶部（叠在网页上，不占布局高度），经典样式在地址栏下方。
+     */
+    private fun attachProgressBar(modern: Boolean) {
+        val root = view as? ViewGroup ?: return
+        val bar = root.findViewById<View>(R.id.progress_bar) ?: return
+        if (modern) {
+            val current = bar.layoutParams as? FrameLayout.LayoutParams
+            if (bar.parent === root && current != null &&
+                current.gravity == android.view.Gravity.TOP
+            ) {
+                if (current.height != dp(2)) {
+                    current.height = dp(2)
+                    bar.layoutParams = current
+                }
+                return
+            }
+            (bar.parent as? ViewGroup)?.removeView(bar)
+            root.addView(
+                bar,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(2),
+                    android.view.Gravity.TOP
+                )
+            )
+            bar.elevation = dp(2).toFloat()
+            return
+        }
+        val content = root.findViewById<LinearLayout>(R.id.browser_content) ?: return
+        if (bar.parent === content) {
+            val current = bar.layoutParams as? LinearLayout.LayoutParams
+            if (current != null && current.height != dp(3)) {
+                current.height = dp(3)
+                bar.layoutParams = current
+            }
+            bar.elevation = 0f
+            return
+        }
+        (bar.parent as? ViewGroup)?.removeView(bar)
+        content.addView(
+            bar,
+            2.coerceAtMost(content.childCount),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3))
+        )
+        bar.elevation = 0f
     }
 
     /**
@@ -9625,7 +9685,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         root: View,
         address: View,
         bottom: View,
-        progress: View?,
         dock: LinearLayout,
         addressHost: FrameLayout,
         toolRow: LinearLayout
@@ -9650,13 +9709,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             dock.layoutParams = params
         }
         tabBar?.visibility = View.GONE
-        val glassStrength = AppServices.settings.glassStrength()
-        dock.background = GlassStyle.background(
-            requireContext(), night, dp(28).toFloat(), glassStrength,
-            minAlpha = DOCK_GLASS_MIN_ALPHA
-        )
-        dock.clipToOutline = true
         applyDockGlass()
+        dock.clipToOutline = true
         dock.elevation = dp(12).toFloat()
         addressHost.layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f)
         address.layoutParams = FrameLayout.LayoutParams(
@@ -9678,25 +9732,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         root.findViewById<TextView>(R.id.modern_cancel)?.setTextColor(
             ThemeAccent.color(requireContext())
         )
-        progress?.let {
-            if (it.parent !== addressHost) {
-                (it.parent as? ViewGroup)?.removeView(it)
-                addressHost.addView(
-                    it,
-                    FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        dp(2),
-                        android.view.Gravity.BOTTOM
-                    )
-                )
-            } else {
-                it.layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(2),
-                    android.view.Gravity.BOTTOM
-                )
-            }
-        }
         root.findViewById<View>(R.id.modern_cancel)?.visibility =
             if (addressEditing) View.VISIBLE else View.GONE
         if (addressEditing) {
@@ -9745,7 +9780,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 address.addView(
                     tool,
                     if (refreshIndex >= 0) refreshIndex else address.childCount,
-                    LinearLayout.LayoutParams(dp(40), dp(40))
+                    LinearLayout.LayoutParams(dp(30), dp(40))
                 )
             }
         }
@@ -9756,7 +9791,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         root: View,
         address: View,
         bottom: View,
-        progress: View?,
         dock: LinearLayout
     ) {
         dock.visibility = View.GONE
@@ -9767,7 +9801,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        address.setPadding(dp(8), dp(6), dp(8), dp(6))
+        address.setPadding(dp(8), dp(6), dp(4), dp(6))
         address.setBackgroundColor(requireContext().getColor(R.color.toolbar_bg))
         address.elevation = 0f
         address.clipToOutline = false
@@ -9783,10 +9817,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         root.findViewById<View>(R.id.modern_cancel)?.visibility = View.GONE
         updateSiteInfoVisibility()
         root.findViewById<View>(R.id.refresh_button)?.visibility = View.VISIBLE
-        progress?.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(3)
-        )
         applyTranslateToolPlacement(modern = false)
         applyBottomBarStyle(root, modern = false)
         updateTranslateFab()
@@ -9870,14 +9900,25 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (on && key !in hidden) View.VISIBLE else View.GONE
         }
         apply(R.id.back_button, "back", true)
-        // 主页始终保留；前进有历史时额外显示，不再二选一。
-        apply(R.id.forward_button, "forward", canForward)
-        apply(R.id.home_button, "home", true)
+        // 地址胶囊至少留 120dp：放不下时按 首页 → 前进 → 翻译 的顺序让位。
+        val translateShown = translateTool?.visibility == View.VISIBLE
+        val forwardShown = canForward && "forward" !in hidden
+        val room = minOf(resources.displayMetrics.widthPixels - dp(20), dp(560)) -
+            dp(16) - dp(120)
+        fun fits(home: Boolean, forward: Boolean, translate: Boolean, width: Int) =
+            width * (3 + (if (home) 1 else 0) + (if (forward) 1 else 0) +
+                (if (translate) 1 else 0)) <= room
+        var iconWidth = dp(40)
+        if (!fits(true, forwardShown, translateShown, iconWidth)) iconWidth = dp(38)
+        val trimHome = !fits(true, forwardShown, translateShown, iconWidth)
+        val trimForward = !fits(false, forwardShown, translateShown, iconWidth)
+        val trimTranslate = !fits(false, false, translateShown, iconWidth)
+        apply(R.id.forward_button, "forward", forwardShown && !trimForward)
+        apply(R.id.home_button, "home", !trimHome)
         apply(R.id.tab_count_button, "tabs", true)
         apply(R.id.menu_button, "menu", true)
-        // 前进出现时五个图标并排，稍微收窄保证地址可用宽度。
+        if (trimTranslate) translateTool?.visibility = View.GONE
         val bar = view?.findViewById<LinearLayout>(R.id.bottom_bar) ?: return
-        val iconWidth = dp(if (canForward && "forward" !in hidden) 38 else 40)
         for (i in 0 until bar.childCount) {
             val child = bar.getChildAt(i)
             val lp = child.layoutParams as? LinearLayout.LayoutParams ?: continue
@@ -10097,8 +10138,16 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val strength = AppServices.settings.glassStrength()
         val radius = dp(28).toFloat()
         dock.background = GlassStyle.background(
-            requireContext(), night, radius, strength, minAlpha = DOCK_GLASS_MIN_ALPHA
+            requireContext(), night, radius, strength,
+            minAlpha = DOCK_GLASS_MIN_ALPHA, base = dockBaseColor()
         )
+    }
+
+    /** 悬浮底栏底色：网页态且开启「应用到工具栏」时用主色淡底，主页保持默认玻璃色。 */
+    private fun dockBaseColor(): Int? {
+        if (homeContainer?.visibility == View.VISIBLE) return null
+        if (!AppServices.settings.homeBgApplyToolbar()) return null
+        return ThemePalette.chromeBase(requireContext())
     }
 
     private var scrollAccum = 0
