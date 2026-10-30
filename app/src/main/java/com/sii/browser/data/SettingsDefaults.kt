@@ -89,6 +89,12 @@ object SettingsDefaults {
     /** 常用网站卡片背景。 */
     const val HOME_SITES_CARD_BG = true
 
+    /** 常用网站卡片阴影（强度随玻璃强度降低）。 */
+    const val HOME_SITES_SHADOW = true
+
+    /** 主页搜索框阴影（强度随玻璃强度降低）。 */
+    const val HOME_SEARCH_SHADOW = true
+
     /** 网页文字颜色：0 原色 / 1 跟随主色 / 2 仅白天 / 3 仅夜晚。 */
     const val WEB_TEXT_COLOR = 0
 

@@ -28,6 +28,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.sii.browser.R
+import com.sii.browser.data.Presets
 import com.sii.browser.di.AppServices
 
 /** 全屏「主页」定制：上方真实主页预览，下方五个分类控制面板。 */
@@ -583,6 +584,13 @@ class HomeCustomizeFragment : Fragment() {
             ) { index ->
                 settings.setHomeSearchHeight(index)
                 refreshPreview()
+            },
+            switchRow(
+                getString(R.string.settings_home_search_shadow),
+                settings.homeSearchShadow()
+            ) {
+                settings.setHomeSearchShadow(it)
+                refreshPreview()
             }
         )
         rows.addAll(if (show) details else details.map { disabledRow(it) })
@@ -693,6 +701,13 @@ class HomeCustomizeFragment : Fragment() {
             settings.homeSitesCardBg()
         ) {
             settings.setHomeSitesCardBg(it)
+            refreshPreview()
+        },
+        switchRow(
+            getString(R.string.settings_home_sites_shadow),
+            settings.homeSitesShadow()
+        ) {
+            settings.setHomeSitesShadow(it)
             refreshPreview()
         }
     )
@@ -1264,77 +1279,7 @@ class HomeCustomizeFragment : Fragment() {
     }
 
     private fun applyPreset(index: Int) {
-        when (index) {
-            0 -> {
-                settings.setUiStyle(0)
-                settings.setTabCardGrid(true)
-                settings.setTabGridColumns(2)
-                settings.setMenuScrollStyle(0)
-                settings.setSettingsCardAlpha(100)
-                settings.setCardBorder(true)
-                settings.setAddressStyle(2)
-                settings.setThemeColorEnabled(true)
-                settings.setHomeShowLabels(true)
-                settings.setShowSites(true)
-                settings.setHomeLogoMode(1)
-                settings.setHomeSearchRadius(3)
-                settings.setHomeSearchRadiusCustom(28)
-                settings.setHomeTopAddress(false)
-                settings.setNightMode(2)
-            }
-            1 -> {
-                settings.setUiStyle(1)
-                settings.setTabCardGrid(true)
-                settings.setTabGridColumns(3)
-                settings.setMenuScrollStyle(0)
-                settings.setSettingsCardAlpha(0)
-                settings.setCardBorder(true)
-                settings.setThemeColorEnabled(false)
-                settings.setHomeShowLabels(true)
-                settings.setShowSites(true)
-                settings.setHomeLogoMode(1)
-                settings.setHomeSearchRadius(3)
-                settings.setHomeSearchRadiusCustom(28)
-                settings.setHomeTopAddress(false)
-                settings.setNightMode(2)
-            }
-            2 -> {
-                settings.setUiStyle(0)
-                settings.setTabCardGrid(true)
-                settings.setTabGridColumns(3)
-                settings.setMenuScrollStyle(0)
-                settings.setSettingsCardAlpha(0)
-                settings.setCardBorder(false)
-                settings.setAddressStyle(0)
-                settings.setThemeColorEnabled(false)
-                settings.setHomeShowLabels(true)
-                settings.setShowSites(true)
-                // 极简白：站点直接浮在主页背景上（原来的“无卡片背景”由该开关表达）。
-                settings.setHomeSitesCardBg(false)
-                settings.setHomeLogoMode(1)
-                settings.setHomeSearchRadius(0)
-                settings.setHomeSearchRadiusCustom(28)
-                settings.setHomeTopAddress(false)
-                settings.setNightMode(2)
-            }
-            else -> {
-                settings.setUiStyle(1)
-                settings.setTabCardGrid(false)
-                settings.setTabGridColumns(2)
-                settings.setMenuScrollStyle(1)
-                settings.setSettingsCardAlpha(0)
-                settings.setCardBorder(false)
-                settings.setAddressStyle(1)
-                settings.setThemeColorEnabled(false)
-                settings.setHomeShowLabels(false)
-                settings.setShowSites(false)
-                settings.setHomeLogoMode(2)
-                settings.setHomeSearchRadius(3)
-                settings.setHomeSearchRadiusCustom(28)
-                settings.setHomeTopAddress(false)
-                settings.setNightMode(2)
-            }
-        }
+        Presets.apply(settings, index)
         (activity as? ShellActivity)?.let {
             ShellActivity.smoothRecreateForNightSwitch(it)
         } ?: activity?.recreate()

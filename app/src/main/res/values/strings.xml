@@ -46,6 +46,7 @@
     <string name="settings_home_icon_radius">网站图标圆角</string>
     <string name="settings_home_search_radius">搜索框圆角</string>
     <string name="settings_home_search_height">搜索框高度</string>
+    <string name="settings_home_search_shadow">搜索框阴影</string>
     <string name="settings_home_bg_blur">背景图模糊</string>
     <string name="settings_home_logo_size">Logo 字号</string>
     <string name="settings_home_logo_weight">Logo 字重</string>
@@ -696,6 +697,7 @@
     <string name="settings_wifi_img_desc">移动网络下不加载图片，省流量</string>
     <string name="settings_show_sites">显示常用网站</string>
     <string name="settings_home_sites_card_bg">常用网站背景</string>
+    <string name="settings_home_sites_shadow">常用网站阴影</string>
     <string name="settings_tool_no_label">工具栏无字</string>
     <string name="settings_ua_simplify">简化浏览器标识</string>
     <string name="settings_ua_simplify_desc">UA 去掉设备型号与次要版本</string>

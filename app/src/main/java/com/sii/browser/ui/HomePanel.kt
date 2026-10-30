@@ -155,8 +155,10 @@ class HomePanel(
         })
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                // 聚焦样式统一走经典：抬头 8dp + 主色淡底 tint，不区分界面风格。
-                searchBox.elevation = dp(8).toFloat()
+                // 聚焦样式统一走经典：提阴影 + 主色淡底 tint，阴影受开关与玻璃强度控制。
+                searchBox.elevation = if (AppServices.settings.homeSearchShadow()) {
+                    dp(shadowDp(9f)).toFloat()
+                } else 0f
                 searchBox.backgroundTintList = android.content.res.ColorStateList.valueOf(
                     context.getColor(R.color.accent_soft)
                 )
@@ -819,6 +821,12 @@ class HomePanel(
         }
     }
 
+    /** 阴影随玻璃强度变浅：强度 0 最重，100 约为40%。 */
+    private fun shadowDp(base: Float): Int {
+        val strength = AppServices.settings.glassStrength().coerceIn(0, 100)
+        return (base * (1f - 0.6f * strength / 100f)).toInt().coerceAtLeast(0)
+    }
+
     /** 常用网站卡片背景：关闭后站点直接浮在主页背景上。 */
     private fun applySitesCardBg(card: View?) {
         card ?: return
@@ -840,8 +848,9 @@ class HomePanel(
             }
         }
         card.outlineProvider = roundOutline(dp(24).toFloat())
-        card.elevation = if (!on || card.background == null) 0f
-        else if (dark) dp(6).toFloat() else dp(8).toFloat()
+        val shadowOn = AppServices.settings.homeSitesShadow()
+        card.elevation = if (!shadowOn || card.background == null) 0f
+        else dp(shadowDp(if (dark) 6f else 8f)).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -875,13 +884,9 @@ class HomePanel(
             setStroke(dp(1), strokeColor)
         }
         box.outlineProvider = roundOutline(radiusPx)
-        box.elevation = if (modern) {
-            dp(if (focused) 12 else 6).toFloat()
-        } else if (focused) {
-            dp(8).toFloat()
-        } else {
-            searchBoxElevation
-        }
+        box.elevation = if (AppServices.settings.homeSearchShadow()) {
+            dp(shadowDp(if (focused) 9f else 6f)).toFloat()
+        } else 0f
         val padV = when (AppServices.settings.homeSearchHeight()) {
             0 -> 2
             2 -> 8

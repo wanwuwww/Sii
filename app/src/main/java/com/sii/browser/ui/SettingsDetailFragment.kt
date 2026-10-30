@@ -1944,20 +1944,10 @@ class SettingsDetailFragment : Fragment() {
     // ---- 高级 ----
 
     private fun buildAdvanced() {
-        sectionTitle(R.string.settings_section_identity)
         card(
-            navRow(getString(R.string.settings_ua_group)) { open(VIEW_V2_UA) }
-        )
-        sectionTitle(R.string.settings_section_network)
-        card(
-            navRow(getString(R.string.settings_network)) { open(VIEW_V2_NETWORK) }
-        )
-        sectionTitle(R.string.settings_section_data)
-        card(
-            navRow(getString(R.string.settings_import_export)) { open(VIEW_V2_IMPORT) }
-        )
-        sectionTitle(R.string.settings_section_other)
-        card(
+            navRow(getString(R.string.settings_ua_group)) { open(VIEW_V2_UA) },
+            navRow(getString(R.string.settings_network)) { open(VIEW_V2_NETWORK) },
+            navRow(getString(R.string.settings_import_export)) { open(VIEW_V2_IMPORT) },
             navRow(getString(R.string.settings_mcp)) { open(VIEW_V2_MCP) },
             navRow(getString(R.string.settings_lab)) { open(VIEW_V2_LAB) }
         )

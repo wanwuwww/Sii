@@ -1268,6 +1268,18 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeSitesCardBg(value: Boolean) =
         putBool(SettingsKeys.HOME_SITES_CARD_BG, value)
 
+    override fun homeSitesShadow(): Boolean =
+        bool(SettingsKeys.HOME_SITES_SHADOW, SettingsDefaults.HOME_SITES_SHADOW)
+
+    override fun setHomeSitesShadow(value: Boolean) =
+        putBool(SettingsKeys.HOME_SITES_SHADOW, value)
+
+    override fun homeSearchShadow(): Boolean =
+        bool(SettingsKeys.HOME_SEARCH_SHADOW, SettingsDefaults.HOME_SEARCH_SHADOW)
+
+    override fun setHomeSearchShadow(value: Boolean) =
+        putBool(SettingsKeys.HOME_SEARCH_SHADOW, value)
+
     override fun webDebug(): Boolean = bool(SettingsKeys.WEB_DEBUG, false)
 
     override fun setWebDebug(value: Boolean) = putBool(SettingsKeys.WEB_DEBUG, value)

@@ -46,6 +46,7 @@
     <string name="settings_home_icon_radius">Site icon corner radius</string>
     <string name="settings_home_search_radius">Search box corner radius</string>
     <string name="settings_home_search_height">Search box height</string>
+    <string name="settings_home_search_shadow">Search box shadow</string>
     <string name="settings_home_bg_blur">Background image blur</string>
     <string name="settings_home_logo_size">Logo size</string>
     <string name="settings_home_logo_weight">Logo weight</string>
@@ -695,6 +696,7 @@
     <string name="settings_wifi_img_desc">Don\'t load images on mobile data to save traffic</string>
     <string name="settings_show_sites">Show frequently used sites</string>
     <string name="settings_home_sites_card_bg">Frequent sites background</string>
+    <string name="settings_home_sites_shadow">Frequent sites shadow</string>
     <string name="settings_tool_no_label">Toolbar without labels</string>
     <string name="settings_ua_simplify">Simplify browser identity</string>
     <string name="settings_ua_simplify_desc">Remove device model and minor version from UA</string>

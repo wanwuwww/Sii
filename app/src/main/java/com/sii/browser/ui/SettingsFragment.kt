@@ -74,6 +74,8 @@ class SettingsFragment : Fragment() {
         SearchEntry("主页顶部搜索框", "外观与主页", "地址栏 顶部 搜索框", diyTab = 1),
         SearchEntry("Logo", "外观与主页", "显示内容 时间", diyTab = 0),
         SearchEntry("常用网站", "外观与主页", "主页图标", diyTab = 4),
+        SearchEntry("常用网站阴影", "外观与主页", "阴影 卡片 shadow", diyTab = 4),
+        SearchEntry("搜索框阴影", "外观与主页", "阴影 主页搜索框 shadow", diyTab = 1),
         SearchEntry("地址栏", "外观与主页", "address", diyTab = 2),
         SearchEntry("工具栏", "外观与主页", "toolbar", diyTab = 5),
         SearchEntry("菜单", "外观与主页", "menu 固定菜单位置", diyTab = 6),

@@ -966,6 +966,16 @@ interface WebPageSettings {
 
     fun setHomeSitesCardBg(value: Boolean)
 
+    /** 常用网站卡片阴影。 */
+    fun homeSitesShadow(): Boolean
+
+    fun setHomeSitesShadow(value: Boolean)
+
+    /** 主页搜索框阴影。 */
+    fun homeSearchShadow(): Boolean
+
+    fun setHomeSearchShadow(value: Boolean)
+
     /** 网页调试（WebView 远程调试）。 */
     fun webDebug(): Boolean
 

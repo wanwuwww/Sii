@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.sii.browser.R
+import com.sii.browser.data.Presets
 import com.sii.browser.di.AppServices
 
 /**
@@ -26,6 +27,8 @@ class FirstLaunchFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<View>(R.id.first_launch_agree).setOnClickListener {
             AppServices.settings.markAgreementDone()
+            // 首次启动完全套用「玻璃胶囊」预设。
+            Presets.apply(AppServices.settings, Presets.GLASS)
             enterBrowser()
         }
     }
