@@ -10198,7 +10198,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val radius = dp(28).toFloat()
         dock.background = GlassStyle.surface(
             requireContext(), night, radius, strength,
-            minAlpha = DOCK_GLASS_MIN_ALPHA, base = dockBaseColor()
+            minAlpha = DOCK_GLASS_MIN_ALPHA, base = dockBaseColor(),
+            shade = 0.03f,
+            strokeOverride = if (night) 0x2AFFFFFF else 0x1C000000
         )
     }
 

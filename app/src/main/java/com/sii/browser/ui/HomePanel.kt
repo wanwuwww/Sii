@@ -835,7 +835,10 @@ class HomePanel(
                 setColor(themeFill)
             }
             modern -> GlassStyle.surface(
-                context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(), minAlpha = 155
+                context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(),
+                minAlpha = 155,
+                shade = if (dark) 0.03f else 0.035f,
+                strokeOverride = if (dark) 0x2AFFFFFF else 0x1A000000
             )
             else -> context.getDrawable(R.drawable.bg_home_card)
         }
@@ -870,8 +873,10 @@ class HomePanel(
             GlassStyle.surface(
                 context, dark, dp(radius).toFloat(),
                 AppServices.settings.glassStrength(), minAlpha = 150,
-                highlight = 0.08f,
-                strokeOverride = if (focused) ThemeAccent.color(context) else null
+                highlight = 0.07f,
+                shade = if (dark) 0.03f else 0.035f,
+                strokeOverride = if (focused) ThemeAccent.color(context)
+                else if (dark) 0x2AFFFFFF else 0x1A000000
             )
         } else {
             GradientDrawable().apply {

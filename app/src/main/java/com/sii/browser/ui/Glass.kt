@@ -27,12 +27,8 @@ object GlassStyle {
 
     fun stroke(dark: Boolean, strength: Int): Int {
         val s = strength.coerceIn(0, 100)
-        // 白天加深描边，否则白色玻璃叠白色背景时边界不可见。
-        val alpha = if (dark) {
-            (0x18 + s * 0x38 / 100).coerceIn(0x18, 0x50)
-        } else {
-            (0x24 + s * 0x36 / 100).coerceIn(0x24, 0x5A)
-        }
+        // 默认保持轻盈的描边；需要「看得见的边缘」的组件自行用 strokeOverride 加深。
+        val alpha = (0x16 + s * 0x30 / 100).coerceIn(0x10, 0x50)
         return (alpha shl 24) or if (dark) 0xFFFFFF else 0x000000
     }
 
@@ -51,8 +47,8 @@ object GlassStyle {
         topOnly: Boolean = false,
         minAlpha: Int = 150,
         base: Int? = null,
-        highlight: Float = if (dark) 0.10f else 0.07f,
-        shade: Float = if (dark) 0.04f else 0.06f,
+        highlight: Float = if (dark) 0.10f else 0.06f,
+        shade: Float = 0f,
         strokeOverride: Int? = null
     ): Drawable {
         val radii = cornerRadii(radiusPx, topOnly)
