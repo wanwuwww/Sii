@@ -130,6 +130,7 @@ class SettingsDetailFragment : Fragment() {
         VIEW_TOOLBAR_CUSTOM -> getString(R.string.settings_toolbar_custom)
         VIEW_LP_CUSTOM -> getString(R.string.settings_lp_custom)
         VIEW_THEME_COLOR -> getString(R.string.settings_theme_color_detect)
+        VIEW_V2_COLOR_DEFINE -> getString(R.string.settings_color_define)
         VIEW_ADVANCED -> getString(R.string.settings_advanced)
         VIEW_DESKTOP_SITES -> getString(R.string.settings_desktop_sites)
         VIEW_V2_HOME -> getString(R.string.settings_home_group)
@@ -191,6 +192,7 @@ class SettingsDetailFragment : Fragment() {
             VIEW_TOOLBAR_CUSTOM -> buildToolbarCustom()
             VIEW_LP_CUSTOM -> buildLongPressCustom()
             VIEW_THEME_COLOR -> buildThemeColor()
+            VIEW_V2_COLOR_DEFINE -> buildV2ColorDefine()
             VIEW_ADVANCED -> buildAdvanced()
             VIEW_DESKTOP_SITES -> buildDesktopSites()
             VIEW_V2_HOME -> buildV2Home()
@@ -1246,6 +1248,10 @@ class SettingsDetailFragment : Fragment() {
                 AppServices.settings.setSkin(THEME_COLOR_IDS[it])
                 recreateAfterSave()
             },
+            navRow(
+                getString(R.string.settings_color_define),
+                getString(R.string.settings_color_define_desc)
+            ) { open(VIEW_V2_COLOR_DEFINE) },
             choiceRow(
                 getString(R.string.settings_web_text_color),
                 arrayOf(
@@ -2789,6 +2795,7 @@ class SettingsDetailFragment : Fragment() {
         const val VIEW_TOOLBAR_CUSTOM = "toolbarCustom"
         const val VIEW_LP_CUSTOM = "lpCustom"
         const val VIEW_THEME_COLOR = "themeColor"
+        const val VIEW_V2_COLOR_DEFINE = "v2ColorDefine"
         const val VIEW_ADVANCED = "advanced"
         const val VIEW_DESKTOP_SITES = "desktopSites"
         const val VIEW_V2_HOME = "v2Home"
@@ -2897,11 +2904,11 @@ class SettingsDetailFragment : Fragment() {
         )
         private val ENGINES = com.sii.browser.data.SearchEngines.DEFAULT
 
-        private val THEME_COLOR_NAMES = arrayOf("默认", "蓝", "绿", "橙", "紫")
+        private val THEME_COLOR_NAMES = arrayOf("蓝", "绿", "橙", "紫")
         private val DOWNLOADER_NAMES = arrayOf("Sii 内建下载器", "系统下载管理器")
         private val DOWNLOAD_PROTOCOL_NAMES = arrayOf("自动", "HTTP/2", "HTTP/1.1")
         private val DOWNLOAD_PARALLEL_NAMES = arrayOf("1", "2", "3", "4")
-        private val THEME_COLOR_IDS = arrayOf("default", "blue", "green", "orange", "purple")
+        private val THEME_COLOR_IDS = arrayOf("blue", "green", "orange", "purple")
 
         /** 长按菜单项。 */
         private val LONG_PRESS_ITEMS = listOf(
@@ -3077,6 +3084,47 @@ class SettingsDetailFragment : Fragment() {
             toast(if (ok) R.string.data_imported else R.string.rules_import_failed)
         }
     }
+    /** 颜色定义：逐项选择哪些位置使用主题色；最后一个开关与网站识别色互斥。 */
+    private fun buildV2ColorDefine() {
+        card(
+            switchRow(
+                getString(R.string.settings_color_part_toolbar),
+                settings.themePartToolbar()
+            ) { settings.setThemePartToolbar(it) },
+            switchRow(
+                getString(R.string.settings_color_part_tabs),
+                settings.themePartTabs()
+            ) { settings.setThemePartTabs(it) },
+            switchRow(
+                getString(R.string.settings_color_part_sites),
+                settings.themePartSites()
+            ) { settings.setThemePartSites(it) },
+            switchRow(
+                getString(R.string.settings_color_part_home_bg),
+                settings.themePartHomeBg()
+            ) { settings.setThemePartHomeBg(it) },
+            switchRow(
+                getString(R.string.settings_color_part_menu),
+                settings.themePartMenu()
+            ) { settings.setThemePartMenu(it) },
+            switchRow(
+                getString(R.string.settings_color_part_status),
+                settings.themePartStatus()
+            ) { settings.setThemePartStatus(it) }
+        )
+        card(
+            switchRow(
+                getString(R.string.settings_color_over_detect),
+                settings.themeOverDetect(),
+                getString(R.string.settings_color_over_detect_desc)
+            ) {
+                settings.setThemeOverDetect(it)
+                build()
+            }
+        )
+        aboutText(R.string.about_color_define)
+    }
+
     private fun buildThemeColor() {
         card(
             switchRow(

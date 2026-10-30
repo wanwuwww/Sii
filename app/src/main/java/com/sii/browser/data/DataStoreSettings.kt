@@ -456,7 +456,11 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun themeColorEnabled(): Boolean = bool(SettingsKeys.THEME_COLOR, false)
 
-    override fun setThemeColorEnabled(value: Boolean) = putBool(SettingsKeys.THEME_COLOR, value)
+    override fun setThemeColorEnabled(value: Boolean) {
+        putBool(SettingsKeys.THEME_COLOR, value)
+        // 与「主题色优先」互斥，打开识别时主题色不再压它。
+        if (value) putBool(SettingsKeys.THEME_OVER_DETECT, false)
+    }
 
     override fun themeColorToolbar(): Boolean = bool(SettingsKeys.THEME_COLOR_TOOLBAR, true)
 
@@ -477,6 +481,51 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setThemeColorMenu(value: Boolean) =
         putBool(SettingsKeys.THEME_COLOR_MENU, value)
+
+    override fun themePartToolbar(): Boolean =
+        bool(SettingsKeys.THEME_PART_TOOLBAR, SettingsDefaults.THEME_PART_TOOLBAR)
+
+    override fun setThemePartToolbar(value: Boolean) =
+        putBool(SettingsKeys.THEME_PART_TOOLBAR, value)
+
+    override fun themePartTabs(): Boolean =
+        bool(SettingsKeys.THEME_PART_TABS, SettingsDefaults.THEME_PART_TABS)
+
+    override fun setThemePartTabs(value: Boolean) =
+        putBool(SettingsKeys.THEME_PART_TABS, value)
+
+    override fun themePartSites(): Boolean =
+        bool(SettingsKeys.THEME_PART_SITES, SettingsDefaults.THEME_PART_SITES)
+
+    override fun setThemePartSites(value: Boolean) =
+        putBool(SettingsKeys.THEME_PART_SITES, value)
+
+    override fun themePartHomeBg(): Boolean =
+        bool(SettingsKeys.THEME_PART_HOME_BG, SettingsDefaults.THEME_PART_HOME_BG)
+
+    override fun setThemePartHomeBg(value: Boolean) =
+        putBool(SettingsKeys.THEME_PART_HOME_BG, value)
+
+    override fun themePartMenu(): Boolean =
+        bool(SettingsKeys.THEME_PART_MENU, SettingsDefaults.THEME_PART_MENU)
+
+    override fun setThemePartMenu(value: Boolean) =
+        putBool(SettingsKeys.THEME_PART_MENU, value)
+
+    override fun themePartStatus(): Boolean =
+        bool(SettingsKeys.THEME_PART_STATUS, SettingsDefaults.THEME_PART_STATUS)
+
+    override fun setThemePartStatus(value: Boolean) =
+        putBool(SettingsKeys.THEME_PART_STATUS, value)
+
+    override fun themeOverDetect(): Boolean =
+        bool(SettingsKeys.THEME_OVER_DETECT, SettingsDefaults.THEME_OVER_DETECT)
+
+    override fun setThemeOverDetect(value: Boolean) {
+        putBool(SettingsKeys.THEME_OVER_DETECT, value)
+        // 与「识别网站主题色」互斥：打开优先位时直接关掉识别。
+        if (value) putBool(SettingsKeys.THEME_COLOR, false)
+    }
 
     override fun themeColorLongPress(): Boolean = bool(SettingsKeys.THEME_COLOR_LONG_PRESS, true)
 

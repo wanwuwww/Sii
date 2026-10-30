@@ -826,9 +826,14 @@ class HomePanel(
         val modern = AppServices.settings.uiStyle() == 1
         val dark = AppServices.settings.isNightMode()
         val style = AppServices.settings.homeStyle()
+        val themeFill = ThemePalette.fill(context, ThemePart.SITES)
         card.background = when {
             style != 0 -> null
             !on -> null
+            themeFill != null -> GradientDrawable().apply {
+                cornerRadius = dp(24).toFloat()
+                setColor(themeFill)
+            }
             modern -> GlassStyle.background(
                 context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(), minAlpha = 155
             )
@@ -971,8 +976,9 @@ class HomePanel(
         return android.graphics.drawable.LayerDrawable(layers.toTypedArray())
     }
 
-    /** 主页背景色：始终跟随主色淡底。 */
-    fun backgroundColor(): Int = ThemePalette.soft(context)
+    /** 主页底色：开启「主页背景」颜色定义时用主色淡底，否则用页面底色。 */
+    fun backgroundColor(): Int =
+        ThemePalette.fill(context, ThemePart.HOME_BG) ?: context.getColor(R.color.bg_page)
 
     /** 无背景图时的背景色；0 = 跟随主题。 */
     private fun applyBgColor() {

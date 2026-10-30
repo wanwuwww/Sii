@@ -104,7 +104,7 @@ class HomePreviewShell(
     /** 新版预览：单行玻璃底栏，颜色跟随日夜。 */
     private fun buildModernDock(): View {
         val night = AppServices.settings.isNightMode()
-        val dockTint = if (previewWeb) null else ThemePalette.soft(context)
+        val dockTint = ThemePalette.fill(context, ThemePart.TOOLBAR)
         val primary = if (night) Color.WHITE
         else ContextCompat.getColor(context, R.color.text_primary)
         val wrap = FrameLayout(context).apply {
@@ -257,7 +257,7 @@ class HomePreviewShell(
         val strip = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(6), dp(3), dp(6), dp(3))
-            setBackgroundColor(chromeColor())
+            setBackgroundColor(tabsColor())
         }
         listOf("主页", "示例页面").forEachIndexed { index, title ->
             strip.addView(TextView(context).apply {
@@ -364,8 +364,8 @@ class HomePreviewShell(
             background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
                 setColor(
-                    if (previewWeb) ContextCompat.getColor(context, R.color.card)
-                    else ThemePalette.soft(context)
+                    ThemePalette.fill(context, ThemePart.MENU)
+                        ?: ContextCompat.getColor(context, R.color.card)
                 )
             }
         }
@@ -529,11 +529,14 @@ class HomePreviewShell(
             .split(',').filter { it.isNotEmpty() }
             .ifEmpty { MenuCatalog.DEFAULT_FIXED }
 
-    private fun chromeColor(): Int {
-        // 主页工具栏与底栏用主色淡底，网页预览保持默认底色。
-        return if (previewWeb) ContextCompat.getColor(context, R.color.toolbar_bg)
-        else ThemePalette.soft(context)
-    }
+    private fun chromeColor(): Int =
+        ThemePalette.fill(context, ThemePart.TOOLBAR)
+            ?: ContextCompat.getColor(context, R.color.toolbar_bg)
+
+    /** 标签栏/标签卡底色：开启「标签页」颜色定义时用主色淡底。 */
+    private fun tabsColor(): Int =
+        ThemePalette.fill(context, ThemePart.TABS)
+            ?: ContextCompat.getColor(context, R.color.toolbar_bg)
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).toInt()

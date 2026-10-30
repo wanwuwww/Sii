@@ -291,6 +291,36 @@ interface AppearanceSettings {
 
     fun setThemeColorMenu(value: Boolean)
 
+    /** 颜色定义：各元素是否使用主题色（默认全关）。 */
+    fun themePartToolbar(): Boolean
+
+    fun setThemePartToolbar(value: Boolean)
+
+    fun themePartTabs(): Boolean
+
+    fun setThemePartTabs(value: Boolean)
+
+    fun themePartSites(): Boolean
+
+    fun setThemePartSites(value: Boolean)
+
+    fun themePartHomeBg(): Boolean
+
+    fun setThemePartHomeBg(value: Boolean)
+
+    fun themePartMenu(): Boolean
+
+    fun setThemePartMenu(value: Boolean)
+
+    fun themePartStatus(): Boolean
+
+    fun setThemePartStatus(value: Boolean)
+
+    /** 主题色压过网站识别色（与识别总开关互斥）。 */
+    fun themeOverDetect(): Boolean
+
+    fun setThemeOverDetect(value: Boolean)
+
     /** 网站主题色作用于长按菜单。 */
     fun themeColorLongPress(): Boolean
 

@@ -1290,7 +1290,7 @@ class HomeCustomizeFragment : Fragment() {
         },
         choiceRow(
             "主题色",
-            arrayOf("默认", "蓝", "绿", "橙", "紫"),
+            arrayOf("蓝", "绿", "橙", "紫"),
             themeColorIndex()
         ) { index ->
             settings.setSkin(themeSkins[index])
@@ -1305,6 +1305,7 @@ class HomeCustomizeFragment : Fragment() {
             AppServices.applyWebTextAccent?.invoke()
             refreshPreview()
         },
+        navRow(getString(R.string.settings_color_define), null) { openColorDefinePage() },
         navRow("主题色识别", null) { openThemeColorPage() }
     )
 
@@ -1407,14 +1408,28 @@ class HomeCustomizeFragment : Fragment() {
         } ?: activity?.recreate()
     }
 
-    private val themeSkins = arrayOf("default", "blue", "green", "orange", "purple")
+    private val themeSkins = arrayOf("blue", "green", "orange", "purple")
 
     private fun themeColorIndex(): Int = when (settings.skin()) {
-        "blue" -> 1
-        "green" -> 2
-        "orange" -> 3
-        "purple" -> 4
-        else -> 0
+        "blue" -> 0
+        "orange" -> 2
+        "purple" -> 3
+        else -> 1
+    }
+
+    private fun openColorDefinePage() {
+        val fragment = SettingsDetailFragment().apply {
+            arguments = android.os.Bundle().apply {
+                putString(
+                    SettingsDetailFragment.ARG_VIEW,
+                    SettingsDetailFragment.VIEW_V2_COLOR_DEFINE
+                )
+            }
+        }
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.shell_root, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 
     private fun openThemeColorPage() {        val fragment = SettingsDetailFragment().apply {

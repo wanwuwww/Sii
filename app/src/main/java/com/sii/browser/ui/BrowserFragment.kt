@@ -4242,7 +4242,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun upgradeToHttps(url: String): String =
         if (url.startsWith("http://")) "https://" + url.substring(7) else url
 
-    /** 主页：工具栏/状态栏/菜单面板统一用主色淡底；网页交给 applySiteThemeColor 与默认色。 */
+    /** 主页：按「颜色定义」的开关给工具栏/标签栏/菜单/状态栏上主色淡底，未开启回默认色。 */
     private fun applyHomeChromeTint() {
         val isHome = homeContainer?.visibility == View.VISIBLE
         if (!isHome) return
@@ -4251,18 +4251,25 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 背景图铺满时交给 applyChromeBackground，避免把图盖成纯色。
             return
         }
-        val color = ThemePalette.soft(requireContext())
+        val toolbarFill = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
+        val tabsFill = ThemePalette.fill(requireContext(), ThemePart.TABS)
+        val menuFill = ThemePalette.fill(requireContext(), ThemePart.MENU)
         if (AppServices.settings.uiStyle() == 1) {
             applyDockGlass()
+            applyTabsPanelAlpha()
             view?.findViewById<View>(R.id.menu_panel)?.backgroundTintList = null
         } else {
+            val defaultColor = ContextCompat.getColor(requireContext(), R.color.toolbar_bg)
             intArrayOf(
-                R.id.address_bar, R.id.bottom_bar, R.id.tab_bar, R.id.search_toolbar_scroll
-            ).forEach { id -> view?.findViewById<View>(id)?.setBackgroundColor(color) }
+                R.id.address_bar, R.id.bottom_bar, R.id.search_toolbar_scroll
+            ).forEach { id -> view?.findViewById<View>(id)?.setBackgroundColor(toolbarFill ?: defaultColor) }
+            view?.findViewById<View>(R.id.tab_bar)?.setBackgroundColor(tabsFill ?: defaultColor)
             view?.findViewById<View>(R.id.menu_panel)?.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(color)
+                android.content.res.ColorStateList.valueOf(
+                    menuFill ?: requireContext().getColor(R.color.card)
+                )
         }
-        shell?.applyStatusBarColor(color)
+        shell?.applyStatusBarColor(ThemePalette.fill(requireContext(), ThemePart.STATUS))
     }
 
     private fun showHome(createTab: Boolean = true) {
@@ -4369,8 +4376,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         } else null
 
         val modern = AppServices.settings.uiStyle() == 1
-        // 主页工具栏用主色淡底，网页恢复默认（网站识别色由 applySiteThemeColor 覆盖）。
-        val homeTint = if (enabled && !hasImage) ThemePalette.soft(requireContext()) else null
+        // 按「颜色定义」的开关上主色淡底；未开启回默认色（识别色仍由 applySiteThemeColor 覆盖）。
+        val toolbarFill = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
+        val tabsFill = ThemePalette.fill(requireContext(), ThemePart.TABS)
         val barIds = intArrayOf(
             R.id.address_bar, R.id.bottom_bar, R.id.tab_bar, R.id.search_toolbar_scroll
         )
@@ -4378,7 +4386,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 新版底栏自己管理颜色：主页也保留地址栏，工具行保持透明。
             view?.findViewById<View>(R.id.address_bar)?.visibility = View.VISIBLE
             view?.findViewById<View>(R.id.tab_bar)?.setBackgroundColor(
-                if (hasImage) android.graphics.Color.TRANSPARENT else toolbarColor
+                if (hasImage) android.graphics.Color.TRANSPARENT else tabsFill ?: toolbarColor
             )
             view?.findViewById<View>(R.id.search_toolbar_scroll)
                 ?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -4388,12 +4396,15 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (enabled) View.GONE else View.VISIBLE
             val chromeColor = when {
                 hasImage -> android.graphics.Color.TRANSPARENT
-                homeTint != null -> homeTint
+                toolbarFill != null -> toolbarFill
                 else -> toolbarColor
             }
-            barIds.forEach { id ->
-                view?.findViewById<View>(id)?.setBackgroundColor(chromeColor)
-            }
+            intArrayOf(
+                R.id.address_bar, R.id.bottom_bar, R.id.search_toolbar_scroll
+            ).forEach { id -> view?.findViewById<View>(id)?.setBackgroundColor(chromeColor) }
+            view?.findViewById<View>(R.id.tab_bar)?.setBackgroundColor(
+                if (hasImage) android.graphics.Color.TRANSPARENT else tabsFill ?: toolbarColor
+            )
             if (hasImage) {
                 val light = shell?.chromeImageIsLight() ?: !AppServices.settings.isNightMode()
                 val foreground = if (light) android.graphics.Color.BLACK else android.graphics.Color.WHITE
@@ -4411,7 +4422,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         applyDockGlass()
         view?.findViewById<View>(R.id.browser_root)?.setBackgroundColor(
-            if (hasImage) android.graphics.Color.TRANSPARENT else homeTint ?: toolbarColor
+            if (hasImage) android.graphics.Color.TRANSPARENT else toolbarFill ?: toolbarColor
         )
     }
 
@@ -4557,8 +4568,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
-        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 165)
-        else requireContext().getColor(R.color.bg)
+        val themeFill = ThemePalette.fill(requireContext(), ThemePart.TABS)
+        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 165, themeFill)
+        else themeFill ?: requireContext().getColor(R.color.bg)
         val mergedAlpha = ((((fill ushr 24) and 0xFF) * alpha) / 255).coerceIn(0, 255)
         val radius = dp(28).toFloat()
         panel.background = android.graphics.drawable.GradientDrawable().apply {
@@ -5312,22 +5324,20 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val menuBg = menuThemeColor
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
-        // 主页菜单面板用主色淡底（悬浮再叠一层玻璃），网页保持默认。
-        val homeMenu = if (homeContainer?.visibility == View.VISIBLE &&
-            AppServices.settings.homeBackground() == null
-        ) ThemePalette.soft(requireContext()) else null
+        // 菜单面板按「菜单页」颜色定义上主色淡底（悬浮再叠一层玻璃），未开启用卡片色。
+        val menuFill = ThemePalette.fill(requireContext(), ThemePart.MENU)
         view?.findViewById<View>(R.id.menu_panel)?.apply {
             if (modern) {
                 background = GlassStyle.background(
                     requireContext(), dark, dp(28).toFloat(),
                     AppServices.settings.glassStrength(), topOnly = true, minAlpha = 170,
-                    base = homeMenu
+                    base = menuFill
                 )
                 backgroundTintList = null
             } else {
                 setBackgroundResource(R.drawable.bg_modern_sheet)
                 backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    menuBg ?: homeMenu ?: requireContext().getColor(R.color.card)
+                    menuBg ?: menuFill ?: requireContext().getColor(R.color.card)
                 )
             }
         }
@@ -5336,7 +5346,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             else requireContext().getColor(R.color.text_primary)
         )
         val menuForeground = if (dark) android.graphics.Color.WHITE
-        else (menuBg ?: homeMenu)?.let { contrastOn(it) }
+        else (menuBg ?: menuFill)?.let { contrastOn(it) }
 
         val toggles = menuToggles ?: return
         toggles.removeAllViews()
@@ -6811,15 +6821,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (isDesktopMode()) {
             return
         }
-        // 网站主题色只在白天生效（含其下所有设置），夜间使用默认夜间配色。
+        // 网站主题色只在白天生效（含其下所有设置），夜间只用主题色淡底。
         if (settings.isNightMode()) {
             if (settings.uiStyle() != 1) {
-                applyToolbarTheme(null)
-                applyAddressTheme(null)
+                applyToolbarTheme(ThemePalette.fill(requireContext(), ThemePart.TOOLBAR))
+                applyAddressTheme(ThemePalette.fill(requireContext(), ThemePart.TOOLBAR))
             }
             menuThemeColor = null
             longPressThemeColor = null
-            (activity as? ShellActivity)?.applyStatusBarColor(null)
+            (activity as? ShellActivity)?.applyStatusBarColor(
+                ThemePalette.fill(requireContext(), ThemePart.STATUS)
+            )
             return
         }
         // B 站等站点 JS 会反复删改 theme-color meta（暗亮轮播），同一 WebView 收到相同值时忽略，
@@ -6827,16 +6839,23 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (raw != null && raw == previous) {
             return
         }
-        val effective = raw?.takeIf { settings.themeColorEnabled() }
+        // 「优先于主题色识别」打开时主题色压过识别色（互斥已在数据层保证识别开关为关）。
+        val effective = raw?.takeIf {
+            settings.themeColorEnabled() && !settings.themeOverDetect()
+        }
         val modern = settings.uiStyle() == 1
         if (!modern) {
-            applyToolbarTheme(if (settings.themeColorToolbar()) effective else null)
-            applyAddressTheme(if (settings.themeColorAddress()) effective else null)
+            val toolbarTheme = if (settings.themeColorToolbar()) effective else null
+            val addressTheme = if (settings.themeColorAddress()) effective else null
+            val fallback = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
+            applyToolbarTheme(toolbarTheme ?: fallback)
+            applyAddressTheme(addressTheme ?: fallback)
         }
         menuThemeColor = if (!modern && settings.themeColorMenu()) effective else null
         longPressThemeColor = if (settings.themeColorLongPress()) effective else null
         (activity as? ShellActivity)?.applyStatusBarColor(
-            if (settings.themeColorStatus()) effective else null
+            (if (settings.themeColorStatus()) effective else null)
+                ?: ThemePalette.fill(requireContext(), ThemePart.STATUS)
         )
         if (homeContainer?.visibility == View.VISIBLE) applyHomeChrome(true)
         if (menuOverlay?.visibility == View.VISIBLE) renderMenuSheet()
@@ -10168,11 +10187,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         )
     }
 
-    /** 悬浮底栏底色：主页用主色淡底并与玻璃强度叠加，网页保持默认白/黑玻璃。 */
+    /** 悬浮底栏底色：开启「工具栏」颜色定义时用主色淡底，与玻璃强度叠加。 */
     private fun dockBaseColor(): Int? {
-        if (homeContainer?.visibility != View.VISIBLE) return null
         if (AppServices.settings.homeBackground() != null) return null
-        return ThemePalette.soft(requireContext())
+        return ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
     }
 
     private var scrollAccum = 0

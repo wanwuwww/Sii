@@ -80,6 +80,7 @@ class SettingsFragment : Fragment() {
         SearchEntry("标签页", "外观与主页", "tabs 标签卡 网格", diyTab = 7),
         SearchEntry("主题", "外观与主页", "夜间 深色 玻璃", diyTab = 8),
         SearchEntry("主题色", "外观与主页", "主色 accent 颜色", diyTab = 8),
+        SearchEntry("颜色定义", "外观与主页", "主题色 工具栏 标签页 菜单 状态栏", diyTab = 8),
         SearchEntry("卡片背景色", "外观与主页", "卡片 颜色 card", diyTab = 8)
     )
 

@@ -207,8 +207,19 @@ object SettingsDefaults {
     const val HOME_SEARCH_SHOW = true
     const val CARD_BORDER = true
 
-    /** 主色：default（中性随日夜）/ blue / green / orange / purple。 */
-    const val SKIN = "default"
+    /** 主色：blue / green / orange / purple。 */
+    const val SKIN = "green"
+
+    /** 颜色定义：各元素是否使用主题色，默认全关。 */
+    const val THEME_PART_TOOLBAR = false
+    const val THEME_PART_TABS = false
+    const val THEME_PART_SITES = false
+    const val THEME_PART_HOME_BG = false
+    const val THEME_PART_MENU = false
+    const val THEME_PART_STATUS = false
+
+    /** 主题色是否压过网站识别色（与识别总开关互斥）。 */
+    const val THEME_OVER_DETECT = false
 
     /** 卡片背景色：0 跟随主题色 / 1 默认 / 2 浅灰 / 3 深灰。 */
     const val CARD_BG = 0
