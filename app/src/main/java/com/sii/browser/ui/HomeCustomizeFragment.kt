@@ -599,16 +599,6 @@ class HomeCustomizeFragment : Fragment() {
     private fun backgroundRows(): List<View> {
         val rows = mutableListOf<View>()
         rows.add(
-            choiceRow(
-                getString(R.string.settings_home_bg_color),
-                arrayOf("跟随主题", "白", "浅灰", "浅蓝", "浅绿", "深灰", "黑"),
-                settings.homeBgColor().coerceIn(0, 6)
-            ) { index ->
-                settings.setHomeBgColor(index)
-                refreshPreview()
-            }
-        )
-        rows.add(
             navRow(
                 getString(R.string.settings_home_background),
                 if (settings.homeBackground() != null) "已设置" else "默认"
@@ -1325,6 +1315,14 @@ class HomeCustomizeFragment : Fragment() {
             activity?.recreate()
         },
         choiceRow(
+            getString(R.string.settings_home_bg_color),
+            homeBgColorNames,
+            settings.homeBgColor().coerceIn(0, 6)
+        ) { index ->
+            settings.setHomeBgColor(index)
+            refreshPreview()
+        },
+        choiceRow(
             "网页文字颜色",
             arrayOf("原色", "跟随主色", "仅白天", "仅夜晚"),
             settings.webTextColor().coerceIn(0, 3)
@@ -1437,6 +1435,9 @@ class HomeCustomizeFragment : Fragment() {
 
     private val themeSkins = arrayOf(null, "green", "orange", "purple")
 
+    private val homeBgColorNames =
+        arrayOf("跟随主题色", "白", "浅灰", "浅蓝", "浅绿", "深灰", "黑")
+
     private fun themeColorIndex(): Int = when (settings.skin()) {
         "green" -> 1
         "orange" -> 2
@@ -1462,6 +1463,14 @@ class HomeCustomizeFragment : Fragment() {
             0, 100
         ) {
             settings.setSettingsCardAlpha(it)
+            CardList.applyCardStyle(controls)
+        },
+        choiceRow(
+            "卡片背景色",
+            arrayOf("跟随主题色", "默认", "浅灰", "深灰"),
+            settings.cardBg().coerceIn(0, 3)
+        ) { index ->
+            settings.setCardBg(index)
             CardList.applyCardStyle(controls)
         },
         switchRow(

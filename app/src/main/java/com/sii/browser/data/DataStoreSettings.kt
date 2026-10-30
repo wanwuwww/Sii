@@ -287,6 +287,12 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setCardBorder(value: Boolean) = putBool(SettingsKeys.CARD_BORDER, value)
 
+    override fun cardBg(): Int =
+        int(SettingsKeys.CARD_BG, SettingsDefaults.CARD_BG).coerceIn(0, 3)
+
+    override fun setCardBg(value: Int) =
+        putInt(SettingsKeys.CARD_BG, value.coerceIn(0, 3))
+
     override fun lastUpdaterCheck(name: String): Long =
         long(SettingsKeys.UPDATER_PREFIX + name, 0L)
 

@@ -46,7 +46,7 @@
     <string name="settings_home_icon_radius">网站图标圆角</string>
     <string name="settings_home_search_radius">搜索框圆角</string>
     <string name="settings_home_search_height">搜索框高度</string>
-    <string name="settings_home_bg_color">主页背景色</string>
+    <string name="settings_home_bg_color">主页底色</string>
     <string name="settings_home_bg_blur">背景图模糊</string>
     <string name="settings_home_logo_size">Logo 字号</string>
     <string name="settings_home_logo_weight">Logo 字重</string>
@@ -960,7 +960,12 @@
     <string name="settings_tab_button_order">标签页按钮位置</string>
     <string name="settings_tab_undo_visible">显示撤销关闭按钮</string>
     <string name="download_size_speed">已下载 %1$s / %2$s · 速度 %3$s/s</string>
+    <string name="download_size_speed_eta">已下载 %1$s / %2$s · %3$s/s · %4$s</string>
     <string name="download_size_speed_unknown_total">已下载 %1$s · 速度 %2$s/s</string>
+    <string name="download_eta_seconds">剩余 %1$d 秒</string>
+    <string name="download_eta_minutes">剩余 %1$d 分 %2$d 秒</string>
+    <string name="download_eta_hours">剩余 %1$d 小时 %2$d 分</string>
+    <string name="download_eta_unknown">剩余时间未知</string>
     <string name="download_bar_view">查看</string>
     <string name="download_bar_downloading">文件正在下载：%1$s</string>
     <string name="history_load_more">加载更多</string>

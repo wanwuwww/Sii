@@ -70,7 +70,7 @@ object CardList {
         val isPage = page ?: (view.tag as? SurfaceTag)?.page ?: return
         val alpha = AppServices.settings.settingsCardAlpha().coerceIn(0, 100)
         val fill = ColorUtils.setAlphaComponent(
-            view.context.getColor(if (isPage) R.color.card_page else R.color.card),
+            ThemePalette.cardFill(view.context, isPage),
             alpha * 255 / 100
         )
         view.background = GradientDrawable().apply {

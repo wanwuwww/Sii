@@ -138,6 +138,11 @@ interface Settings :
     /** 卡片外框开关。 */
     fun cardBorder(): Boolean
 
+    /** 卡片背景色：0 跟随主题色 / 1 默认 / 2 浅灰 / 3 深灰。 */
+    fun cardBg(): Int
+
+    fun setCardBg(value: Int)
+
     fun setCardBorder(value: Boolean)
 
     /** 规则订阅/脚本的最近检查时间。 */

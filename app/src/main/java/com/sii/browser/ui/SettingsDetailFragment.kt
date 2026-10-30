@@ -158,7 +158,6 @@ class SettingsDetailFragment : Fragment() {
         VIEW_V2_HOME_SITES -> getString(R.string.settings_home_sites)
         VIEW_V2_HOME_SEARCH -> getString(R.string.settings_home_search)
         VIEW_V2_HOME_BG -> getString(R.string.settings_home_background)
-        VIEW_V2_HOME_BG_COLOR -> getString(R.string.settings_home_bg_color)
         VIEW_V2_UI_LAYOUT -> getString(R.string.settings_ui_layout)
         VIEW_V2_SITE -> getString(R.string.settings_site_settings)
         VIEW_V2_SITE_DEFAULT -> getString(R.string.settings_site_default)
@@ -220,7 +219,6 @@ class SettingsDetailFragment : Fragment() {
             VIEW_V2_HOME_SITES -> buildV2HomeSites()
             VIEW_V2_HOME_SEARCH -> buildV2HomeSearch()
             VIEW_V2_HOME_BG -> buildV2HomeBg()
-            VIEW_V2_HOME_BG_COLOR -> buildV2HomeBgColor()
             VIEW_V2_UI_LAYOUT -> buildUi()
             VIEW_V2_SITE -> buildV2Site()
             VIEW_V2_SITE_DEFAULT -> buildV2SiteDefault()
@@ -1249,6 +1247,11 @@ class SettingsDetailFragment : Fragment() {
                 recreateAfterSave()
             },
             choiceRow(
+                getString(R.string.settings_home_bg_color),
+                HOME_BG_COLOR_NAMES,
+                settings.homeBgColor().coerceIn(0, 6)
+            ) { settings.setHomeBgColor(it) },
+            choiceRow(
                 getString(R.string.settings_web_text_color),
                 arrayOf(
                     getString(R.string.settings_web_text_color_original),
@@ -1475,10 +1478,6 @@ class SettingsDetailFragment : Fragment() {
                 if (settings.homeBackground() != null) getString(R.string.settings_home_background_set)
                 else getString(R.string.settings_home_background_default)
             ) { chooseHomeBackground() },
-            navRow(
-                getString(R.string.settings_home_bg_color),
-                HOME_BG_COLOR_NAMES[settings.homeBgColor().coerceIn(0, 6)]
-            ) { open(VIEW_V2_HOME_BG_COLOR) },
             choiceRow(
                 getString(R.string.settings_home_bg_blur),
                 HOME_BG_BLUR_NAMES,
@@ -1488,7 +1487,19 @@ class SettingsDetailFragment : Fragment() {
             sliderRow(
                 getString(R.string.settings_home_bg_overlay),
                 settings.homeBgOverlay(), 0, 100, 5
-            ) { settings.setHomeBgOverlay(it) }
+            ) { settings.setHomeBgOverlay(it) },
+            switchRow(
+                getString(R.string.settings_bg_apply_toolbar),
+                settings.homeBgApplyToolbar()
+            ) { settings.setHomeBgApplyToolbar(it) },
+            switchRow(
+                getString(R.string.settings_bg_apply_status),
+                settings.homeBgApplyStatus()
+            ) { settings.setHomeBgApplyStatus(it) },
+            switchRow(
+                getString(R.string.settings_bg_apply_menu),
+                settings.homeBgApplyMenu()
+            ) { settings.setHomeBgApplyMenu(it) }
         )
     }
 
@@ -2345,28 +2356,6 @@ class SettingsDetailFragment : Fragment() {
         card(*rows.toTypedArray())
     }
 
-    private fun buildV2HomeBgColor() {
-        card(
-            choiceRow(
-                getString(R.string.settings_home_bg_color),
-                HOME_BG_COLOR_NAMES,
-                settings.homeBgColor().coerceIn(0, 6)
-            ) { settings.setHomeBgColor(it) },
-            switchRow(
-                getString(R.string.settings_bg_apply_toolbar),
-                settings.homeBgApplyToolbar()
-            ) { settings.setHomeBgApplyToolbar(it) },
-            switchRow(
-                getString(R.string.settings_bg_apply_status),
-                settings.homeBgApplyStatus()
-            ) { settings.setHomeBgApplyStatus(it) },
-            switchRow(
-                getString(R.string.settings_bg_apply_menu),
-                settings.homeBgApplyMenu()
-            ) { settings.setHomeBgApplyMenu(it) }
-        )
-    }
-
     private fun presetIndex(value: Int, presets: IntArray): Int {
         val idx = presets.indexOf(value)
         return if (idx >= 0) idx else presets.size
@@ -2845,7 +2834,6 @@ class SettingsDetailFragment : Fragment() {
         const val VIEW_V2_HOME_SITES = "v2HomeSites"
         const val VIEW_V2_HOME_SEARCH = "v2HomeSearch"
         const val VIEW_V2_HOME_BG = "v2HomeBg"
-        const val VIEW_V2_HOME_BG_COLOR = "v2HomeBgColor"
         const val VIEW_V2_UI_LAYOUT = "v2UiLayout"
         const val VIEW_V2_SITE = "v2Site"
         const val VIEW_V2_SITE_DEFAULT = "v2SiteDefault"
@@ -2889,7 +2877,8 @@ class SettingsDetailFragment : Fragment() {
         private val HOME_ICON_RADIUS_NAMES = arrayOf("无", "小", "中", "大")
         private val HOME_SEARCH_RADIUS_NAMES = arrayOf("小", "中", "大", "自定义")
         private val HOME_SEARCH_HEIGHT_NAMES = arrayOf("紧凑", "标准", "宽松")
-        private val HOME_BG_COLOR_NAMES = arrayOf("跟随主题", "白", "浅灰", "浅蓝", "浅绿", "深灰", "黑")
+        private val HOME_BG_COLOR_NAMES =
+            arrayOf("跟随主题色", "白", "浅灰", "浅蓝", "浅绿", "深灰", "黑")
         private val HOME_BG_BLUR_NAMES = arrayOf("关", "小", "中", "大")
         private val LOGO_SIZE_NAMES = arrayOf("小 24", "中 34", "大 44", "自定义")
         private val LOGO_SIZE_VALUES = intArrayOf(24, 34, 44)

@@ -261,6 +261,7 @@ object SettingsKeys {
     const val HOME_STYLE = "home_style"
     const val HOME_SEARCH_SHOW = "home_search_show"
     const val CARD_BORDER = "card_border"
+    const val CARD_BG = "card_bg"
     const val BG_HOME = "bghome"
     const val BG_INFO = "bginfo"
     const val SKIN = "skin"

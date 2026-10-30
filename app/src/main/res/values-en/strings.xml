@@ -46,7 +46,7 @@
     <string name="settings_home_icon_radius">Site icon corner radius</string>
     <string name="settings_home_search_radius">Search box corner radius</string>
     <string name="settings_home_search_height">Search box height</string>
-    <string name="settings_home_bg_color">Home background color</string>
+    <string name="settings_home_bg_color">Home base color</string>
     <string name="settings_home_bg_blur">Background image blur</string>
     <string name="settings_home_logo_size">Logo size</string>
     <string name="settings_home_logo_weight">Logo weight</string>
@@ -959,7 +959,12 @@
     <string name="settings_tab_button_order">Tab button order</string>
     <string name="settings_tab_undo_visible">Show undo closed tab button</string>
     <string name="download_size_speed">Downloaded %1$s / %2$s · %3$s/s</string>
+    <string name="download_size_speed_eta">Downloaded %1$s / %2$s · %3$s/s · %4$s</string>
     <string name="download_size_speed_unknown_total">Downloaded %1$s · %2$s/s</string>
+    <string name="download_eta_seconds">%1$d s left</string>
+    <string name="download_eta_minutes">%1$d min %2$d s left</string>
+    <string name="download_eta_hours">%1$d h %2$d min left</string>
+    <string name="download_eta_unknown">Time left unknown</string>
     <string name="download_bar_view">View</string>
     <string name="download_bar_downloading">Downloading: %1$s</string>
     <string name="history_load_more">Load more</string>

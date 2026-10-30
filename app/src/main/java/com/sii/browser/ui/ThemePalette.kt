@@ -39,4 +39,18 @@ object ThemePalette {
             ratio
         )
     }
+
+    /** 卡片填充：默认跟随主题色，只叠很淡的一层主色。 */
+    fun cardFill(context: Context, page: Boolean): Int {
+        val night = AppServices.settings.isNightMode()
+        val base = context.getColor(if (page) R.color.card_page else R.color.card)
+        return when (AppServices.settings.cardBg().coerceIn(0, 3)) {
+            0 -> ColorUtils.blendARGB(
+                base, ThemeAccent.color(context), if (night) 0.10f else 0.05f
+            )
+            2 -> if (night) 0xFF1D2024.toInt() else 0xFFF3F4F6.toInt()
+            3 -> if (night) 0xFF262A30.toInt() else 0xFFE9EBEF.toInt()
+            else -> base
+        }
+    }
 }

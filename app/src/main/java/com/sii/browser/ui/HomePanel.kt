@@ -971,10 +971,10 @@ class HomePanel(
         return android.graphics.drawable.LayerDrawable(layers.toTypedArray())
     }
 
-    /** 当前主页背景色；0 = 跟随主题。 */
+    /** 当前主页背景色；0 = 跟随主题色（主色淡底）。 */
     fun backgroundColor(): Int {
         val index = AppServices.settings.homeBgColor()
-        if (index <= 0) return context.getColor(R.color.bg_page)
+        if (index <= 0) return ThemePalette.soft(context)
         val colors = intArrayOf(
             0xFFFFFFFF.toInt(),
             0xFFF3F4F6.toInt(),

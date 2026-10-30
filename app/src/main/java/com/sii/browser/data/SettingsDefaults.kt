@@ -210,6 +210,9 @@ object SettingsDefaults {
     const val HOME_SEARCH_SHOW = true
     const val CARD_BORDER = true
 
+    /** 卡片背景色：0 跟随主题色 / 1 默认 / 2 浅灰 / 3 深灰。 */
+    const val CARD_BG = 0
+
     /** MCP 服务默认关闭；只监听本机回环。 */
     const val MCP_ENABLED = false
     const val MCP_PORT = 8765

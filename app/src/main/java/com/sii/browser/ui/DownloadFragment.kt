@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -233,11 +232,13 @@ class DownloadFragment : Fragment() {
     /** 结构不变时只刷新动态内容，按钮实例不动，点击/长按不被重建打断。 */
     private fun updateRow(task: com.sii.browser.data.db.DownloadTask) {
         val row = rowViews[task.id] ?: return
-        val bar = row.findViewById<ProgressBar>(R.id.download_progress) ?: return
-        bar.isIndeterminate = task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L
-        bar.progress = if (task.totalSize > 0) {
-            (task.downloadedSize * 100 / task.totalSize).toInt()
-        } else 0
+        val bar = row.findViewById<WaveProgressView>(R.id.download_progress) ?: return
+        bar.setIndeterminate(task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L)
+        bar.setProgressPercent(
+            if (task.totalSize > 0) (task.downloadedSize * 100 / task.totalSize).toInt() else 0
+        )
+        bar.setRunning(task.state == DownloadState.DOWNLOADING)
+        bar.visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
         boundTasks[task.id] = task
         row.findViewById<TextView>(R.id.download_state)?.let { tv ->
             val exists = taskFileExists(task)
@@ -374,11 +375,18 @@ class DownloadFragment : Fragment() {
             )
             setPadding(dp(6), 0, dp(6), 0)
         }
-        val bar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+        val bar = WaveProgressView(context).apply {
             id = R.id.download_progress
-            max = 100
-            this.progress = progress
-            isIndeterminate = task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(6)
+            ).apply {
+                topMargin = dp(8)
+                bottomMargin = dp(2)
+            }
+            setProgressPercent(progress)
+            setIndeterminate(task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L)
+            setRunning(task.state == DownloadState.DOWNLOADING)
             visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
         }
         val action = ImageButton(context).apply {
@@ -466,10 +474,11 @@ class DownloadFragment : Fragment() {
                 getString(R.string.download_size_only, formatSize(task.totalSize))
             task.state == DownloadState.DOWNLOADING && speed > 0 && task.totalSize > 0 ->
                 getString(
-                    R.string.download_size_speed,
+                    R.string.download_size_speed_eta,
                     formatSize(task.downloadedSize),
                     formatSize(task.totalSize),
-                    formatSize(speed)
+                    formatSize(speed),
+                    etaText(task, speed)
                 )
             task.state == DownloadState.DOWNLOADING && speed > 0 ->
                 getString(
@@ -484,6 +493,23 @@ class DownloadFragment : Fragment() {
                     formatSize(task.totalSize)
                 )
             else -> getString(R.string.download_size_unknown)
+        }
+    }
+
+    /** 剩余时间：按当前平滑速度估算，速度过低或剩余过大时不报具体值。 */
+    private fun etaText(task: com.sii.browser.data.db.DownloadTask, speed: Long): String {
+        val remain = (task.totalSize - task.downloadedSize).coerceAtLeast(0)
+        if (speed <= 0 || remain <= 0) return getString(R.string.download_eta_unknown)
+        val seconds = remain / speed
+        return when {
+            seconds < 60 -> getString(R.string.download_eta_seconds, seconds)
+            seconds < 3600 -> getString(
+                R.string.download_eta_minutes, seconds / 60, seconds % 60
+            )
+            seconds < 99 * 3600 -> getString(
+                R.string.download_eta_hours, seconds / 3600, seconds % 3600 / 60
+            )
+            else -> getString(R.string.download_eta_unknown)
         }
     }
 
