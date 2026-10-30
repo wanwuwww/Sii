@@ -155,14 +155,11 @@ class HomePanel(
         })
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                if (AppServices.settings.uiStyle() == 1) {
-                    applySearchStyle(focused = true)
-                } else {
-                    searchBox.elevation = dp(8).toFloat()
-                    searchBox.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        context.getColor(R.color.accent_soft)
-                    )
-                }
+                // 聚焦样式统一走经典：抬头 8dp + 主色淡底 tint，不区分界面风格。
+                searchBox.elevation = dp(8).toFloat()
+                searchBox.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    context.getColor(R.color.accent_soft)
+                )
                 searchScan.imageTintList = android.content.res.ColorStateList.valueOf(
                     ThemeAccent.color(context)
                 )
@@ -754,7 +751,7 @@ class HomePanel(
         val s = AppServices.settings
         val logo = view.findViewById<TextView>(R.id.home_logo)
         val logoIcon = view.findViewById<ImageView>(R.id.home_logo_icon)
-        val mode = if (s.homeStyle() == 2) 2 else s.homeLogoMode()
+        val mode = s.homeLogoMode()
         logo?.visibility = if (mode == 0) View.VISIBLE else View.GONE
         logoIcon?.visibility = if (mode == 1) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.home_clock)?.visibility =
@@ -784,11 +781,7 @@ class HomePanel(
             !colorValue.isNullOrBlank() -> parseColorValue(colorValue)?.let { logo?.setTextColor(it) }
             else -> logo?.setTextColor(context.getColor(R.color.text_primary))
         }
-        val columns = when (s.homeStyle()) {
-            1 -> 4
-            2 -> 2
-            else -> s.homeGridColumns().coerceIn(4, 6)
-        }
+        val columns = s.homeGridColumns().coerceIn(4, 6)
         if (grid.columnCount != columns) grid.columnCount = columns
         applySearchStyle()
         applyBackground()
@@ -831,11 +824,9 @@ class HomePanel(
         card ?: return
         val on = AppServices.settings.homeSitesCardBg()
         val dark = AppServices.settings.isNightMode()
-        val style = AppServices.settings.homeStyle()
         val themeFill = ThemePalette.fill(context, ThemePart.SITES)
         val base = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
         card.background = when {
-            style != 0 -> null
             !on -> null
             themeFill != null -> GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
@@ -912,15 +903,7 @@ class HomePanel(
             searchInput.setTextColor(context.getColor(R.color.text_primary))
             searchInput.setHintTextColor(context.getColor(R.color.text_secondary))
         }
-        // 极简 / 杂志：改为细边框，去掉胶囊与阴影；圆角仍按设置的档位。
-        if (AppServices.settings.homeStyle() != 0) {
-            box.background = GradientDrawable().apply {
-                cornerRadius = dp(radius).toFloat()
-                setColor(0x00000000)
-                setStroke(dp(1), if (dark) 0x33FFFFFF else 0x26000000)
-            }
-            box.elevation = 0f
-        }
+        // 主页无「极简/杂志」分支，搜索框样式统一由现有设置决定。
     }
 
     /** 应用主页背景：有图时异步采样解码并缓存，避免每次回主页阻塞主线程。 */

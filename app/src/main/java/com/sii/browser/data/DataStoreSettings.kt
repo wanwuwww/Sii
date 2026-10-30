@@ -258,12 +258,6 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setGlassStrength(value: Int) =
         putInt(SettingsKeys.GLASS_STRENGTH, value.coerceIn(0, 100))
 
-    override fun homeStyle(): Int =
-        int(SettingsKeys.HOME_STYLE, SettingsDefaults.HOME_STYLE).coerceIn(0, 2)
-
-    override fun setHomeStyle(value: Int) =
-        putInt(SettingsKeys.HOME_STYLE, value.coerceIn(0, 2))
-
     override fun homeSearchShow(): Boolean =
         bool(SettingsKeys.HOME_SEARCH_SHOW, SettingsDefaults.HOME_SEARCH_SHOW)
 

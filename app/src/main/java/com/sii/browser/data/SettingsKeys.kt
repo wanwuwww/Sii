@@ -251,7 +251,6 @@ object SettingsKeys {
     const val JS_CONSOLE_LOG = "js_console_log"
     const val SETTINGS_CARD_ALPHA = "settings_card_alpha"
     const val GLASS_STRENGTH = "glassstrength"
-    const val HOME_STYLE = "home_style"
     const val HOME_SEARCH_SHOW = "home_search_show"
     const val CARD_BORDER = "card_border"
     const val CARD_BG = "card_bg"

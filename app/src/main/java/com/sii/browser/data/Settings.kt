@@ -115,11 +115,6 @@ interface Settings :
 
     fun setGlassStrength(value: Int)
 
-    /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
-    fun homeStyle(): Int
-
-    fun setHomeStyle(value: Int)
-
     /** 主页搜索框是否显示。 */
     fun homeSearchShow(): Boolean
 

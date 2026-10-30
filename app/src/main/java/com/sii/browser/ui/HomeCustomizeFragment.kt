@@ -1267,7 +1267,6 @@ class HomeCustomizeFragment : Fragment() {
         when (index) {
             0 -> {
                 settings.setUiStyle(0)
-                settings.setHomeStyle(0)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(2)
                 settings.setMenuScrollStyle(0)
@@ -1285,7 +1284,6 @@ class HomeCustomizeFragment : Fragment() {
             }
             1 -> {
                 settings.setUiStyle(1)
-                settings.setHomeStyle(0)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(3)
                 settings.setMenuScrollStyle(0)
@@ -1302,7 +1300,6 @@ class HomeCustomizeFragment : Fragment() {
             }
             2 -> {
                 settings.setUiStyle(0)
-                settings.setHomeStyle(1)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(3)
                 settings.setMenuScrollStyle(0)
@@ -1312,6 +1309,8 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setThemeColorEnabled(false)
                 settings.setHomeShowLabels(true)
                 settings.setShowSites(true)
+                // 极简白：站点直接浮在主页背景上（原来的“无卡片背景”由该开关表达）。
+                settings.setHomeSitesCardBg(false)
                 settings.setHomeLogoMode(1)
                 settings.setHomeSearchRadius(0)
                 settings.setHomeSearchRadiusCustom(28)
@@ -1320,8 +1319,8 @@ class HomeCustomizeFragment : Fragment() {
             }
             else -> {
                 settings.setUiStyle(1)
-                settings.setHomeStyle(0)
                 settings.setTabCardGrid(false)
+                settings.setTabGridColumns(2)
                 settings.setMenuScrollStyle(1)
                 settings.setSettingsCardAlpha(0)
                 settings.setCardBorder(false)
