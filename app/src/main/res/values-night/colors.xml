@@ -12,7 +12,9 @@
     <color name="line">#FF2A2E34</color>
     <color name="toolbar_bg">#FF000000</color>
     <color name="accent">#FF5B93F7</color>
+    <color name="accent_default">#FFE3E4E8</color>
     <color name="accent_soft">#FF22304A</color>
+    <color name="accent_soft_default">#FF26282C</color>
     <color name="accent_soft_green">#FF1B352C</color>
     <color name="accent_soft_orange">#FF3A2A1A</color>
     <color name="accent_soft_purple">#FF2A2340</color>

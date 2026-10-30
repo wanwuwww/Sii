@@ -382,7 +382,7 @@ class DataStoreSettings(private val context: Context) : Settings {
         putInt(SettingsKeys.APP_UI, value)
     }
 
-    override fun skin(): String? = str(SettingsKeys.SKIN, "green")
+    override fun skin(): String? = str(SettingsKeys.SKIN, SettingsDefaults.SKIN)
 
     override fun setSkin(value: String?) {
         putStr(SettingsKeys.SKIN, value)
@@ -697,12 +697,6 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeSearchHeight(value: Int) =
         putInt(SettingsKeys.HOME_SEARCH_HEIGHT, value)
 
-    override fun homeBgColor(): Int =
-        int(SettingsKeys.HOME_BG_COLOR, 0)
-
-    override fun setHomeBgColor(value: Int) =
-        putInt(SettingsKeys.HOME_BG_COLOR, value)
-
     override fun homeBgBlur(): Int =
         int(SettingsKeys.HOME_BG_BLUR, SettingsDefaults.HOME_BG_BLUR)
 
@@ -960,21 +954,6 @@ class DataStoreSettings(private val context: Context) : Settings {
 
     override fun setHomeSearchAlpha(value: Int) =
         putInt(SettingsKeys.HOME_SEARCH_ALPHA, value.coerceIn(0, 100))
-
-    override fun homeBgApplyToolbar(): Boolean = bool(SettingsKeys.HOME_BG_APPLY_TOOLBAR, true)
-
-    override fun setHomeBgApplyToolbar(value: Boolean) =
-        putBool(SettingsKeys.HOME_BG_APPLY_TOOLBAR, value)
-
-    override fun homeBgApplyStatus(): Boolean = bool(SettingsKeys.HOME_BG_APPLY_STATUS, true)
-
-    override fun setHomeBgApplyStatus(value: Boolean) =
-        putBool(SettingsKeys.HOME_BG_APPLY_STATUS, value)
-
-    override fun homeBgApplyMenu(): Boolean = bool(SettingsKeys.HOME_BG_APPLY_MENU, true)
-
-    override fun setHomeBgApplyMenu(value: Boolean) =
-        putBool(SettingsKeys.HOME_BG_APPLY_MENU, value)
 
     override fun siteNoImage(): Boolean = bool(SettingsKeys.SITE_NO_IMAGE, false)
 

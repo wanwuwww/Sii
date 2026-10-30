@@ -62,9 +62,6 @@ object SettingsDefaults {
     /** 主页顶部地址栏入口，默认关闭（由界面风格预设控制）。 */
     const val HOME_TOP_ADDRESS = false
 
-    /** 主页背景色：0 跟随主题。 */
-    const val HOME_BG_COLOR = 0
-
     /** 背景图模糊：0 关。 */
     const val HOME_BG_BLUR = 0
 
@@ -209,6 +206,9 @@ object SettingsDefaults {
     const val HOME_STYLE = 0
     const val HOME_SEARCH_SHOW = true
     const val CARD_BORDER = true
+
+    /** 主色：default（中性随日夜）/ blue / green / orange / purple。 */
+    const val SKIN = "default"
 
     /** 卡片背景色：0 跟随主题色 / 1 默认 / 2 浅灰 / 3 深灰。 */
     const val CARD_BG = 0

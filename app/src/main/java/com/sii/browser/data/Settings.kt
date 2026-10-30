@@ -461,11 +461,6 @@ interface BehaviorSettings {
 
     fun setHomeSearchHeight(value: Int)
 
-    /** 主页背景色：0 跟随主题。 */
-    fun homeBgColor(): Int
-
-    fun setHomeBgColor(value: Int)
-
     /** 背景图模糊：0 关 / 1 小 / 2 中 / 3 大。 */
     fun homeBgBlur(): Int
 
@@ -698,18 +693,6 @@ interface BehaviorSettings {
     fun homeSearchAlpha(): Int
 
     fun setHomeSearchAlpha(value: Int)
-
-    fun homeBgApplyToolbar(): Boolean
-
-    fun setHomeBgApplyToolbar(value: Boolean)
-
-    fun homeBgApplyStatus(): Boolean
-
-    fun setHomeBgApplyStatus(value: Boolean)
-
-    fun homeBgApplyMenu(): Boolean
-
-    fun setHomeBgApplyMenu(value: Boolean)
 
     fun siteNoImage(): Boolean
 

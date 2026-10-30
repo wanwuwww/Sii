@@ -635,24 +635,6 @@ class HomeCustomizeFragment : Fragment() {
                 refreshPreview()
             }
         )
-        rows.add(
-            switchRow(getString(R.string.settings_bg_apply_status), settings.homeBgApplyStatus()) {
-                settings.setHomeBgApplyStatus(it)
-                refreshPreview()
-            }
-        )
-        rows.add(
-            switchRow(getString(R.string.settings_bg_apply_toolbar), settings.homeBgApplyToolbar()) {
-                settings.setHomeBgApplyToolbar(it)
-                refreshPreview()
-            }
-        )
-        rows.add(
-            switchRow(getString(R.string.settings_bg_apply_menu), settings.homeBgApplyMenu()) {
-                settings.setHomeBgApplyMenu(it)
-                refreshPreview()
-            }
-        )
         return rows
     }
 
@@ -1308,19 +1290,11 @@ class HomeCustomizeFragment : Fragment() {
         },
         choiceRow(
             "主题色",
-            arrayOf("默认（蓝）", "绿", "橙", "紫"),
+            arrayOf("默认", "蓝", "绿", "橙", "紫"),
             themeColorIndex()
         ) { index ->
             settings.setSkin(themeSkins[index])
             activity?.recreate()
-        },
-        choiceRow(
-            getString(R.string.settings_home_bg_color),
-            homeBgColorNames,
-            settings.homeBgColor().coerceIn(0, 6)
-        ) { index ->
-            settings.setHomeBgColor(index)
-            refreshPreview()
         },
         choiceRow(
             "网页文字颜色",
@@ -1433,15 +1407,13 @@ class HomeCustomizeFragment : Fragment() {
         } ?: activity?.recreate()
     }
 
-    private val themeSkins = arrayOf(null, "green", "orange", "purple")
-
-    private val homeBgColorNames =
-        arrayOf("跟随主题色", "白", "浅灰", "浅蓝", "浅绿", "深灰", "黑")
+    private val themeSkins = arrayOf("default", "blue", "green", "orange", "purple")
 
     private fun themeColorIndex(): Int = when (settings.skin()) {
-        "green" -> 1
-        "orange" -> 2
-        "purple" -> 3
+        "blue" -> 1
+        "green" -> 2
+        "orange" -> 3
+        "purple" -> 4
         else -> 0
     }
 

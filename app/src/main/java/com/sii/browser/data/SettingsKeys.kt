@@ -122,7 +122,6 @@ object SettingsKeys {
     const val HOME_ICON_RADIUS = "homeiconradius"
     const val HOME_SEARCH_RADIUS = "homesearchradius"
     const val HOME_SEARCH_HEIGHT = "homesearchheight"
-    const val HOME_BG_COLOR = "homebgcolor"
     const val HOME_BG_BLUR = "homebgblur"
     const val HOME_BG_BLUR_PERCENT = "homebgblurpercent"
     const val HOME_LOGO_SIZE = "homologosize"
@@ -174,9 +173,6 @@ object SettingsKeys {
     const val HOME_SEARCH_ALPHA = "homesearchalpha"
     /** 新版悬浮风格下，主页是否把地址栏显示在顶部。 */
     const val HOME_TOP_ADDRESS = "hometopaddress"
-    const val HOME_BG_APPLY_TOOLBAR = "homebgapplytoolbar"
-    const val HOME_BG_APPLY_STATUS = "homebgapplystatus"
-    const val HOME_BG_APPLY_MENU = "homebgapplymenu"
     const val SITE_NO_IMAGE = "sitenoimage"
     const val SITE_BACK_NO_RELOAD = "sitebacknoreload"
     const val SITE_ALLOW_REDIRECT = "siteallowredirect"

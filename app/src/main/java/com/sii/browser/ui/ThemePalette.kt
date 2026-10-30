@@ -29,17 +29,6 @@ object ThemePalette {
         )
     }
 
-    /** 网页态工具栏底色：在工具栏底色上叠一层主色。 */
-    fun chromeBase(context: Context): Int {
-        val night = AppServices.settings.isNightMode()
-        val ratio = if (night) DARK_WEIGHT else LIGHT_WEIGHT
-        return ColorUtils.blendARGB(
-            context.getColor(if (night) R.color.card else R.color.toolbar_bg),
-            ThemeAccent.color(context),
-            ratio
-        )
-    }
-
     /** 卡片填充：默认跟随主题色，只叠很淡的一层主色。 */
     fun cardFill(context: Context, page: Boolean): Int {
         val night = AppServices.settings.isNightMode()

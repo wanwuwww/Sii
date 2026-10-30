@@ -46,7 +46,6 @@
     <string name="settings_home_icon_radius">网站图标圆角</string>
     <string name="settings_home_search_radius">搜索框圆角</string>
     <string name="settings_home_search_height">搜索框高度</string>
-    <string name="settings_home_bg_color">主页底色</string>
     <string name="settings_home_bg_blur">背景图模糊</string>
     <string name="settings_home_logo_size">Logo 字号</string>
     <string name="settings_home_logo_weight">Logo 字重</string>
@@ -910,9 +909,6 @@
     <string name="import_password_wrong">密码错误或文件损坏</string>
     <string name="export_failed">导出失败</string>
     <string name="settings_home_search_alpha">搜索框背景透明度</string>
-    <string name="settings_bg_apply_toolbar">工具栏使用主页背景色</string>
-    <string name="settings_bg_apply_status">状态栏使用主页背景色</string>
-    <string name="settings_bg_apply_menu">菜单面板使用主页背景色</string>
     <string name="settings_home_logo_show">显示主页 Logo</string>
     <string name="site_rule_single_title">单个网站设置</string>
     <string name="settings_site_no_image">不加载图片</string>

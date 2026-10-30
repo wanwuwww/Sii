@@ -1247,11 +1247,6 @@ class SettingsDetailFragment : Fragment() {
                 recreateAfterSave()
             },
             choiceRow(
-                getString(R.string.settings_home_bg_color),
-                HOME_BG_COLOR_NAMES,
-                settings.homeBgColor().coerceIn(0, 6)
-            ) { settings.setHomeBgColor(it) },
-            choiceRow(
                 getString(R.string.settings_web_text_color),
                 arrayOf(
                     getString(R.string.settings_web_text_color_original),
@@ -1487,19 +1482,7 @@ class SettingsDetailFragment : Fragment() {
             sliderRow(
                 getString(R.string.settings_home_bg_overlay),
                 settings.homeBgOverlay(), 0, 100, 5
-            ) { settings.setHomeBgOverlay(it) },
-            switchRow(
-                getString(R.string.settings_bg_apply_toolbar),
-                settings.homeBgApplyToolbar()
-            ) { settings.setHomeBgApplyToolbar(it) },
-            switchRow(
-                getString(R.string.settings_bg_apply_status),
-                settings.homeBgApplyStatus()
-            ) { settings.setHomeBgApplyStatus(it) },
-            switchRow(
-                getString(R.string.settings_bg_apply_menu),
-                settings.homeBgApplyMenu()
-            ) { settings.setHomeBgApplyMenu(it) }
+            ) { settings.setHomeBgOverlay(it) }
         )
     }
 
@@ -2877,8 +2860,6 @@ class SettingsDetailFragment : Fragment() {
         private val HOME_ICON_RADIUS_NAMES = arrayOf("无", "小", "中", "大")
         private val HOME_SEARCH_RADIUS_NAMES = arrayOf("小", "中", "大", "自定义")
         private val HOME_SEARCH_HEIGHT_NAMES = arrayOf("紧凑", "标准", "宽松")
-        private val HOME_BG_COLOR_NAMES =
-            arrayOf("跟随主题色", "白", "浅灰", "浅蓝", "浅绿", "深灰", "黑")
         private val HOME_BG_BLUR_NAMES = arrayOf("关", "小", "中", "大")
         private val LOGO_SIZE_NAMES = arrayOf("小 24", "中 34", "大 44", "自定义")
         private val LOGO_SIZE_VALUES = intArrayOf(24, 34, 44)
@@ -2916,11 +2897,11 @@ class SettingsDetailFragment : Fragment() {
         )
         private val ENGINES = com.sii.browser.data.SearchEngines.DEFAULT
 
-        private val THEME_COLOR_NAMES = arrayOf("默认（蓝）", "绿", "橙", "紫")
+        private val THEME_COLOR_NAMES = arrayOf("默认", "蓝", "绿", "橙", "紫")
         private val DOWNLOADER_NAMES = arrayOf("Sii 内建下载器", "系统下载管理器")
         private val DOWNLOAD_PROTOCOL_NAMES = arrayOf("自动", "HTTP/2", "HTTP/1.1")
         private val DOWNLOAD_PARALLEL_NAMES = arrayOf("1", "2", "3", "4")
-        private val THEME_COLOR_IDS = arrayOf(null, "green", "orange", "purple")
+        private val THEME_COLOR_IDS = arrayOf("default", "blue", "green", "orange", "purple")
 
         /** 长按菜单项。 */
         private val LONG_PRESS_ITEMS = listOf(

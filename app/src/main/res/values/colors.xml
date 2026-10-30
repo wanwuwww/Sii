@@ -13,10 +13,12 @@
     <color name="line">#FFECECF0</color>
     <color name="toolbar_bg">#FFFFFFFF</color>
     <color name="accent">#FF2F7CF6</color>
+    <color name="accent_default">#FF3F4146</color>
     <color name="accent_green">#FF34C28F</color>
     <color name="accent_orange">#FFF2984A</color>
     <color name="accent_purple">#FF8A6FF0</color>
     <color name="accent_soft">#FFEAF2FF</color>
+    <color name="accent_soft_default">#FFF2F2F4</color>
     <color name="accent_soft_green">#FFE8F7F1</color>
     <color name="accent_soft_orange">#FFFFF1E4</color>
     <color name="accent_soft_purple">#FFF1EDFF</color>

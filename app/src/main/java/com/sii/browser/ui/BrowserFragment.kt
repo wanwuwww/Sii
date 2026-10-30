@@ -4242,25 +4242,27 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun upgradeToHttps(url: String): String =
         if (url.startsWith("http://")) "https://" + url.substring(7) else url
 
-    /** 主页背景色应用到工具栏/状态栏/菜单面板；离开主页或使用背景图时恢复。 */
+    /** 主页：工具栏/状态栏/菜单面板统一用主色淡底；网页交给 applySiteThemeColor 与默认色。 */
     private fun applyHomeChromeTint() {
         val isHome = homeContainer?.visibility == View.VISIBLE
-        val panel = view?.findViewById<View>(R.id.menu_panel)
+        if (!isHome) return
         val shell = activity as? ShellActivity
-        val s = AppServices.settings
-        val color = if (isHome && s.homeBackground() == null) homePanel?.backgroundColor() else null
-        if (color != null) {
-            if (s.homeBgApplyMenu() && AppServices.settings.uiStyle() != 1) {
-                panel?.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(color)
-            } else if (AppServices.settings.uiStyle() == 1) {
-                panel?.backgroundTintList = null
-            }
-            if (s.homeBgApplyStatus()) shell?.applyStatusBarColor(color)
-        } else {
-            panel?.backgroundTintList = null
-            shell?.applyStatusBarColor(null)
+        if (AppServices.settings.homeBackground() != null) {
+            // 背景图铺满时交给 applyChromeBackground，避免把图盖成纯色。
+            return
         }
+        val color = ThemePalette.soft(requireContext())
+        if (AppServices.settings.uiStyle() == 1) {
+            applyDockGlass()
+            view?.findViewById<View>(R.id.menu_panel)?.backgroundTintList = null
+        } else {
+            intArrayOf(
+                R.id.address_bar, R.id.bottom_bar, R.id.tab_bar, R.id.search_toolbar_scroll
+            ).forEach { id -> view?.findViewById<View>(id)?.setBackgroundColor(color) }
+            view?.findViewById<View>(R.id.menu_panel)?.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(color)
+        }
+        shell?.applyStatusBarColor(color)
     }
 
     private fun showHome(createTab: Boolean = true) {
@@ -4329,6 +4331,13 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         homeContainer?.visibility = View.GONE
         attachCurrentWebView()
         tabManager.currentWebView?.visibility = View.VISIBLE
+        // 从主页发起导航时进度条被“主页不显示”挡住，切到网页后补上当前进度。
+        if (tabManager.currentWebView?.let { pageLoadFinished[it] } == false) {
+            progressBar?.let {
+                it.alpha = 1f
+                it.visibility = View.VISIBLE
+            }
+        }
         updateQuickEngineVisibility()
         updateSiteInfoVisibility()
         applyHomeChrome(false)
@@ -4360,10 +4369,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         } else null
 
         val modern = AppServices.settings.uiStyle() == 1
-        // 「应用到工具栏」只作用于网页态：主页保持默认底色，回网页时换成主色淡底。
-        val pageTint = if (!enabled && !hasImage && AppServices.settings.homeBgApplyToolbar()) {
-            ThemePalette.chromeBase(requireContext())
-        } else null
+        // 主页工具栏用主色淡底，网页恢复默认（网站识别色由 applySiteThemeColor 覆盖）。
+        val homeTint = if (enabled && !hasImage) ThemePalette.soft(requireContext()) else null
         val barIds = intArrayOf(
             R.id.address_bar, R.id.bottom_bar, R.id.tab_bar, R.id.search_toolbar_scroll
         )
@@ -4381,7 +4388,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 if (enabled) View.GONE else View.VISIBLE
             val chromeColor = when {
                 hasImage -> android.graphics.Color.TRANSPARENT
-                pageTint != null -> pageTint
+                homeTint != null -> homeTint
                 else -> toolbarColor
             }
             barIds.forEach { id ->
@@ -4404,7 +4411,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         applyDockGlass()
         view?.findViewById<View>(R.id.browser_root)?.setBackgroundColor(
-            if (hasImage) android.graphics.Color.TRANSPARENT else pageTint ?: toolbarColor
+            if (hasImage) android.graphics.Color.TRANSPARENT else homeTint ?: toolbarColor
         )
     }
 
@@ -5305,17 +5312,22 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val menuBg = menuThemeColor
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
+        // 主页菜单面板用主色淡底（悬浮再叠一层玻璃），网页保持默认。
+        val homeMenu = if (homeContainer?.visibility == View.VISIBLE &&
+            AppServices.settings.homeBackground() == null
+        ) ThemePalette.soft(requireContext()) else null
         view?.findViewById<View>(R.id.menu_panel)?.apply {
             if (modern) {
                 background = GlassStyle.background(
                     requireContext(), dark, dp(28).toFloat(),
-                    AppServices.settings.glassStrength(), topOnly = true, minAlpha = 170
+                    AppServices.settings.glassStrength(), topOnly = true, minAlpha = 170,
+                    base = homeMenu
                 )
                 backgroundTintList = null
             } else {
                 setBackgroundResource(R.drawable.bg_modern_sheet)
                 backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    menuBg ?: requireContext().getColor(R.color.card)
+                    menuBg ?: homeMenu ?: requireContext().getColor(R.color.card)
                 )
             }
         }
@@ -5324,7 +5336,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             else requireContext().getColor(R.color.text_primary)
         )
         val menuForeground = if (dark) android.graphics.Color.WHITE
-        else menuBg?.let { contrastOn(it) }
+        else (menuBg ?: homeMenu)?.let { contrastOn(it) }
 
         val toggles = menuToggles ?: return
         toggles.removeAllViews()
@@ -9599,10 +9611,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             if (bar.parent === root && current != null &&
                 current.gravity == android.view.Gravity.TOP
             ) {
-                if (current.height != dp(2)) {
-                    current.height = dp(2)
+                if (current.height != dp(3)) {
+                    current.height = dp(3)
                     bar.layoutParams = current
                 }
+                applyProgressTrack(bar)
                 return
             }
             (bar.parent as? ViewGroup)?.removeView(bar)
@@ -9610,11 +9623,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 bar,
                 FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(2),
+                    dp(3),
                     android.view.Gravity.TOP
                 )
             )
             bar.elevation = dp(2).toFloat()
+            applyProgressTrack(bar)
             return
         }
         val content = root.findViewById<LinearLayout>(R.id.browser_content) ?: return
@@ -9634,6 +9648,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3))
         )
         bar.elevation = 0f
+        bar.background = null
+    }
+
+    /** 顶部进度条的轨道底色：未加载部分也看得见，才知道这是进度条。 */
+    private fun applyProgressTrack(bar: View) {
+        bar.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(withAlpha(requireContext().getColor(R.color.line), 0.6f))
+        }
     }
 
     /**
@@ -10143,11 +10165,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         )
     }
 
-    /** 悬浮底栏底色：网页态且开启「应用到工具栏」时用主色淡底，主页保持默认玻璃色。 */
+    /** 悬浮底栏底色：主页用主色淡底并与玻璃强度叠加，网页保持默认白/黑玻璃。 */
     private fun dockBaseColor(): Int? {
-        if (homeContainer?.visibility == View.VISIBLE) return null
-        if (!AppServices.settings.homeBgApplyToolbar()) return null
-        return ThemePalette.chromeBase(requireContext())
+        if (homeContainer?.visibility != View.VISIBLE) return null
+        if (AppServices.settings.homeBackground() != null) return null
+        return ThemePalette.soft(requireContext())
     }
 
     private var scrollAccum = 0

@@ -971,20 +971,8 @@ class HomePanel(
         return android.graphics.drawable.LayerDrawable(layers.toTypedArray())
     }
 
-    /** 当前主页背景色；0 = 跟随主题色（主色淡底）。 */
-    fun backgroundColor(): Int {
-        val index = AppServices.settings.homeBgColor()
-        if (index <= 0) return ThemePalette.soft(context)
-        val colors = intArrayOf(
-            0xFFFFFFFF.toInt(),
-            0xFFF3F4F6.toInt(),
-            0xFFEAF2FF.toInt(),
-            0xFFEAF7EF.toInt(),
-            0xFF2B2F36.toInt(),
-            0xFF000000.toInt()
-        )
-        return colors[(index - 1).coerceIn(0, colors.size - 1)]
-    }
+    /** 主页背景色：始终跟随主色淡底。 */
+    fun backgroundColor(): Int = ThemePalette.soft(context)
 
     /** 无背景图时的背景色；0 = 跟随主题。 */
     private fun applyBgColor() {

@@ -46,7 +46,6 @@
     <string name="settings_home_icon_radius">Site icon corner radius</string>
     <string name="settings_home_search_radius">Search box corner radius</string>
     <string name="settings_home_search_height">Search box height</string>
-    <string name="settings_home_bg_color">Home base color</string>
     <string name="settings_home_bg_blur">Background image blur</string>
     <string name="settings_home_logo_size">Logo size</string>
     <string name="settings_home_logo_weight">Logo weight</string>
@@ -909,9 +908,6 @@
     <string name="import_password_wrong">Wrong password or corrupted file</string>
     <string name="export_failed">Export failed</string>
     <string name="settings_home_search_alpha">Search box background opacity</string>
-    <string name="settings_bg_apply_toolbar">Toolbar uses home background color</string>
-    <string name="settings_bg_apply_status">Status bar uses home background color</string>
-    <string name="settings_bg_apply_menu">Menu panel uses home background color</string>
     <string name="settings_home_logo_show">Show home logo</string>
     <string name="site_rule_single_title">Individual site settings</string>
     <string name="settings_site_no_image">Do not load images</string>

@@ -64,6 +64,10 @@
         <item name="android:colorAccent">@color/accent_purple</item>
         <item name="colorAccent">@color/accent_purple</item>
     </style>
+    <style name="SiiDialogDefault" parent="SiiDialog">
+        <item name="android:colorAccent">@color/accent_default</item>
+        <item name="colorAccent">@color/accent_default</item>
+    </style>
     <style name="SiiDialogNightGreen" parent="SiiDialogNight">
         <item name="android:colorAccent">@color/accent_green</item>
         <item name="colorAccent">@color/accent_green</item>
@@ -75,6 +79,10 @@
     <style name="SiiDialogNightPurple" parent="SiiDialogNight">
         <item name="android:colorAccent">@color/accent_purple</item>
         <item name="colorAccent">@color/accent_purple</item>
+    </style>
+    <style name="SiiDialogNightDefault" parent="SiiDialogNight">
+        <item name="android:colorAccent">@color/accent_default</item>
+        <item name="colorAccent">@color/accent_default</item>
     </style>
 
     <style name="Theme.Sii.Dialog" parent="Theme.AppCompat.Dialog.Alert">
@@ -123,6 +131,14 @@
         <item name="alertDialogTheme">@style/SiiDialogPurple</item>
         <item name="android:alertDialogTheme">@style/SiiDialogPurple</item>
     </style>
+    <!-- 「默认」主色：中性无彩色，白天近白/夜间深色，强调色用深浅适宜的灰。 -->
+    <style name="Theme.Sii.Default" parent="Theme.Sii">
+        <item name="android:colorAccent">@color/accent_default</item>
+        <item name="colorAccent">@color/accent_default</item>
+        <item name="accentSoft">@color/accent_soft_default</item>
+        <item name="alertDialogTheme">@style/SiiDialogDefault</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogDefault</item>
+    </style>
 
     <style name="Theme.Sii.Night.Green" parent="Theme.Sii.Night">
         <item name="android:colorAccent">@color/accent_green</item>
@@ -144,6 +160,13 @@
         <item name="accentSoft">@color/accent_soft_purple</item>
         <item name="alertDialogTheme">@style/SiiDialogNightPurple</item>
         <item name="android:alertDialogTheme">@style/SiiDialogNightPurple</item>
+    </style>
+    <style name="Theme.Sii.Night.Default" parent="Theme.Sii.Night">
+        <item name="android:colorAccent">@color/accent_default</item>
+        <item name="colorAccent">@color/accent_default</item>
+        <item name="accentSoft">@color/accent_soft_default</item>
+        <item name="alertDialogTheme">@style/SiiDialogNightDefault</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightDefault</item>
     </style>
 
     <!-- 新版深色弹窗（白天/夜间通用，跟随主色变体） -->
@@ -175,6 +198,10 @@
         <item name="android:colorAccent">@color/accent_purple</item>
         <item name="colorAccent">@color/accent_purple</item>
     </style>
+    <style name="SiiDialogModernDefault" parent="SiiDialogModern">
+        <item name="android:colorAccent">@color/accent_default</item>
+        <item name="colorAccent">@color/accent_default</item>
+    </style>
 
     <style name="ThemeOverlay.Sii.DialogModern" parent="">
         <item name="alertDialogTheme">@style/SiiDialogModern</item>
@@ -191,6 +218,10 @@
     <style name="ThemeOverlay.Sii.DialogModernPurple" parent="">
         <item name="alertDialogTheme">@style/SiiDialogModernPurple</item>
         <item name="android:alertDialogTheme">@style/SiiDialogModernPurple</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogModernDefault" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogModernDefault</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogModernDefault</item>
     </style>
 
     <style name="ThemeOverlay.Sii.DialogClassic" parent="">
@@ -209,6 +240,10 @@
         <item name="alertDialogTheme">@style/SiiDialogPurple</item>
         <item name="android:alertDialogTheme">@style/SiiDialogPurple</item>
     </style>
+    <style name="ThemeOverlay.Sii.DialogClassicDefault" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogDefault</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogDefault</item>
+    </style>
     <style name="ThemeOverlay.Sii.DialogClassicNight" parent="">
         <item name="alertDialogTheme">@style/SiiDialogNight</item>
         <item name="android:alertDialogTheme">@style/SiiDialogNight</item>
@@ -224,6 +259,10 @@
     <style name="ThemeOverlay.Sii.DialogClassicNightPurple" parent="">
         <item name="alertDialogTheme">@style/SiiDialogNightPurple</item>
         <item name="android:alertDialogTheme">@style/SiiDialogNightPurple</item>
+    </style>
+    <style name="ThemeOverlay.Sii.DialogClassicNightDefault" parent="">
+        <item name="alertDialogTheme">@style/SiiDialogNightDefault</item>
+        <item name="android:alertDialogTheme">@style/SiiDialogNightDefault</item>
     </style>
 
     <!-- 底部工具栏按钮 -->
