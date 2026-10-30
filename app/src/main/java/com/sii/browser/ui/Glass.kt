@@ -87,7 +87,8 @@ object GlassStyle {
         layers.add(body)
         // 进度填充层插在填充与高光之间，保证高光/内阴影仍在最上层。
         overlay?.let { layers.add(it) }
-        layers.add(gloss)
+        // highlight = 0 表示不要高光层（悬浮底栏）。
+        if (highlight > 0f) layers.add(gloss)
         layers.add(innerShade)
         return LayerDrawable(layers.toTypedArray())
     }

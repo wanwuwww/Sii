@@ -10197,6 +10197,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         dock.background = GlassStyle.surface(
             requireContext(), night, radius, strength,
             minAlpha = DOCK_GLASS_MIN_ALPHA, base = dockBaseColor(),
+            highlight = 0f,
             shade = 0.03f,
             strokeOverride = if (night) 0x2AFFFFFF else 0x1C000000,
             overlay = clip
