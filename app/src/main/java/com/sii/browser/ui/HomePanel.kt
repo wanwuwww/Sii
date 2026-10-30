@@ -831,6 +831,12 @@ class HomePanel(
      * 系统 elevation 的阴影画在 View 背后，会透过半透明填充形成内圈灰；
      * 这种画法把阴影放在描边之外，内部保持纯净。
      */
+    /**
+     * 假阴影背景：多层 halo 环从描边向外逐渐变淡（越外越淡），内层卡片保持半透明。
+     *
+     * 系统 elevation 的阴影画在 View 背后，会透过半透明填充形成内圈灰；
+     * 这种画法把阴影放在描边之外，内部保持纯净。
+     */
     private fun haloBackground(
         radiusDp: Int,
         fill: Int,
@@ -839,20 +845,39 @@ class HomePanel(
         dark: Boolean
     ): Drawable {
         val radius = dp(radiusDp).toFloat()
-        val halo = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = radius + dp(haloDp)
-            setColor(Color.TRANSPARENT)
-            setStroke(dp(haloDp), if (dark) 0x14FFFFFF else 0x0D000000)
+        val halo = dp(haloDp)
+        val steps = 6
+        val stepPx = (halo / steps).coerceAtLeast(1)
+        val ringRgb = if (dark) 0xFFFFFF else 0x000000
+        val maxAlpha = if (dark) 0x3A else 0x30
+        val layers = ArrayList<Drawable>(steps + 1)
+        // i = 1 最外圈（最淡），i = steps 紧贴卡片（最深）
+        for (i in 1..steps) {
+            val inset = stepPx * (i - 1)
+            val alpha = (maxAlpha * i / steps).coerceIn(0, 255)
+            layers.add(
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = radius + (halo - inset).toFloat()
+                    setColor(Color.TRANSPARENT)
+                    setStroke(stepPx, (alpha shl 24) or ringRgb)
+                }
+            )
         }
-        val body = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = radius
-            setColor(fill)
-            setStroke(dp(1), stroke)
-        }
-        return LayerDrawable(arrayOf(halo, body)).apply {
-            setLayerInset(1, dp(haloDp), dp(haloDp), dp(haloDp), dp(haloDp))
+        layers.add(
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = radius
+                setColor(fill)
+                setStroke(dp(1), stroke)
+            }
+        )
+        return LayerDrawable(layers.toTypedArray()).apply {
+            for (i in 1..steps) {
+                val inset = stepPx * (i - 1)
+                setLayerInset(i - 1, inset, inset, inset, inset)
+            }
+            setLayerInset(steps, halo, halo, halo, halo)
         }
     }
 
@@ -875,7 +900,7 @@ class HomePanel(
             }
             // 卡片不走玻璃：半透明卡 + 细描边 + 描边外的 halo 假阴影。
             else -> haloBackground(
-                24, fill, if (dark) 0x1FFFFFFF else 0x14000000, 3, dark
+                24, fill, if (dark) 0x1FFFFFFF else 0x14000000, 8, dark
             )
         }
         card.elevation = 0f
@@ -907,15 +932,15 @@ class HomePanel(
         val alpha = surfaceAlpha(175)
         val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
         box.background = haloBackground(
-            radius, (alpha shl 24) or (baseColor and 0x00FFFFFF), strokeColor, 2, dark
+            radius, (alpha shl 24) or (baseColor and 0x00FFFFFF), strokeColor, 5, dark
         )
         box.elevation = 0f
         val padV = when (AppServices.settings.homeSearchHeight()) {
             0 -> 2
             2 -> 8
             else -> 4
-        }
-        box.setPadding(dp(8), dp(padV), dp(4), dp(padV))
+        }.coerceAtLeast(5)
+        box.setPadding(dp(8), dp(padV), dp(6), dp(padV))
         val normalIcon = if (dark) 0xCCFFFFFF.toInt()
         else context.getColor(R.color.text_secondary)
         searchScan.imageTintList = android.content.res.ColorStateList.valueOf(
