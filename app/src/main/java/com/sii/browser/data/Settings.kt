@@ -291,7 +291,7 @@ interface AppearanceSettings {
 
     fun setThemeColorMenu(value: Boolean)
 
-    /** 颜色定义：各元素是否使用主题色（默认全关）。 */
+    /** 主题色应用范围：各元素是否在主页使用主题色（默认全关）。 */
     fun themePartToolbar(): Boolean
 
     fun setThemePartToolbar(value: Boolean)

@@ -4242,7 +4242,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun upgradeToHttps(url: String): String =
         if (url.startsWith("http://")) "https://" + url.substring(7) else url
 
-    /** 主页：按「颜色定义」的开关给工具栏/标签栏/菜单/状态栏上主色淡底，未开启回默认色。 */
+    /** 主页：按「主题色应用范围」的开关给工具栏/标签栏/菜单/状态栏上主色淡底，未开启回默认色。 */
     private fun applyHomeChromeTint() {
         val isHome = homeContainer?.visibility == View.VISIBLE
         if (!isHome) return
@@ -4376,9 +4376,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         } else null
 
         val modern = AppServices.settings.uiStyle() == 1
-        // 按「颜色定义」的开关上主色淡底；未开启回默认色（识别色仍由 applySiteThemeColor 覆盖）。
-        val toolbarFill = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
-        val tabsFill = ThemePalette.fill(requireContext(), ThemePart.TABS)
+        // 按「主题色应用范围」的开关上主色淡底；网页还要看「网页应用主题色」。
+        val toolbarFill = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR, onWeb = !enabled)
+        val tabsFill = ThemePalette.fill(requireContext(), ThemePart.TABS, onWeb = !enabled)
         val barIds = intArrayOf(
             R.id.address_bar, R.id.bottom_bar, R.id.tab_bar, R.id.search_toolbar_scroll
         )
@@ -4568,7 +4568,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
-        val themeFill = ThemePalette.fill(requireContext(), ThemePart.TABS)
+        val themeFill = ThemePalette.fill(
+            requireContext(), ThemePart.TABS, onWeb = homeContainer?.visibility != View.VISIBLE
+        )
         val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 165, themeFill)
         else themeFill ?: requireContext().getColor(R.color.bg)
         val mergedAlpha = ((((fill ushr 24) and 0xFF) * alpha) / 255).coerceIn(0, 255)
@@ -5324,8 +5326,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val menuBg = menuThemeColor
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
-        // 菜单面板按「菜单页」颜色定义上主色淡底（悬浮再叠一层玻璃），未开启用卡片色。
-        val menuFill = ThemePalette.fill(requireContext(), ThemePart.MENU)
+        // 菜单面板按「菜单页」开关上主色淡底（悬浮再叠一层玻璃），未开启用卡片色。
+        val menuFill = ThemePalette.fill(
+            requireContext(), ThemePart.MENU, onWeb = homeContainer?.visibility != View.VISIBLE
+        )
         view?.findViewById<View>(R.id.menu_panel)?.apply {
             if (modern) {
                 background = GlassStyle.background(
@@ -6824,13 +6828,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         // 网站主题色只在白天生效（含其下所有设置），夜间只用主题色淡底。
         if (settings.isNightMode()) {
             if (settings.uiStyle() != 1) {
-                applyToolbarTheme(ThemePalette.fill(requireContext(), ThemePart.TOOLBAR))
-                applyAddressTheme(ThemePalette.fill(requireContext(), ThemePart.TOOLBAR))
+                val fallback = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR, onWeb = true)
+                applyToolbarTheme(fallback)
+                applyAddressTheme(fallback)
             }
             menuThemeColor = null
             longPressThemeColor = null
             (activity as? ShellActivity)?.applyStatusBarColor(
-                ThemePalette.fill(requireContext(), ThemePart.STATUS)
+                ThemePalette.fill(requireContext(), ThemePart.STATUS, onWeb = true)
             )
             return
         }
@@ -6839,15 +6844,16 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         if (raw != null && raw == previous) {
             return
         }
-        // 「优先于主题色识别」打开时主题色压过识别色（互斥已在数据层保证识别开关为关）。
+        // 「网页应用主题色」打开时主题色压过识别色（互斥已在数据层保证识别开关为关）。
         val effective = raw?.takeIf {
             settings.themeColorEnabled() && !settings.themeOverDetect()
         }
         val modern = settings.uiStyle() == 1
+        val onHome = homeContainer?.visibility == View.VISIBLE
         if (!modern) {
             val toolbarTheme = if (settings.themeColorToolbar()) effective else null
             val addressTheme = if (settings.themeColorAddress()) effective else null
-            val fallback = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
+            val fallback = ThemePalette.fill(requireContext(), ThemePart.TOOLBAR, onWeb = !onHome)
             applyToolbarTheme(toolbarTheme ?: fallback)
             applyAddressTheme(addressTheme ?: fallback)
         }
@@ -6855,9 +6861,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         longPressThemeColor = if (settings.themeColorLongPress()) effective else null
         (activity as? ShellActivity)?.applyStatusBarColor(
             (if (settings.themeColorStatus()) effective else null)
-                ?: ThemePalette.fill(requireContext(), ThemePart.STATUS)
+                ?: ThemePalette.fill(requireContext(), ThemePart.STATUS, onWeb = !onHome)
         )
-        if (homeContainer?.visibility == View.VISIBLE) applyHomeChrome(true)
+        if (onHome) {
+            applyHomeChrome(true)
+            applyHomeChromeTint()
+        }
         if (menuOverlay?.visibility == View.VISIBLE) renderMenuSheet()
         // 白天：强制为背景色时，把识别到的主题色应用到整页。
         if (raw != null && settings.themeColorEnabled() &&
@@ -10187,10 +10196,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         )
     }
 
-    /** 悬浮底栏底色：开启「工具栏」颜色定义时用主色淡底，与玻璃强度叠加。 */
+    /** 悬浮底栏底色：选中「工具栏」且（主页或已开网页应用）时用主色淡底，与玻璃强度叠加。 */
     private fun dockBaseColor(): Int? {
         if (AppServices.settings.homeBackground() != null) return null
-        return ThemePalette.fill(requireContext(), ThemePart.TOOLBAR)
+        val onWeb = homeContainer?.visibility != View.VISIBLE
+        return ThemePalette.fill(requireContext(), ThemePart.TOOLBAR, onWeb)
     }
 
     private var scrollAccum = 0

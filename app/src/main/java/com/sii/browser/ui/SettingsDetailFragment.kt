@@ -3084,7 +3084,7 @@ class SettingsDetailFragment : Fragment() {
             toast(if (ok) R.string.data_imported else R.string.rules_import_failed)
         }
     }
-    /** 颜色定义：逐项选择哪些位置使用主题色；最后一个开关与网站识别色互斥。 */
+    /** 主题色应用范围：逐项选择哪些位置在主页使用主题色；最后一个开关控制网页。 */
     private fun buildV2ColorDefine() {
         card(
             switchRow(

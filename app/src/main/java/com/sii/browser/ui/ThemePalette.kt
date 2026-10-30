@@ -7,7 +7,7 @@ import androidx.core.graphics.ColorUtils
 import com.sii.browser.R
 import com.sii.browser.di.AppServices
 
-/** 颜色定义里的元素：对应「主题 → 颜色定义」的 6 个开关。 */
+/** 主题色应用范围里的元素：对应「主题 → 主题色应用范围」的 6 个开关。 */
 enum class ThemePart { TOOLBAR, TABS, SITES, HOME_BG, MENU, STATUS }
 
 /**
@@ -46,8 +46,12 @@ object ThemePalette {
     }
 
     /** 元素的主题色淡底；未开启时返回 null，由调用方回落默认色。 */
-    fun fill(context: Context, part: ThemePart): Int? =
-        if (enabled(part)) soft(context) else null
+    fun fill(context: Context, part: ThemePart, onWeb: Boolean = false): Int? {
+        if (!enabled(part)) return null
+        // 这 6 个开关只作用于主页；网页还要额外看「网页应用主题色」。
+        if (onWeb && !AppServices.settings.themeOverDetect()) return null
+        return soft(context)
+    }
 
     /** 卡片填充：默认跟随主题色，只叠很淡的一层主色。 */
     fun cardFill(context: Context, page: Boolean): Int {

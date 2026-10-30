@@ -976,7 +976,7 @@ class HomePanel(
         return android.graphics.drawable.LayerDrawable(layers.toTypedArray())
     }
 
-    /** 主页底色：开启「主页背景」颜色定义时用主色淡底，否则用页面底色。 */
+    /** 主页底色：开启「主页背景」时用主色淡底，否则用页面底色。 */
     fun backgroundColor(): Int =
         ThemePalette.fill(context, ThemePart.HOME_BG) ?: context.getColor(R.color.bg_page)
 

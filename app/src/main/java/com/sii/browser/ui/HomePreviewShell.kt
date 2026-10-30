@@ -104,7 +104,7 @@ class HomePreviewShell(
     /** 新版预览：单行玻璃底栏，颜色跟随日夜。 */
     private fun buildModernDock(): View {
         val night = AppServices.settings.isNightMode()
-        val dockTint = ThemePalette.fill(context, ThemePart.TOOLBAR)
+        val dockTint = ThemePalette.fill(context, ThemePart.TOOLBAR, onWeb = previewWeb)
         val primary = if (night) Color.WHITE
         else ContextCompat.getColor(context, R.color.text_primary)
         val wrap = FrameLayout(context).apply {
@@ -364,7 +364,7 @@ class HomePreviewShell(
             background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
                 setColor(
-                    ThemePalette.fill(context, ThemePart.MENU)
+                    ThemePalette.fill(context, ThemePart.MENU, onWeb = previewWeb)
                         ?: ContextCompat.getColor(context, R.color.card)
                 )
             }
@@ -530,12 +530,12 @@ class HomePreviewShell(
             .ifEmpty { MenuCatalog.DEFAULT_FIXED }
 
     private fun chromeColor(): Int =
-        ThemePalette.fill(context, ThemePart.TOOLBAR)
+        ThemePalette.fill(context, ThemePart.TOOLBAR, onWeb = previewWeb)
             ?: ContextCompat.getColor(context, R.color.toolbar_bg)
 
-    /** 标签栏/标签卡底色：开启「标签页」颜色定义时用主色淡底。 */
+    /** 标签栏/标签卡底色：开启「标签页」时用主色淡底。 */
     private fun tabsColor(): Int =
-        ThemePalette.fill(context, ThemePart.TABS)
+        ThemePalette.fill(context, ThemePart.TABS, onWeb = previewWeb)
             ?: ContextCompat.getColor(context, R.color.toolbar_bg)
 
     private fun dp(value: Int): Int =

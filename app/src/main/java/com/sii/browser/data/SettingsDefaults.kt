@@ -210,7 +210,7 @@ object SettingsDefaults {
     /** 主色：blue / green / orange / purple。 */
     const val SKIN = "green"
 
-    /** 颜色定义：各元素是否使用主题色，默认全关。 */
+    /** 主题色应用范围：各元素是否在主页使用主题色，默认全关。 */
     const val THEME_PART_TOOLBAR = false
     const val THEME_PART_TABS = false
     const val THEME_PART_SITES = false
