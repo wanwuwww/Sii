@@ -276,13 +276,6 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeSearchShow(value: Boolean) =
         putBool(SettingsKeys.HOME_SEARCH_SHOW, value)
 
-    override fun tabsPanelTransparency(): Int =
-        int(SettingsKeys.TABS_PANEL_TRANSPARENCY, SettingsDefaults.TABS_PANEL_TRANSPARENCY)
-            .coerceIn(0, 100)
-
-    override fun setTabsPanelTransparency(value: Int) =
-        putInt(SettingsKeys.TABS_PANEL_TRANSPARENCY, value.coerceIn(0, 100))
-
     override fun cardBorder(): Boolean = bool(SettingsKeys.CARD_BORDER, true)
 
     override fun setCardBorder(value: Boolean) = putBool(SettingsKeys.CARD_BORDER, value)
@@ -1011,11 +1004,6 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setHomeSearchRadiusCustom(value: Int) =
         putInt(SettingsKeys.HOME_SEARCH_RADIUS_CUSTOM, value.coerceIn(0, 48))
 
-    override fun homeSearchAlpha(): Int = int(SettingsKeys.HOME_SEARCH_ALPHA, 50)
-
-    override fun setHomeSearchAlpha(value: Int) =
-        putInt(SettingsKeys.HOME_SEARCH_ALPHA, value.coerceIn(0, 100))
-
     override fun siteNoImage(): Boolean = bool(SettingsKeys.SITE_NO_IMAGE, false)
 
     override fun setSiteNoImage(value: Boolean) = putBool(SettingsKeys.SITE_NO_IMAGE, value)
@@ -1709,7 +1697,7 @@ class DataStoreSettings(private val context: Context) : Settings {
         SettingsKeys.READER_THEME_COLOR, SettingsKeys.VIDEO_ORIENTATION,
         SettingsKeys.BOOKMARKS_VIEW_MODE, SettingsKeys.LAB_FLAG, SettingsKeys.DUA_CHOICE,
         SettingsKeys.WEB_FLAG_2, SettingsKeys.QUICK_ENGINE_POS, SettingsKeys.SETTINGS_CARD_ALPHA,
-        SettingsKeys.TABS_PANEL_TRANSPARENCY, SettingsKeys.MENU_SCROLL_STYLE,
+        SettingsKeys.MENU_SCROLL_STYLE,
         SettingsKeys.UPDATE_PROMPT
     )
 

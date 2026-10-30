@@ -923,7 +923,6 @@
     <string name="import_password_title">Enter backup password</string>
     <string name="import_password_wrong">Wrong password or corrupted file</string>
     <string name="export_failed">Export failed</string>
-    <string name="settings_home_search_alpha">Search box background opacity</string>
     <string name="settings_home_logo_show">Show home logo</string>
     <string name="site_rule_single_title">Individual site settings</string>
     <string name="settings_site_no_image">Do not load images</string>

@@ -130,11 +130,6 @@ interface Settings :
 
     fun setHomeSearchShow(value: Boolean)
 
-    /** 标签页背景透明度，0 = 不透明，100 = 全透明。 */
-    fun tabsPanelTransparency(): Int
-
-    fun setTabsPanelTransparency(value: Int)
-
     /** 卡片外框开关。 */
     fun cardBorder(): Boolean
 
@@ -726,13 +721,10 @@ interface BehaviorSettings {
 
     fun setHomeLogoShow(value: Boolean)
 
+    /** 搜索框自定义圆角（dp）。 */
     fun homeSearchRadiusCustom(): Int
 
     fun setHomeSearchRadiusCustom(value: Int)
-
-    fun homeSearchAlpha(): Int
-
-    fun setHomeSearchAlpha(value: Int)
 
     fun siteNoImage(): Boolean
 

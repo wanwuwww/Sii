@@ -1482,11 +1482,7 @@ class SettingsDetailFragment : Fragment() {
                 getString(R.string.settings_home_search_height),
                 HOME_SEARCH_HEIGHT_NAMES,
                 settings.homeSearchHeight().coerceIn(0, 2)
-            ) { settings.setHomeSearchHeight(it) },
-            sliderRow(
-                getString(R.string.settings_home_search_alpha),
-                settings.homeSearchAlpha(), 0, 100, 5
-            ) { settings.setHomeSearchAlpha(it) }
+            ) { settings.setHomeSearchHeight(it) }
         )
     }
 

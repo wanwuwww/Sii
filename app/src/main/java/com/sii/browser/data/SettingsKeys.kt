@@ -170,7 +170,6 @@ object SettingsKeys {
     const val SCRIPT_LAST_UPDATE = "scriptlastupdate"
     const val HOME_LOGO_SHOW = "homelogoshow"
     const val HOME_SEARCH_RADIUS_CUSTOM = "homesearchradiuscustom"
-    const val HOME_SEARCH_ALPHA = "homesearchalpha"
     /** 新版悬浮风格下，主页是否把地址栏显示在顶部。 */
     const val HOME_TOP_ADDRESS = "hometopaddress"
     const val SITE_NO_IMAGE = "sitenoimage"
@@ -246,7 +245,6 @@ object SettingsKeys {
     const val TAB_GRID_COLUMNS = "tab_grid_columns"
     const val TAB_SHOW_THUMB = "tab_show_thumb"
     const val UI_STYLE = "ui_style"
-    const val TABS_PANEL_TRANSPARENCY = "tabs_panel_transparency"
     const val EXIT_RESTORE_PROMPT = "exit_restore_prompt"
     const val EXIT_CONFIRM = "exit_confirm"
     const val HLS_TO_MP4 = "hls_to_mp4"

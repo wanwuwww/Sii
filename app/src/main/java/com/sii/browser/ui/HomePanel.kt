@@ -834,13 +834,13 @@ class HomePanel(
                 cornerRadius = dp(24).toFloat()
                 setColor(themeFill)
             }
-            modern -> GlassStyle.background(
+            modern -> GlassStyle.surface(
                 context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(), minAlpha = 155
             )
             else -> context.getDrawable(R.drawable.bg_home_card)
         }
         card.elevation = if (!on || card.background == null) 0f
-        else if (dark) dp(4).toFloat() else dp(6).toFloat()
+        else if (dark) dp(3).toFloat() else dp(4).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -860,20 +860,24 @@ class HomePanel(
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val radius = searchCornerRadiusDp()
-        val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
-        val alpha = (AppServices.settings.homeSearchAlpha().coerceIn(0, 100) * 255 / 100)
-        val color = (alpha shl 24) or (baseColor and 0x00FFFFFF)
-        box.background = GradientDrawable().apply {
-            cornerRadius = dp(radius).toFloat()
-            setColor(color)
-            setStroke(
-                dp(1),
-                when {
-                    modern && focused -> ThemeAccent.color(context)
-                    dark -> 0x24FFFFFF
-                    else -> context.getColor(R.color.line)
-                }
+        val strokeColor = when {
+            modern && focused -> ThemeAccent.color(context)
+            dark -> 0x24FFFFFF
+            else -> context.getColor(R.color.line)
+        }
+        // 悬浮玻璃风格下搜索框也走玻璃材质（含顶部高光）；经典与极简/杂志沿用纯色细边。
+        box.background = if (modern && AppServices.settings.homeStyle() == 0) {
+            GlassStyle.surface(
+                context, dark, dp(radius).toFloat(),
+                AppServices.settings.glassStrength(), minAlpha = 150,
+                highlight = if (dark) 0.08f else 0.12f
             )
+        } else {
+            GradientDrawable().apply {
+                cornerRadius = dp(radius).toFloat()
+                setColor(if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card))
+                setStroke(dp(1), strokeColor)
+            }
         }
         box.elevation = if (modern) {
             dp(if (focused) 10 else 4).toFloat()

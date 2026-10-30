@@ -583,13 +583,6 @@ class HomeCustomizeFragment : Fragment() {
             ) { index ->
                 settings.setHomeSearchHeight(index)
                 refreshPreview()
-            },
-            sliderRow(
-                getString(R.string.settings_home_search_alpha),
-                settings.homeSearchAlpha().coerceIn(0, 100), 0, 100
-            ) { value ->
-                settings.setHomeSearchAlpha(value)
-                refreshPreview()
             }
         )
         rows.addAll(if (show) details else details.map { disabledRow(it) })
@@ -1229,10 +1222,6 @@ class HomeCustomizeFragment : Fragment() {
             styleRow,
             columnsRow,
             thumbRow,
-            sliderRow("面板背景透明度", settings.tabsPanelTransparency(), 0, 100) {
-                settings.setTabsPanelTransparency(it)
-                refreshPreview()
-            },
             choiceRow(
                 "新建/撤销顺序",
                 arrayOf("新建在左", "撤销在左"),
@@ -1291,7 +1280,6 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setSettingsCardAlpha(100)
                 settings.setCardBorder(true)
                 settings.setAddressStyle(2)
-                settings.setTabsPanelTransparency(0)
                 settings.setThemeColorEnabled(true)
                 settings.setHomeShowLabels(true)
                 settings.setShowSites(true)
@@ -1311,7 +1299,6 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setMenuScrollStyle(0)
                 settings.setSettingsCardAlpha(0)
                 settings.setCardBorder(true)
-                settings.setTabsPanelTransparency(0)
                 settings.setThemeColorEnabled(false)
                 settings.setHomeShowLabels(true)
                 settings.setShowSites(true)
@@ -1332,7 +1319,6 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setSettingsCardAlpha(0)
                 settings.setCardBorder(false)
                 settings.setAddressStyle(0)
-                settings.setTabsPanelTransparency(0)
                 settings.setThemeColorEnabled(false)
                 settings.setHomeShowLabels(true)
                 settings.setShowSites(true)
@@ -1352,7 +1338,6 @@ class HomeCustomizeFragment : Fragment() {
                 settings.setSettingsCardAlpha(0)
                 settings.setCardBorder(false)
                 settings.setAddressStyle(1)
-                settings.setTabsPanelTransparency(0)
                 settings.setThemeColorEnabled(false)
                 settings.setHomeShowLabels(false)
                 settings.setShowSites(false)

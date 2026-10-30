@@ -3,16 +3,14 @@
 package com.sii.browser.ui
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.webkit.WebView
-import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
+import android.graphics.drawable.LayerDrawable
 import com.sii.browser.di.AppServices
 
 /**
- * 玻璃材质：统一由「玻璃强度」推导填充与描边，供底栏、面板、主页卡片共用。
+ * 玻璃材质：统一由「玻璃强度」推导填充、描边与顶部高光，供底栏、面板、卡片、搜索框共用。
  */
 object GlassStyle {
 
@@ -30,18 +28,49 @@ object GlassStyle {
         return (alpha shl 24) or if (dark) 0xFFFFFF else 0x000000
     }
 
-    /** 圆角玻璃底：radiusPx 为像素；topOnly 为 true 时只圆上方两角。 */
-    fun background(
+    /**
+     * 玻璃表面：填充 + 1dp 描边 + 顶部高光渐变。
+     *
+     * 高光是自上而下衰减的白色渐变，模拟玻璃上缘的反光；夜间减半，避免发灰。
+     * 返回 LayerDrawable，调用方直接赋给 background 即可。
+     */
+    fun surface(
         context: Context,
         dark: Boolean,
         radiusPx: Float,
         strength: Int,
         topOnly: Boolean = false,
         minAlpha: Int = 150,
-        base: Int? = null
-    ): GradientDrawable = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadii = if (topOnly) {
+        base: Int? = null,
+        highlight: Float = if (dark) 0.06f else 0.10f
+    ): Drawable {
+        val radii = cornerRadii(radiusPx, topOnly)
+        val body = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = radii
+            setColor(fill(context, dark, strength, minAlpha, base))
+            setStroke(
+                context.resources.displayMetrics.density.toInt().coerceAtLeast(1),
+                stroke(dark, strength)
+            )
+        }
+        val gloss = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = radii
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            colors = intArrayOf(
+                withAlpha(Color.WHITE, highlight),
+                withAlpha(Color.WHITE, highlight * 0.35f),
+                withAlpha(Color.WHITE, 0f)
+            )
+        }
+        return LayerDrawable(arrayOf(body, gloss))
+    }
+
+    /** 圆角四角，topOnly 时只圆上方两角（贴底面板用）。 */
+    fun cornerRadii(radiusPx: Float, topOnly: Boolean = false): FloatArray =
+        if (topOnly) {
             floatArrayOf(radiusPx, radiusPx, radiusPx, radiusPx, 0f, 0f, 0f, 0f)
         } else {
             floatArrayOf(
@@ -49,45 +78,9 @@ object GlassStyle {
                 radiusPx, radiusPx, radiusPx, radiusPx
             )
         }
-        setColor(fill(context, dark, strength, minAlpha, base))
-        setStroke(context.resources.displayMetrics.density.toInt().coerceAtLeast(1), stroke(dark, strength))
-    }
-}
 
-/**
- * 实时模糊背景层。
- *
- * 把当前网页缩到 1/10 再放大，形成模糊底图；作为背景层叠在玻璃填充下方。
- * 不插入子视图，避免破坏底栏/面板的布局。
- */
-object GlassBlur {
-
-    fun layer(
-        context: Context,
-        source: WebView?,
-        width: Int,
-        height: Int,
-        radiusPx: Float
-    ): Drawable? {
-        if (!AppServices.settings.glassBlur()) return null
-        if (source == null || source.width <= 0 || source.height <= 0) return null
-        if (width <= 0 || height <= 0) return null
-        val smallWidth = (width / 5).coerceAtLeast(12)
-        val smallHeight = (height / 5).coerceAtLeast(12)
-        val small = Bitmap.createBitmap(smallWidth, smallHeight, Bitmap.Config.ARGB_8888)
-        runCatching {
-            val canvas = Canvas(small)
-            canvas.scale(
-                smallWidth.toFloat() / source.width,
-                smallHeight.toFloat() / source.height
-            )
-            source.draw(canvas)
-        }
-        return RoundedBitmapDrawableFactory.create(context.resources, small).apply {
-            cornerRadius = radiusPx
-            setAntiAlias(true)
-            // 柔和底图，避免颜色过艳影响上方文字。
-            alpha = 120
-        }
+    private fun withAlpha(color: Int, alpha: Float): Int {
+        val a = (alpha.coerceIn(0f, 1f) * 255).toInt()
+        return (color and 0x00FFFFFF) or (a shl 24)
     }
 }

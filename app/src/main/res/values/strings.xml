@@ -924,7 +924,6 @@
     <string name="import_password_title">输入备份密码</string>
     <string name="import_password_wrong">密码错误或文件损坏</string>
     <string name="export_failed">导出失败</string>
-    <string name="settings_home_search_alpha">搜索框背景透明度</string>
     <string name="settings_home_logo_show">显示主页 Logo</string>
     <string name="site_rule_single_title">单个网站设置</string>
     <string name="settings_site_no_image">不加载图片</string>

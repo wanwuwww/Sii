@@ -694,7 +694,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             orientation = android.widget.LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(10), dp(6), dp(10))
-            background = GlassStyle.background(
+            background = GlassStyle.surface(
                 context, dark, dp(22).toFloat(),
                 AppServices.settings.glassStrength(), minAlpha = 165
             )
@@ -4560,11 +4560,9 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         hideSniffPrompt()
     }
 
-    /** 标签页背景透明度：0 = 不透明，100 = 全透明。 */
+    /** 标签页面板背景：悬浮用玻璃强度（含高光），经典用不透明底色。 */
     private fun applyTabsPanelAlpha() {
         val panel = view?.findViewById<View>(R.id.tabs_panel) ?: return
-        val transparency = AppServices.settings.tabsPanelTransparency().coerceIn(0, 100)
-        val alpha = 255 - transparency * 255 / 100
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
@@ -4576,20 +4574,17 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         else ThemePalette.fill(
             requireContext(), ThemePart.TABS, onWeb = homeContainer?.visibility != View.VISIBLE
         )
-        val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 165, themeFill)
-        else themeFill ?: requireContext().getColor(R.color.bg)
-        val mergedAlpha = ((((fill ushr 24) and 0xFF) * alpha) / 255).coerceIn(0, 255)
         val radius = dp(28).toFloat()
-        panel.background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            // 新版面板与底栏之间留了距离，四角都做圆角；经典模式仍贴底，只圆上方两角。
-            cornerRadii = if (modern) {
-                floatArrayOf(radius, radius, radius, radius, radius, radius, radius, radius)
-            } else {
-                floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
+        if (modern) {
+            panel.background = GlassStyle.surface(
+                requireContext(), dark, radius, strength, minAlpha = 165, base = themeFill
+            )
+        } else {
+            panel.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadii = floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
+                setColor(themeFill ?: requireContext().getColor(R.color.bg))
             }
-            setColor((fill and 0x00FFFFFF) or (mergedAlpha shl 24))
-            if (modern) setStroke(dp(1), GlassStyle.stroke(dark, strength))
         }
         val actionText = if (dark) android.graphics.Color.WHITE
         else if (modern) 0xFF1A1A1A.toInt()
@@ -5337,7 +5332,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         )
         view?.findViewById<View>(R.id.menu_panel)?.apply {
             if (modern) {
-                background = GlassStyle.background(
+                background = GlassStyle.surface(
                     requireContext(), dark, dp(28).toFloat(),
                     AppServices.settings.glassStrength(), topOnly = true, minAlpha = 170,
                     base = menuFill
@@ -9779,6 +9774,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         tabBar?.visibility = View.GONE
         applyDockGlass()
         dock.clipToOutline = true
+        // 背景换成了 LayerDrawable（玻璃 + 高光），outline 不再可靠，显式给圆角轮廓保住裁剪。
+        dock.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, dp(28).toFloat())
+            }
+        }
         dock.elevation = dp(12).toFloat()
         addressHost.layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f)
         address.layoutParams = FrameLayout.LayoutParams(
@@ -10205,7 +10206,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val night = AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
         val radius = dp(28).toFloat()
-        dock.background = GlassStyle.background(
+        dock.background = GlassStyle.surface(
             requireContext(), night, radius, strength,
             minAlpha = DOCK_GLASS_MIN_ALPHA, base = dockBaseColor()
         )
