@@ -819,37 +819,10 @@ class HomePanel(
         grid.visibility = if (show) View.VISIBLE else View.GONE
     }
 
-    /** 卡片/搜索框背景 alpha：由玻璃强度控制，下限保证文字可读；描边与投影不受影响。 */
-    private fun surfaceAlpha(min: Int): Int =
-        (255 - AppServices.settings.glassStrength()).coerceIn(min, 255)
-
-    /**
-     * 假阴影背景：外层 halo 描边充当阴影，内层卡片保持半透明。
-     *
-     * 系统 elevation 的阴影画在 View 背后，会透过半透明填充形成内圈灰；
-     * 这种画法把阴影放在描边之外，内部保持纯净。
-     */
-    /**
-     * 假阴影背景：多层 halo 环从描边向外逐渐变淡（越外越淡），内层卡片保持半透明。
-     *
-     * 系统 elevation 的阴影画在 View 背后，会透过半透明填充形成内圈灰；
-     * 这种画法把阴影放在描边之外，内部保持纯净。
-     */
     /** 圆角轮廓：elevation 阴影需要它才能沿圆角绘制。 */
     private fun roundOutline(radiusPx: Float) = object : android.view.ViewOutlineProvider() {
         override fun getOutline(v: View, outline: android.graphics.Outline) {
             outline.setRoundRect(0, 0, v.width, v.height, radiusPx)
-        }
-    }
-
-    /**
-     * 阴影调淡：API 28+ 关掉环境阴影（它会在半透明卡内侧形成灰圈），点阴影用半透明黑；
-     * API 26/27 不支持自定义阴影颜色，只能靠较低的 elevation。
-     */
-    private fun applySoftShadow(v: View, dark: Boolean) {
-        if (android.os.Build.VERSION.SDK_INT >= 28) {
-            v.outlineAmbientShadowColor = Color.TRANSPARENT
-            v.outlineSpotShadowColor = if (dark) 0x38000000 else 0x30000000
         }
     }
 
@@ -860,27 +833,24 @@ class HomePanel(
         val dark = AppServices.settings.isNightMode()
         val style = AppServices.settings.homeStyle()
         val themeFill = ThemePalette.fill(context, ThemePart.SITES)
-        val alpha = surfaceAlpha(165)
         val base = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
-        val fill = (alpha shl 24) or (base and 0x00FFFFFF)
         card.background = when {
             style != 0 -> null
             !on -> null
             themeFill != null -> GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor((alpha shl 24) or (themeFill and 0x00FFFFFF))
+                setColor(themeFill)
             }
-            // 半透明卡 + 淡投影：填充 alpha 随玻璃强度，阴影靠 outline + 调淡色。
+            // 不透明卡 + 细描边 + 投影；不再受玻璃强度影响。
             else -> GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor(fill)
+                setColor(base)
                 setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
             }
         }
         card.outlineProvider = roundOutline(dp(24).toFloat())
-        applySoftShadow(card, dark)
         card.elevation = if (!on || card.background == null) 0f
-        else if (dark) dp(4).toFloat() else dp(6).toFloat()
+        else if (dark) dp(6).toFloat() else dp(8).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -905,19 +875,17 @@ class HomePanel(
             dark -> 0x24FFFFFF
             else -> context.getColor(R.color.line)
         }
-        // 搜索框不走玻璃：半透明卡 + 细描边 + 淡投影（阴影调淡，减少内圈灰）。
-        val alpha = surfaceAlpha(175)
+        // 搜索框不走玻璃：不透明卡 + 细描边 + 投影（阴影不再调淡）。
         val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
         val radiusPx = dp(radius).toFloat()
         box.background = GradientDrawable().apply {
             cornerRadius = radiusPx
-            setColor((alpha shl 24) or (baseColor and 0x00FFFFFF))
+            setColor(baseColor)
             setStroke(dp(1), strokeColor)
         }
         box.outlineProvider = roundOutline(radiusPx)
-        applySoftShadow(box, dark)
         box.elevation = if (modern) {
-            dp(if (focused) 10 else 5).toFloat()
+            dp(if (focused) 12 else 6).toFloat()
         } else if (focused) {
             dp(8).toFloat()
         } else {
