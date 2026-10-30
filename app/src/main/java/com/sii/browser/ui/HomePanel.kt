@@ -834,11 +834,12 @@ class HomePanel(
                 cornerRadius = dp(24).toFloat()
                 setColor(themeFill)
             }
-            modern -> GlassStyle.surface(
-                context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(),
-                minAlpha = 155,
-                strokeOverride = if (dark) 0x2AFFFFFF else 0x1A000000
-            )
+            // 卡片不再走玻璃：白/深色卡 + 细描边 + 投影，靠 elevation 表现悬浮。
+            modern -> GradientDrawable().apply {
+                cornerRadius = dp(24).toFloat()
+                setColor(if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card))
+                setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
+            }
             else -> context.getDrawable(R.drawable.bg_home_card)
         }
         // LayerDrawable 不自带 outline，不补轮廓时 elevation 投影不显示，卡片会“贴”在主页上。
@@ -874,25 +875,13 @@ class HomePanel(
             dark -> 0x24FFFFFF
             else -> context.getColor(R.color.line)
         }
-        // 悬浮玻璃风格下搜索框也走玻璃材质（含顶部高光）；经典与极简/杂志沿用纯色细边。
-        val glass = modern && AppServices.settings.homeStyle() == 0
-        box.background = if (glass) {
-            GlassStyle.surface(
-                context, dark, dp(radius).toFloat(),
-                AppServices.settings.glassStrength(), minAlpha = 150,
-                highlight = 0.07f,
-                strokeOverride = if (focused) ThemeAccent.color(context)
-                else if (dark) 0x2AFFFFFF else 0x1A000000
-            )
-        } else {
-            GradientDrawable().apply {
-                cornerRadius = dp(radius).toFloat()
-                setColor(if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card))
-                setStroke(dp(1), strokeColor)
-            }
+        // 搜索框不再走玻璃：白/深色卡 + 细描边 + 投影，靠 elevation 表现悬浮。
+        box.background = GradientDrawable().apply {
+            cornerRadius = dp(radius).toFloat()
+            setColor(if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card))
+            setStroke(dp(1), strokeColor)
         }
-        // 玻璃背景是 LayerDrawable，不自带 outline；不补轮廓的话 elevation 阴影画不出来，
-        // 搜索框就会“贴在”主页上。显式给圆角轮廓。
+        // 与玻璃背景不同，这里背景是 GradientDrawable 自带上 outline，但统一显式设置更稳。
         val radiusPx = dp(radius).toFloat()
         box.outlineProvider = object : android.view.ViewOutlineProvider() {
             override fun getOutline(v: View, outline: android.graphics.Outline) {
