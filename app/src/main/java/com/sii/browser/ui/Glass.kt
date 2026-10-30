@@ -49,7 +49,8 @@ object GlassStyle {
         base: Int? = null,
         highlight: Float = if (dark) 0.10f else 0.06f,
         shade: Float = 0f,
-        strokeOverride: Int? = null
+        strokeOverride: Int? = null,
+        overlay: Drawable? = null
     ): Drawable {
         val radii = cornerRadii(radiusPx, topOnly)
         val body = GradientDrawable().apply {
@@ -82,7 +83,13 @@ object GlassStyle {
                 withAlpha(Color.BLACK, 0f)
             )
         }
-        return LayerDrawable(arrayOf(body, gloss, innerShade))
+        val layers = ArrayList<Drawable>(4)
+        layers.add(body)
+        // 进度填充层插在填充与高光之间，保证高光/内阴影仍在最上层。
+        overlay?.let { layers.add(it) }
+        layers.add(gloss)
+        layers.add(innerShade)
+        return LayerDrawable(layers.toTypedArray())
     }
 
     /** 圆角四角，topOnly 时只圆上方两角（贴底面板用）。 */

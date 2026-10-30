@@ -82,6 +82,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private var toolbarIconColor: Int? = null
     private var addressIconColor: Int? = null
     private var progressBar: ProgressBar? = null
+    /** 悬浮模式的进度填充层：胶囊背景里的主色 ClipDrawable，level = 进度×100。 */
+    private var dockProgressClip: android.graphics.drawable.ClipDrawable? = null
     /** 进度条平滑动画：新进度到来时取消旧动画、从当前值继续追，避免瞬跳。 */
     private var progressAnimator: ValueAnimator? = null
     private var progressFinishPending: Runnable? = null
@@ -227,7 +229,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         view.findViewById<View>(R.id.modern_chrome)?.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) applyFloatingBarLift()
-            positionModernProgress()
         }
         webViewContainer = view.findViewById(R.id.webview_container)
         homeContainer = view.findViewById(R.id.home_container)
@@ -4293,6 +4294,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             it.progress = 0
             it.alpha = 1f
         }
+        syncDockProgress()
         tabManager.currentWebView?.visibility = View.GONE
         ensureHomePanel()
         homePanel?.clearSearch()
@@ -7054,8 +7056,10 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     progressAnimator?.cancel()
                     bar.alpha = 1f
                     if (!continuing) bar.progress = 0
-                    bar.visibility = View.VISIBLE
+                    // 悬浮模式的进度由胶囊填充层表达，不显示独立横条。
+                    if (AppServices.settings.uiStyle() != 1) bar.visibility = View.VISIBLE
                 }
+                syncDockProgress()
             }
         }
     }
@@ -7084,9 +7088,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val bar = progressBar ?: return
         if (homeContainer?.visibility == View.VISIBLE) {
             bar.visibility = View.GONE
+            syncDockProgress()
             return
         }
-        if (bar.visibility != View.VISIBLE) {
+        // 悬浮模式不再显示独立横条，进度由胶囊填充层表达。
+        val modern = AppServices.settings.uiStyle() == 1
+        if (!modern && bar.visibility != View.VISIBLE) {
             bar.alpha = 1f
             bar.progress = 0
             bar.visibility = View.VISIBLE
@@ -7105,6 +7112,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             interpolator = DecelerateInterpolator()
             addUpdateListener {
                 bar.progress = it.animatedValue as Int
+                syncDockProgress()
             }
         }
         progressAnimator = animator
@@ -7124,6 +7132,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             bar.progress = 0
             bar.alpha = 1f
         }
+        syncDockProgress()
         setRefreshLoading(false)
     }
 
@@ -9641,21 +9650,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun attachProgressBar(modern: Boolean) {
         val bar = progressBar ?: return
         if (modern) {
-            val root = view as? ViewGroup ?: return
-            if (bar.parent !== root) {
-                (bar.parent as? ViewGroup)?.removeView(bar)
-                root.addView(
-                    bar,
-                    FrameLayout.LayoutParams(
-                        dp(240),
-                        dp(3),
-                        android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
-                    )
-                )
-            }
-            bar.elevation = 0f
-            applyProgressTrack(bar)
-            positionModernProgress()
+            // 悬浮模式：不挂独立横条，进度由胶囊背景里的主色填充层表达。
+            (bar.parent as? ViewGroup)?.removeView(bar)
+            bar.visibility = View.GONE
+            bar.background = null
+            syncDockProgress()
             return
         }
         val content = view?.findViewById<LinearLayout>(R.id.browser_content) ?: return
@@ -9675,29 +9674,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         bar.elevation = 0f
         bar.background = null
-    }
-
-    /** 悬浮进度条位置：宽度跟随胶囊，底部让出胶囊高度 + 默认下边距 + 4dp 间距。 */
-    private fun positionModernProgress() {
-        val bar = progressBar ?: return
-        if (AppServices.settings.uiStyle() != 1) return
-        val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
-        val lp = bar.layoutParams as? FrameLayout.LayoutParams ?: return
-        val width = dock.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels - dp(20)
-        val margin = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(14)
-        if (lp.width != width || lp.bottomMargin != margin) {
-            lp.width = width
-            lp.bottomMargin = margin
-            bar.layoutParams = lp
-        }
-    }
-
-    /** 进度条轨道底色：未加载部分也看得见，才知道这是进度条。 */
-    private fun applyProgressTrack(bar: View) {
-        bar.background = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = dp(2).toFloat()
-            setColor(withAlpha(requireContext().getColor(R.color.line), 0.6f))
-        }
     }
 
     /**
@@ -9825,7 +9801,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyBottomBarStyle(root, modern = true)
         applyModernToolVisibility()
         updateTranslateFab()
-        root.post { positionModernProgress() }
     }
 
     /** 翻译图标：新版并入底栏工具行（菜单左侧），经典插在地址输入与刷新之间。 */
@@ -10208,12 +10183,29 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val night = AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
         val radius = dp(28).toFloat()
+        // 进度用胶囊本身的背景表达：一层从左往右裁剪的主色，插在填充与高光之间。
+        val accent = ThemeAccent.color(requireContext())
+        val fillAlpha = if (night) 0x3D else 0x33
+        val clip = android.graphics.drawable.ClipDrawable(
+            android.graphics.drawable.ColorDrawable((fillAlpha shl 24) or (accent and 0x00FFFFFF)),
+            android.view.Gravity.START,
+            android.graphics.drawable.ClipDrawable.HORIZONTAL
+        ).apply {
+            level = (progressBar?.progress ?: 0).coerceIn(0, 100) * 100
+        }
+        dockProgressClip = clip
         dock.background = GlassStyle.surface(
             requireContext(), night, radius, strength,
             minAlpha = DOCK_GLASS_MIN_ALPHA, base = dockBaseColor(),
             shade = 0.03f,
-            strokeOverride = if (night) 0x2AFFFFFF else 0x1C000000
+            strokeOverride = if (night) 0x2AFFFFFF else 0x1C000000,
+            overlay = clip
         )
+    }
+
+    /** 把当前加载进度同步到胶囊的填充层。 */
+    private fun syncDockProgress() {
+        dockProgressClip?.level = (progressBar?.progress ?: 0).coerceIn(0, 100) * 100
     }
 
     /** 悬浮底栏底色：选中「工具栏」且（主页或已开网页应用）时用主色淡底，与玻璃强度叠加。 */
