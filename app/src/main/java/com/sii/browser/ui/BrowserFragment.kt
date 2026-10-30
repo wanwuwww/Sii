@@ -227,6 +227,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         view.findViewById<View>(R.id.modern_chrome)?.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) applyFloatingBarLift()
+            positionModernProgress()
         }
         webViewContainer = view.findViewById(R.id.webview_container)
         homeContainer = view.findViewById(R.id.home_container)
@@ -9632,7 +9633,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
      * 页面加载进度条：悬浮样式贴在窗口顶部（叠在网页上，不占布局高度），经典样式在地址栏下方。
      */
     /**
-     * 页面加载进度条：悬浮样式贴在悬浮胶囊顶部（随胶囊一起收起/隐藏），经典样式在地址栏下方。
+     * 页面加载进度条：悬浮样式贴在悬浮胶囊上方（与胶囊同宽、同进同退），经典样式在地址栏下方。
      *
      * 必须用 [progressBar] 字段而不是 findViewById：切样式时它已被移出视图树，
      * 此时在树里搜不到，会导致进度条永久消失。
@@ -9640,26 +9641,21 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun attachProgressBar(modern: Boolean) {
         val bar = progressBar ?: return
         if (modern) {
-            val dock = view?.findViewById<LinearLayout>(R.id.modern_chrome) ?: return
-            val current = bar.layoutParams as? LinearLayout.LayoutParams
-            if (bar.parent === dock && current != null) {
-                if (current.height != dp(3)) {
-                    current.height = dp(3)
-                    bar.layoutParams = current
-                }
-            } else {
+            val root = view as? ViewGroup ?: return
+            if (bar.parent !== root) {
                 (bar.parent as? ViewGroup)?.removeView(bar)
-                dock.addView(
+                root.addView(
                     bar,
-                    0,
-                    LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        dp(3)
-                    ).apply { bottomMargin = dp(2) }
+                    FrameLayout.LayoutParams(
+                        dp(240),
+                        dp(3),
+                        android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
+                    )
                 )
             }
             bar.elevation = 0f
             applyProgressTrack(bar)
+            positionModernProgress()
             return
         }
         val content = view?.findViewById<LinearLayout>(R.id.browser_content) ?: return
@@ -9679,6 +9675,21 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         bar.elevation = 0f
         bar.background = null
+    }
+
+    /** 悬浮进度条位置：宽度跟随胶囊，底部让出胶囊高度 + 默认下边距 + 4dp 间距。 */
+    private fun positionModernProgress() {
+        val bar = progressBar ?: return
+        if (AppServices.settings.uiStyle() != 1) return
+        val dock = view?.findViewById<View>(R.id.modern_chrome) ?: return
+        val lp = bar.layoutParams as? FrameLayout.LayoutParams ?: return
+        val width = dock.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels - dp(20)
+        val margin = (dock.height.takeIf { it > 0 } ?: dp(56)) + dp(14)
+        if (lp.width != width || lp.bottomMargin != margin) {
+            lp.width = width
+            lp.bottomMargin = margin
+            bar.layoutParams = lp
+        }
     }
 
     /** 进度条轨道底色：未加载部分也看得见，才知道这是进度条。 */
@@ -9814,6 +9825,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         applyBottomBarStyle(root, modern = true)
         applyModernToolVisibility()
         updateTranslateFab()
+        root.post { positionModernProgress() }
     }
 
     /** 翻译图标：新版并入底栏工具行（菜单左侧），经典插在地址输入与刷新之间。 */
@@ -10250,10 +10262,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                 toolbarHidden = true
                 dock.animate().translationY(hidden.toFloat()).setDuration(180)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                progressBar?.animate()?.translationY(hidden.toFloat())?.setDuration(180)
+                    ?.setInterpolator(android.view.animation.DecelerateInterpolator())?.start()
             } else if (dy < 0 && toolbarHidden) {
                 toolbarHidden = false
                 dock.animate().translationY(0f).setDuration(180)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                progressBar?.animate()?.translationY(0f)?.setDuration(180)
+                    ?.setInterpolator(android.view.animation.DecelerateInterpolator())?.start()
             }
             return
         }
