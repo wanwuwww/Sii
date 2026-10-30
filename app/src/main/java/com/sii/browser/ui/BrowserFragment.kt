@@ -698,7 +698,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             setPadding(dp(16), dp(10), dp(6), dp(10))
             background = GlassStyle.surface(
                 context, dark, dp(22).toFloat(),
-                AppServices.settings.glassStrength(), minAlpha = 165
+                AppServices.settings.glassStrength(), minAlpha = 165,
+                highlight = 0f
             )
             elevation = dp(8).toFloat()
             alpha = 0f
