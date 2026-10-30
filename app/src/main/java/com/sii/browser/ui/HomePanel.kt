@@ -819,28 +819,33 @@ class HomePanel(
         grid.visibility = if (show) View.VISIBLE else View.GONE
     }
 
+    /** 卡片/搜索框背景 alpha：由玻璃强度控制，下限保证文字可读；描边与投影不受影响。 */
+    private fun surfaceAlpha(min: Int): Int =
+        (255 - AppServices.settings.glassStrength()).coerceIn(min, 255)
+
     /** 常用网站卡片背景：关闭后站点直接浮在主页背景上。 */
     private fun applySitesCardBg(card: View?) {
         card ?: return
         val on = AppServices.settings.homeSitesCardBg()
-        val modern = AppServices.settings.uiStyle() == 1
         val dark = AppServices.settings.isNightMode()
         val style = AppServices.settings.homeStyle()
         val themeFill = ThemePalette.fill(context, ThemePart.SITES)
+        val alpha = surfaceAlpha(165)
+        val base = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
+        val fill = (alpha shl 24) or (base and 0x00FFFFFF)
         card.background = when {
             style != 0 -> null
             !on -> null
             themeFill != null -> GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor(themeFill)
+                setColor((alpha shl 24) or (themeFill and 0x00FFFFFF))
             }
-            // 卡片不再走玻璃：白/深色卡 + 细描边 + 投影，靠 elevation 表现悬浮。
-            modern -> GradientDrawable().apply {
+            // 卡片不走玻璃：白/深色卡 + 细描边 + 投影；只有填充 alpha 随玻璃强度变化。
+            else -> GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor(if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card))
+                setColor(fill)
                 setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
             }
-            else -> context.getDrawable(R.drawable.bg_home_card)
         }
         // LayerDrawable 不自带 outline，不补轮廓时 elevation 投影不显示，卡片会“贴”在主页上。
         val cardRadius = dp(24).toFloat()
@@ -875,10 +880,12 @@ class HomePanel(
             dark -> 0x24FFFFFF
             else -> context.getColor(R.color.line)
         }
-        // 搜索框不再走玻璃：白/深色卡 + 细描边 + 投影，靠 elevation 表现悬浮。
+        // 搜索框不走玻璃：白/深色卡 + 细描边 + 投影；只有填充 alpha 随玻璃强度变化。
+        val alpha = surfaceAlpha(175)
+        val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
         box.background = GradientDrawable().apply {
             cornerRadius = dp(radius).toFloat()
-            setColor(if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card))
+            setColor((alpha shl 24) or (baseColor and 0x00FFFFFF))
             setStroke(dp(1), strokeColor)
         }
         // 与玻璃背景不同，这里背景是 GradientDrawable 自带上 outline，但统一显式设置更稳。
