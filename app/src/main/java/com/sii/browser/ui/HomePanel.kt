@@ -5,9 +5,7 @@ package com.sii.browser.ui
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.LayerDrawable
 import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
@@ -837,47 +835,21 @@ class HomePanel(
      * 系统 elevation 的阴影画在 View 背后，会透过半透明填充形成内圈灰；
      * 这种画法把阴影放在描边之外，内部保持纯净。
      */
-    private fun haloBackground(
-        radiusDp: Int,
-        fill: Int,
-        stroke: Int,
-        haloDp: Int,
-        dark: Boolean
-    ): Drawable {
-        val radius = dp(radiusDp).toFloat()
-        val halo = dp(haloDp)
-        val steps = 6
-        val stepPx = (halo / steps).coerceAtLeast(1)
-        val ringRgb = if (dark) 0xFFFFFF else 0x000000
-        val maxAlpha = if (dark) 0x3A else 0x30
-        val layers = ArrayList<Drawable>(steps + 1)
-        // i = 1 最外圈（最淡），i = steps 紧贴卡片（最深）
-        for (i in 1..steps) {
-            val inset = stepPx * (i - 1)
-            val alpha = (maxAlpha * i / steps).coerceIn(0, 255)
-            layers.add(
-                GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = radius + (halo - inset).toFloat()
-                    setColor(Color.TRANSPARENT)
-                    setStroke(stepPx, (alpha shl 24) or ringRgb)
-                }
-            )
+    /** 圆角轮廓：elevation 阴影需要它才能沿圆角绘制。 */
+    private fun roundOutline(radiusPx: Float) = object : android.view.ViewOutlineProvider() {
+        override fun getOutline(v: View, outline: android.graphics.Outline) {
+            outline.setRoundRect(0, 0, v.width, v.height, radiusPx)
         }
-        layers.add(
-            GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = radius
-                setColor(fill)
-                setStroke(dp(1), stroke)
-            }
-        )
-        return LayerDrawable(layers.toTypedArray()).apply {
-            for (i in 1..steps) {
-                val inset = stepPx * (i - 1)
-                setLayerInset(i - 1, inset, inset, inset, inset)
-            }
-            setLayerInset(steps, halo, halo, halo, halo)
+    }
+
+    /**
+     * 阴影调淡：API 28+ 关掉环境阴影（它会在半透明卡内侧形成灰圈），点阴影用半透明黑；
+     * API 26/27 不支持自定义阴影颜色，只能靠较低的 elevation。
+     */
+    private fun applySoftShadow(v: View, dark: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            v.outlineAmbientShadowColor = Color.TRANSPARENT
+            v.outlineSpotShadowColor = if (dark) 0x38000000 else 0x30000000
         }
     }
 
@@ -898,12 +870,17 @@ class HomePanel(
                 cornerRadius = dp(24).toFloat()
                 setColor((alpha shl 24) or (themeFill and 0x00FFFFFF))
             }
-            // 卡片不走玻璃：半透明卡 + 细描边 + 描边外的 halo 假阴影。
-            else -> haloBackground(
-                24, fill, if (dark) 0x1FFFFFFF else 0x14000000, 8, dark
-            )
+            // 半透明卡 + 淡投影：填充 alpha 随玻璃强度，阴影靠 outline + 调淡色。
+            else -> GradientDrawable().apply {
+                cornerRadius = dp(24).toFloat()
+                setColor(fill)
+                setStroke(dp(1), if (dark) 0x1FFFFFFF else 0x14000000)
+            }
         }
-        card.elevation = 0f
+        card.outlineProvider = roundOutline(dp(24).toFloat())
+        applySoftShadow(card, dark)
+        card.elevation = if (!on || card.background == null) 0f
+        else if (dark) dp(4).toFloat() else dp(6).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -928,19 +905,30 @@ class HomePanel(
             dark -> 0x24FFFFFF
             else -> context.getColor(R.color.line)
         }
-        // 搜索框不走玻璃：半透明卡 + 细描边 + 描边外的 halo 假阴影（内部无灰）。
+        // 搜索框不走玻璃：半透明卡 + 细描边 + 淡投影（阴影调淡，减少内圈灰）。
         val alpha = surfaceAlpha(175)
         val baseColor = if (dark) 0xFF1B1E23.toInt() else context.getColor(R.color.card)
-        box.background = haloBackground(
-            radius, (alpha shl 24) or (baseColor and 0x00FFFFFF), strokeColor, 5, dark
-        )
-        box.elevation = 0f
+        val radiusPx = dp(radius).toFloat()
+        box.background = GradientDrawable().apply {
+            cornerRadius = radiusPx
+            setColor((alpha shl 24) or (baseColor and 0x00FFFFFF))
+            setStroke(dp(1), strokeColor)
+        }
+        box.outlineProvider = roundOutline(radiusPx)
+        applySoftShadow(box, dark)
+        box.elevation = if (modern) {
+            dp(if (focused) 10 else 5).toFloat()
+        } else if (focused) {
+            dp(8).toFloat()
+        } else {
+            searchBoxElevation
+        }
         val padV = when (AppServices.settings.homeSearchHeight()) {
             0 -> 2
             2 -> 8
             else -> 4
-        }.coerceAtLeast(5)
-        box.setPadding(dp(8), dp(padV), dp(6), dp(padV))
+        }
+        box.setPadding(dp(8), dp(padV), dp(4), dp(padV))
         val normalIcon = if (dark) 0xCCFFFFFF.toInt()
         else context.getColor(R.color.text_secondary)
         searchScan.imageTintList = android.content.res.ColorStateList.valueOf(
