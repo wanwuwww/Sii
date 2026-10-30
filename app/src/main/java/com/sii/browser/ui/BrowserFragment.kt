@@ -113,6 +113,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     /** 异常退出恢复提示条，更新弹窗靠它避让，不叠在同一个位置。 */
     private var restorePromptBar: View? = null
+    private var restoreAutoDismiss: Runnable? = null
     private var homeForwardAvailable = false
     /** 本次导航由主页发起：返回键先回主页，而不是退网页历史。 */
     private var navFromHome = false
@@ -735,6 +736,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
         }
         val autoDismiss = Runnable {
+            // 5 秒内可能已切夜间/退出导致 Fragment 分离，延迟任务必须自己守卫。
+            if (!isAdded || view == null) return@Runnable
             if (bar.parent == null) return@Runnable
             bar.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(180)
                 .withEndAction {
@@ -745,6 +748,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             // 自动忽略：清空快照，主页保持可操作，避免下次启动重复提示。
             clearSnapshot()
         }
+        restoreAutoDismiss = autoDismiss
         bar.addView(android.widget.TextView(context).apply {
             text = "×"
             setTextSize(18f)
@@ -10356,6 +10360,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
 
     override fun onDestroyView() {
         AppServices.onUpdatePromptReady = null
+        restoreAutoDismiss?.let { runnable ->
+            restorePromptBar?.removeCallbacks(runnable)
+            view?.removeCallbacks(runnable)
+        }
+        restoreAutoDismiss = null
         restorePromptBar = null
         view?.removeCallbacks(applyScrollDirection)
         MenuPopup.dismiss()
