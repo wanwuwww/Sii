@@ -48,6 +48,8 @@ object ThemePalette {
     /** 元素的主题色淡底；未开启时返回 null，由调用方回落默认色。 */
     fun fill(context: Context, part: ThemePart, onWeb: Boolean = false): Int? {
         if (!enabled(part)) return null
+        // 夜间默认不生效（「夜间生效」开关打开后才套用）。
+        if (AppServices.settings.isNightMode() && !AppServices.settings.themePartsNight()) return null
         // 这 6 个开关只作用于主页；网页还要额外看「网页应用主题色」。
         if (onWeb && !AppServices.settings.themeOverDetect()) return null
         return soft(context)
@@ -58,7 +60,8 @@ object ThemePalette {
         val night = AppServices.settings.isNightMode()
         val base = context.getColor(if (page) R.color.card_page else R.color.card)
         return when (AppServices.settings.cardBg().coerceIn(0, 3)) {
-            0 -> ColorUtils.blendARGB(
+            0 -> if (night && !AppServices.settings.themePartsNight()) base
+            else ColorUtils.blendARGB(
                 base, ThemeAccent.color(context), if (night) 0.10f else 0.05f
             )
             2 -> if (night) 0xFF1D2024.toInt() else 0xFFF3F4F6.toInt()

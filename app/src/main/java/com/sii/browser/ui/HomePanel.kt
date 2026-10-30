@@ -839,7 +839,8 @@ class HomePanel(
             )
             else -> context.getDrawable(R.drawable.bg_home_card)
         }
-        card.elevation = if (on && style == 0) dp(2).toFloat() else 0f
+        card.elevation = if (!on || card.background == null) 0f
+        else if (dark) dp(4).toFloat() else dp(6).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */

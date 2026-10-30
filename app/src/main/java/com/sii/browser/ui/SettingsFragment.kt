@@ -81,7 +81,13 @@ class SettingsFragment : Fragment() {
         SearchEntry("主题", "外观与主页", "夜间 深色 玻璃", diyTab = 8),
         SearchEntry("主题色", "外观与主页", "主色 accent 颜色", diyTab = 8),
         SearchEntry("主题色应用范围", "外观与主页", "主题色 工具栏 标签页 菜单 状态栏", diyTab = 8),
-        SearchEntry("卡片背景色", "外观与主页", "卡片 颜色 card", diyTab = 8)
+        SearchEntry("卡片背景色", "外观与主页", "卡片 颜色 card", diyTab = 8),
+        SearchEntry("卡片背景透明度", "外观与主页", "卡片 card 透明度 opacity", diyTab = 8),
+        SearchEntry("卡片外框", "外观与主页", "卡片 card 边框 border", diyTab = 8),
+        SearchEntry("夜间", "外观与主页", "night 夜间模式 暗色 夜间 CSS", diyTab = 8),
+        SearchEntry("网页主题色识别", "外观与主页", "识别 网站 theme-color", diyTab = 8),
+        SearchEntry("网页应用主题色", "外观与主页", "主题色 网页 scope", diyTab = 8),
+        SearchEntry("夜间也生效", "外观与主页", "主题色 夜间 dark", diyTab = 8)
     )
 
     /** 诊断接口只在测试包出现，正式包的搜索索引里也不留。 */

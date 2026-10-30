@@ -4568,7 +4568,12 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val modern = AppServices.settings.uiStyle() == 1
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
-        val themeFill = ThemePalette.fill(
+        val themeFill = if (!AppServices.settings.isNightMode() &&
+            AppServices.settings.themeColorEnabled() &&
+            AppServices.settings.themeColorTabs() &&
+            !AppServices.settings.themeOverDetect()
+        ) currentThemeColor()
+        else ThemePalette.fill(
             requireContext(), ThemePart.TABS, onWeb = homeContainer?.visibility != View.VISIBLE
         )
         val fill = if (modern) GlassStyle.fill(requireContext(), dark, strength, 165, themeFill)
@@ -5738,7 +5743,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         "passwords" -> SettingsDetailFragment.VIEW_V2_PASSWORD
         "cleardata" -> SettingsDetailFragment.VIEW_V2_CLEAR
         "adblock", "adpick" -> "rules"
-        "dark", "nightauto" -> SettingsDetailFragment.VIEW_V2_THEME
+        "dark", "nightauto" -> SettingsDetailFragment.VIEW_V2_NIGHT
         "incog" -> SettingsDetailFragment.VIEW_V2_INCOG
         "newtab" -> SettingsDetailFragment.VIEW_V2_OPERATE
         else -> null
@@ -6859,6 +6864,16 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         }
         menuThemeColor = if (!modern && settings.themeColorMenu()) effective else null
         longPressThemeColor = if (settings.themeColorLongPress()) effective else null
+        // 网站主题色作用于标签页（默认开）；网页态的经典标签栏直接上识别色。
+        if (!onHome) {
+            val tabTheme = if (settings.themeColorTabs()) effective else null
+            view?.findViewById<View>(R.id.tab_bar)?.setBackgroundColor(
+                tabTheme
+                    ?: ThemePalette.fill(requireContext(), ThemePart.TABS, onWeb = true)
+                    ?: ContextCompat.getColor(requireContext(), R.color.toolbar_bg)
+            )
+        }
+        if (modern) applyTabsPanelAlpha()
         (activity as? ShellActivity)?.applyStatusBarColor(
             (if (settings.themeColorStatus()) effective else null)
                 ?: ThemePalette.fill(requireContext(), ThemePart.STATUS, onWeb = !onHome)

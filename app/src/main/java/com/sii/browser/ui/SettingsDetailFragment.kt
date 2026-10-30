@@ -119,7 +119,6 @@ class SettingsDetailFragment : Fragment() {
     /** 页面标题（页头显示）。 */
     private fun titleFor(pageId: String): String = when (pageId) {
         VIEW_GENERAL -> getString(R.string.settings_general)
-        VIEW_HABITS -> getString(R.string.settings_habits)
         VIEW_ENGINE -> getString(R.string.settings_engine)
         VIEW_DL_SET -> getString(R.string.settings_download)
         VIEW_PRIVACY -> getString(R.string.settings_privacy)
@@ -144,6 +143,9 @@ class SettingsDetailFragment : Fragment() {
         VIEW_V2_READING -> getString(R.string.settings_reading)
         VIEW_V2_READING_MODE -> getString(R.string.settings_reading_mode)
         VIEW_V2_NOTIFY -> getString(R.string.settings_notify)
+        VIEW_V2_NIGHT -> getString(R.string.settings_night_group)
+        VIEW_V2_THEME_COLOR_GROUP -> getString(R.string.settings_theme_color)
+        VIEW_V2_CARD -> getString(R.string.settings_card_group)
         VIEW_V2_TABS -> getString(R.string.settings_tabs_start)
         VIEW_V2_ADDRESS -> getString(R.string.settings_address_search)
         VIEW_V2_SUGGEST -> getString(R.string.settings_suggest_group)
@@ -151,7 +153,6 @@ class SettingsDetailFragment : Fragment() {
         VIEW_V2_DOWNLOAD -> getString(R.string.settings_download)
         VIEW_V2_OPERATE -> getString(R.string.settings_operate)
         VIEW_V2_OPERATE_HOLD -> getString(R.string.settings_toolbar_hold)
-        VIEW_V2_THEME -> getString(R.string.settings_theme_night)
         VIEW_V2_FONT -> getString(R.string.settings_font)
         VIEW_V2_MENUS -> getString(R.string.settings_menus_toolbar)
         VIEW_V2_GESTURE -> getString(R.string.settings_gestures)
@@ -181,7 +182,6 @@ class SettingsDetailFragment : Fragment() {
     private fun build() {
         container.removeAllViews()
         when (viewId) {            VIEW_GENERAL -> buildGeneral()
-            VIEW_HABITS -> buildHabits()
             VIEW_ENGINE -> buildEngine()
             VIEW_DL_SET -> buildDlSet()
             VIEW_PRIVACY -> buildPrivacy()
@@ -206,6 +206,9 @@ class SettingsDetailFragment : Fragment() {
             VIEW_V2_READING -> buildV2Reading()
             VIEW_V2_READING_MODE -> buildV2ReadingMode()
             VIEW_V2_NOTIFY -> buildV2Notify()
+            VIEW_V2_NIGHT -> buildV2Night()
+            VIEW_V2_THEME_COLOR_GROUP -> buildV2ThemeColorGroup()
+            VIEW_V2_CARD -> buildV2Card()
             VIEW_V2_TABS -> buildV2Tabs()
             VIEW_V2_ADDRESS -> buildV2Address()
             VIEW_V2_SUGGEST -> buildV2Suggest()
@@ -213,7 +216,6 @@ class SettingsDetailFragment : Fragment() {
             VIEW_V2_DOWNLOAD -> buildDlSet()
             VIEW_V2_OPERATE -> buildV2Operate()
             VIEW_V2_OPERATE_HOLD -> buildV2OperateHold()
-            VIEW_V2_THEME -> buildV2Theme()
             VIEW_V2_FONT -> buildV2Font()
             VIEW_V2_MENUS -> buildV2Menus()
             VIEW_V2_GESTURE -> buildV2Gesture()
@@ -370,6 +372,7 @@ class SettingsDetailFragment : Fragment() {
             navRow(getString(R.string.settings_gestures)) { open(VIEW_V2_GESTURE) },
             navRow(getString(R.string.settings_lp_custom)) { open(VIEW_LP_CUSTOM) },
             navRow(getString(R.string.settings_operate)) { open(VIEW_V2_OPERATE) },
+            navRow(getString(R.string.settings_notify)) { open(VIEW_V2_NOTIFY) },
             choiceRow(
                 getString(R.string.settings_screen_orientation),
                 ORIENTATIONS,
@@ -1196,35 +1199,22 @@ class SettingsDetailFragment : Fragment() {
         )
     }
 
-    private fun buildHabits() {
+    /** 夜间：跟随系统夜间 / 夜间 CSS / 网页暗色 / 夜间滤镜。 */
+    private fun buildV2Night() {
         card(
-            navRow(getString(R.string.settings_theme_night)) { open(VIEW_V2_THEME) },
-            navRow(getString(R.string.settings_gestures)) { open(VIEW_V2_GESTURE) },
-            navRow(getString(R.string.settings_lp_custom)) { open(VIEW_LP_CUSTOM) },
-            navRow(getString(R.string.settings_tabs_start)) { open(VIEW_V2_TABS) },
-            navRow(getString(R.string.settings_operate)) { open(VIEW_V2_OPERATE) },
-            navRow(getString(R.string.settings_notify)) { open(VIEW_V2_NOTIFY) },
-            choiceRow(
-                getString(R.string.settings_screen_orientation),
-                ORIENTATIONS,
-                settings.screenOrientation()
+            switchRow(
+                getString(R.string.settings_night_mode),
+                settings.nightFollowSystem(),
+                getString(R.string.settings_night_mode_auto)
             ) {
-                settings.setScreenOrientation(it)
-                (activity as? ShellActivity)?.applyOrientation()
-            },
-            switchRow(getString(R.string.settings_keep_on), settings.keepOn()) {
-                settings.setKeepOn(it)
-            }
-        )
-    }
-
-    private fun buildV2Theme() {
-        card(
-            switchRow(getString(R.string.settings_night_mode), settings.nightFollowSystem(), getString(R.string.settings_night_mode_auto)) {
                 settings.setNightFollowSystem(it)
                 (activity as? ShellActivity)?.let { ShellActivity.smoothRecreateForNightSwitch(it) }
             },
-            switchRow(getString(R.string.settings_night_css), settings.nightCssEnabled(), getString(R.string.settings_night_css_desc)) {
+            switchRow(
+                getString(R.string.settings_night_css),
+                settings.nightCssEnabled(),
+                getString(R.string.settings_night_css_desc)
+            ) {
                 settings.setNightCssEnabled(it)
                 if (it) settings.setWebViewDark(false)
                 AppServices.applyWebViewDark?.invoke()
@@ -1243,15 +1233,17 @@ class SettingsDetailFragment : Fragment() {
             sliderRow(
                 getString(R.string.settings_night_filter),
                 settings.nightFilter(), 0, 255, 5
-            ) { settings.setNightFilter(it) },
+            ) { settings.setNightFilter(it) }
+        )
+    }
+
+    /** 主题色：主色 / 网页文字颜色 / 主题色应用范围 / 卡片。 */
+    private fun buildV2ThemeColorGroup() {
+        card(
             choiceRow(getString(R.string.settings_theme_color), THEME_COLOR_NAMES, themeColorIndex()) {
                 AppServices.settings.setSkin(THEME_COLOR_IDS[it])
                 recreateAfterSave()
             },
-            navRow(
-                getString(R.string.settings_color_define),
-                getString(R.string.settings_color_define_desc)
-            ) { open(VIEW_V2_COLOR_DEFINE) },
             choiceRow(
                 getString(R.string.settings_web_text_color),
                 arrayOf(
@@ -1266,9 +1258,35 @@ class SettingsDetailFragment : Fragment() {
                 AppServices.applyWebTextAccent?.invoke()
             },
             navRow(
-                getString(R.string.settings_theme_color_detect),
-                getString(R.string.settings_theme_color_detect_desc)
-            ) { open(VIEW_THEME_COLOR) }
+                getString(R.string.settings_color_define),
+                getString(R.string.settings_color_define_desc)
+            ) { open(VIEW_V2_COLOR_DEFINE) },
+            navRow(getString(R.string.settings_card_group)) { open(VIEW_V2_CARD) }
+        )
+    }
+
+    /** 卡片：背景透明度 / 背景色 / 外框，作用于所有 CardList 卡片。 */
+    private fun buildV2Card() {
+        card(
+            sliderRow(
+                getString(R.string.settings_card_alpha),
+                settings.settingsCardAlpha(), 0, 100, 1
+            ) {
+                settings.setSettingsCardAlpha(it)
+                build()
+            },
+            choiceRow(
+                getString(R.string.settings_card_bg),
+                arrayOf("跟随主题色", "默认", "浅灰", "深灰"),
+                settings.cardBg().coerceIn(0, 3)
+            ) {
+                settings.setCardBg(it)
+                build()
+            },
+            switchRow(getString(R.string.settings_card_border), settings.cardBorder()) {
+                settings.setCardBorder(it)
+                build()
+            }
         )
     }
 
@@ -2784,7 +2802,6 @@ class SettingsDetailFragment : Fragment() {
         const val ARG_FOCUS = "focus"
 
         const val VIEW_GENERAL = "general"
-        const val VIEW_HABITS = "habits"
         const val VIEW_ENGINE = "engine"
         const val VIEW_DL_SET = "dlSet"
         const val VIEW_PRIVACY = "privacy"
@@ -2816,7 +2833,9 @@ class SettingsDetailFragment : Fragment() {
         const val VIEW_V2_DOWNLOAD = "v2Download"
         const val VIEW_V2_OPERATE = "v2Operate"
         const val VIEW_V2_OPERATE_HOLD = "v2OperateHold"
-        const val VIEW_V2_THEME = "v2Theme"
+        const val VIEW_V2_THEME_COLOR_GROUP = "v2ThemeColorGroup"
+        const val VIEW_V2_NIGHT = "v2Night"
+        const val VIEW_V2_CARD = "v2Card"
         const val VIEW_V2_FONT = "v2Font"
         const val VIEW_V2_MENUS = "v2Menus"
         const val VIEW_V2_GESTURE = "v2Gesture"
@@ -3110,7 +3129,12 @@ class SettingsDetailFragment : Fragment() {
             switchRow(
                 getString(R.string.settings_color_part_status),
                 settings.themePartStatus()
-            ) { settings.setThemePartStatus(it) }
+            ) { settings.setThemePartStatus(it) },
+            switchRow(
+                getString(R.string.settings_color_night),
+                settings.themePartsNight(),
+                getString(R.string.settings_color_night_desc)
+            ) { settings.setThemePartsNight(it) }
         )
         card(
             switchRow(
@@ -3143,6 +3167,11 @@ class SettingsDetailFragment : Fragment() {
                 settings.themeColorToolbar(),
                 enabled = master
             ) { settings.setThemeColorToolbar(it) },
+            switchRow(
+                getString(R.string.settings_theme_color_tabs),
+                settings.themeColorTabs(),
+                enabled = master
+            ) { settings.setThemeColorTabs(it) },
             switchRow(
                 getString(R.string.settings_theme_color_address),
                 settings.themeColorAddress(),

@@ -268,6 +268,8 @@ object SettingsKeys {
     const val THEME_PART_MENU = "theme_part_menu"
     const val THEME_PART_STATUS = "theme_part_status"
     const val THEME_OVER_DETECT = "theme_over_detect"
+    const val THEME_PARTS_NIGHT = "theme_parts_night"
+    const val THEME_COLOR_TABS = "theme_color_tabs"
     const val WEB_TEXT_COLOR = "webtextcolor"
     const val WEBVIEW_DARK = "webviewdark"
     const val ADDRESS_STYLE = "addressstyle"

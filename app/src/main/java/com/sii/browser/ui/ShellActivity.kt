@@ -297,21 +297,21 @@ class ShellActivity : AppCompatActivity() {
         val style = when {
             modern && night -> when (settings.skin()) {
                 "blue" -> R.style.ThemeOverlay_Sii_DialogModern
-                "orange" -> R.style.ThemeOverlay_Sii_DialogModernOrange
+                "green" -> R.style.ThemeOverlay_Sii_DialogModernGreen
                 "purple" -> R.style.ThemeOverlay_Sii_DialogModernPurple
-                else -> R.style.ThemeOverlay_Sii_DialogModernGreen
+                else -> R.style.ThemeOverlay_Sii_DialogModernOrange
             }
             night -> when (settings.skin()) {
                 "blue" -> R.style.ThemeOverlay_Sii_DialogClassicNight
-                "orange" -> R.style.ThemeOverlay_Sii_DialogClassicNightOrange
+                "green" -> R.style.ThemeOverlay_Sii_DialogClassicNightGreen
                 "purple" -> R.style.ThemeOverlay_Sii_DialogClassicNightPurple
-                else -> R.style.ThemeOverlay_Sii_DialogClassicNightGreen
+                else -> R.style.ThemeOverlay_Sii_DialogClassicNightOrange
             }
             else -> when (settings.skin()) {
                 "blue" -> R.style.ThemeOverlay_Sii_DialogClassic
-                "orange" -> R.style.ThemeOverlay_Sii_DialogClassicOrange
+                "green" -> R.style.ThemeOverlay_Sii_DialogClassicGreen
                 "purple" -> R.style.ThemeOverlay_Sii_DialogClassicPurple
-                else -> R.style.ThemeOverlay_Sii_DialogClassicGreen
+                else -> R.style.ThemeOverlay_Sii_DialogClassicOrange
             }
         }
         if (style == appliedDialogTheme) return
@@ -415,9 +415,9 @@ class ShellActivity : AppCompatActivity() {
         val night = settings.isNightMode()
         val style = when (settings.skin()) {
             "blue" -> if (night) R.style.Theme_Sii_Night else R.style.Theme_Sii
-            "orange" -> if (night) R.style.Theme_Sii_Night_Orange else R.style.Theme_Sii_Orange
+            "green" -> if (night) R.style.Theme_Sii_Night_Green else R.style.Theme_Sii_Green
             "purple" -> if (night) R.style.Theme_Sii_Night_Purple else R.style.Theme_Sii_Purple
-            else -> if (night) R.style.Theme_Sii_Night_Green else R.style.Theme_Sii_Green
+            else -> if (night) R.style.Theme_Sii_Night_Orange else R.style.Theme_Sii_Orange
         }
         setTheme(style)
         applyDialogTheme()

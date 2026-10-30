@@ -641,8 +641,14 @@
     <string name="settings_engine">搜索引擎</string>
     <string name="settings_ui_layout">界面布局</string>
     <string name="settings_theme_color">主色</string>
-    <string name="settings_theme_color_detect">识别网站主题色</string>
-    <string name="settings_theme_color_detect_desc">顶栏、工具栏与菜单跟随网页 theme-color</string>
+    <string name="settings_theme_color_detect">网页主题色识别</string>
+    <string name="settings_theme_color_detect_desc">工具栏、标签页、状态栏与菜单跟随网页 theme-color</string>
+    <string name="settings_theme_color_tabs">标签页</string>
+    <string name="settings_color_night">夜间也生效</string>
+    <string name="settings_color_night_desc">关闭时夜间回默认配色</string>
+    <string name="settings_night_group">夜间</string>
+    <string name="settings_card_group">卡片</string>
+    <string name="settings_card_bg">卡片背景色</string>
     <string name="settings_color_define">主题色应用范围</string>
     <string name="settings_color_define_desc">选择哪些位置使用主题色（主页）</string>
     <string name="settings_color_part_toolbar">工具栏</string>
@@ -845,7 +851,6 @@
     <string name="restore_tabs_confirm">恢复</string>
     <string name="restore_tabs_skip">不恢复</string>
     <string name="settings_search_hint">搜索设置</string>
-    <string name="settings_theme_night">主题与夜间</string>
     <string name="settings_font">字体</string>
     <string name="settings_menus_toolbar">菜单与工具栏</string>
     <string name="settings_gestures">手势</string>

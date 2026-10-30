@@ -1254,32 +1254,10 @@ class HomeCustomizeFragment : Fragment() {
         )
     }
 
-    /** 主题：夜间、网页暗色、滤镜、主题色与网页文字颜色。 */
+    /** 主题：夜间 / 主题色（含网页文字颜色、应用范围、卡片）/ 玻璃 / 识别。 */
     private fun themeRows(): List<View> = listOf(
-        switchRow("跟随系统夜间", settings.nightFollowSystem()) {
-            settings.setNightFollowSystem(it)
-            (activity as? ShellActivity)?.let { act ->
-                ShellActivity.smoothRecreateForNightSwitch(act)
-            }
-        },
-        switchRow("夜间 CSS", settings.nightCssEnabled()) {
-            settings.setNightCssEnabled(it)
-            if (it) settings.setWebViewDark(false)
-            AppServices.applyWebViewDark?.invoke()
-            view?.post { buildControls() }
-            refreshPreview()
-        },
-        switchRow("网页暗色", settings.webViewDark()) {
-            settings.setWebViewDark(it)
-            if (it) settings.setNightCssEnabled(false)
-            AppServices.applyWebViewDark?.invoke()
-            view?.post { buildControls() }
-            refreshPreview()
-        },
-        sliderRow("夜间滤镜", settings.nightFilter(), 0, 255) {
-            settings.setNightFilter(it)
-            refreshPreview()
-        },
+        navRow(getString(R.string.settings_night_group), null) { openNightPage() },
+        navRow(getString(R.string.settings_theme_color), null) { openThemeColorGroupPage() },
         sliderRow("玻璃强度", settings.glassStrength(), 0, 100) {
             settings.setGlassStrength(it)
             view?.post { refreshPreview() }
@@ -1288,25 +1266,7 @@ class HomeCustomizeFragment : Fragment() {
             settings.setGlassBlur(it)
             refreshPreview()
         },
-        choiceRow(
-            "主题色",
-            arrayOf("蓝", "绿", "橙", "紫"),
-            themeColorIndex()
-        ) { index ->
-            settings.setSkin(themeSkins[index])
-            activity?.recreate()
-        },
-        choiceRow(
-            "网页文字颜色",
-            arrayOf("原色", "跟随主色", "仅白天", "仅夜晚"),
-            settings.webTextColor().coerceIn(0, 3)
-        ) {
-            settings.setWebTextColor(it)
-            AppServices.applyWebTextAccent?.invoke()
-            refreshPreview()
-        },
-        navRow(getString(R.string.settings_color_define), null) { openColorDefinePage() },
-        navRow("主题色识别", null) { openThemeColorPage() }
+        navRow("网页主题色识别", null) { openThemeColorPage() }
     )
 
     /** 界面风格预设：只套用界面相关项。 */
@@ -1408,22 +1368,17 @@ class HomeCustomizeFragment : Fragment() {
         } ?: activity?.recreate()
     }
 
-    private val themeSkins = arrayOf("blue", "green", "orange", "purple")
+    private fun openNightPage() = openDetail(SettingsDetailFragment.VIEW_V2_NIGHT)
 
-    private fun themeColorIndex(): Int = when (settings.skin()) {
-        "blue" -> 0
-        "orange" -> 2
-        "purple" -> 3
-        else -> 1
-    }
+    private fun openThemeColorGroupPage() =
+        openDetail(SettingsDetailFragment.VIEW_V2_THEME_COLOR_GROUP)
 
-    private fun openColorDefinePage() {
+    private fun openColorDefinePage() = openDetail(SettingsDetailFragment.VIEW_V2_COLOR_DEFINE)
+
+    private fun openDetail(viewId: String) {
         val fragment = SettingsDetailFragment().apply {
             arguments = android.os.Bundle().apply {
-                putString(
-                    SettingsDetailFragment.ARG_VIEW,
-                    SettingsDetailFragment.VIEW_V2_COLOR_DEFINE
-                )
+                putString(SettingsDetailFragment.ARG_VIEW, viewId)
             }
         }
         parentFragmentManager.beginTransaction()
@@ -1444,29 +1399,6 @@ class HomeCustomizeFragment : Fragment() {
     }
 
     private fun advancedRows(): List<View> = listOf(
-        sliderRow(
-            getString(R.string.settings_card_alpha),
-            settings.settingsCardAlpha(),
-            0, 100
-        ) {
-            settings.setSettingsCardAlpha(it)
-            CardList.applyCardStyle(controls)
-        },
-        choiceRow(
-            "卡片背景色",
-            arrayOf("跟随主题色", "默认", "浅灰", "深灰"),
-            settings.cardBg().coerceIn(0, 3)
-        ) { index ->
-            settings.setCardBg(index)
-            CardList.applyCardStyle(controls)
-        },
-        switchRow(
-            getString(R.string.settings_card_border),
-            settings.cardBorder()
-        ) {
-            settings.setCardBorder(it)
-            CardList.applyCardStyle(controls)
-        },
         choiceRow(
             "预览界面",
             arrayOf("主页", "模拟网页"),

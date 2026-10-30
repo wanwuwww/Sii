@@ -321,6 +321,16 @@ interface AppearanceSettings {
 
     fun setThemeOverDetect(value: Boolean)
 
+    /** 主题色应用范围是否在夜间也生效。 */
+    fun themePartsNight(): Boolean
+
+    fun setThemePartsNight(value: Boolean)
+
+    /** 网站主题色是否作用于标签页。 */
+    fun themeColorTabs(): Boolean
+
+    fun setThemeColorTabs(value: Boolean)
+
     /** 网站主题色作用于长按菜单。 */
     fun themeColorLongPress(): Boolean
 

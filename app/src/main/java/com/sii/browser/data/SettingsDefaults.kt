@@ -208,7 +208,7 @@ object SettingsDefaults {
     const val CARD_BORDER = true
 
     /** 主色：blue / green / orange / purple。 */
-    const val SKIN = "green"
+    const val SKIN = "orange"
 
     /** 主题色应用范围：各元素是否在主页使用主题色，默认全关。 */
     const val THEME_PART_TOOLBAR = false
@@ -220,6 +220,12 @@ object SettingsDefaults {
 
     /** 主题色是否压过网站识别色（与识别总开关互斥）。 */
     const val THEME_OVER_DETECT = false
+
+    /** 主题色应用范围是否在夜间也生效（默认不生效）。 */
+    const val THEME_PARTS_NIGHT = false
+
+    /** 网站主题色是否作用于标签页（默认开）。 */
+    const val THEME_COLOR_TABS = true
 
     /** 卡片背景色：0 跟随主题色 / 1 默认 / 2 浅灰 / 3 深灰。 */
     const val CARD_BG = 0

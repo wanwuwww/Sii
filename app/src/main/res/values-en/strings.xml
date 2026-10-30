@@ -640,8 +640,14 @@
     <string name="settings_engine">Search engine</string>
     <string name="settings_ui_layout">UI layout</string>
     <string name="settings_theme_color">Accent color</string>
-    <string name="settings_theme_color_detect">Detect site theme color</string>
-    <string name="settings_theme_color_detect_desc">Top bar, toolbar and menu follow the page theme-color</string>
+    <string name="settings_theme_color_detect">Web theme color detection</string>
+    <string name="settings_theme_color_detect_desc">Toolbar, tabs, status bar and menu follow the page theme-color</string>
+    <string name="settings_theme_color_tabs">Tabs</string>
+    <string name="settings_color_night">Also in dark mode</string>
+    <string name="settings_color_night_desc">When off, dark mode uses the default colors</string>
+    <string name="settings_night_group">Night mode</string>
+    <string name="settings_card_group">Cards</string>
+    <string name="settings_card_bg">Card background color</string>
     <string name="settings_color_define">Theme color scope</string>
     <string name="settings_color_define_desc">Choose which parts use the theme color (home page)</string>
     <string name="settings_color_part_toolbar">Toolbar</string>
@@ -844,7 +850,6 @@
     <string name="restore_tabs_confirm">Restore</string>
     <string name="restore_tabs_skip">Don\'t restore</string>
     <string name="settings_search_hint">Search settings</string>
-    <string name="settings_theme_night">Theme and night</string>
     <string name="settings_font">Fonts</string>
     <string name="settings_menus_toolbar">Menu and toolbar</string>
     <string name="settings_gestures">Gestures</string>

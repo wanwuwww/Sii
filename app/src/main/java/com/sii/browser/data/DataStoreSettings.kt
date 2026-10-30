@@ -527,6 +527,18 @@ class DataStoreSettings(private val context: Context) : Settings {
         if (value) putBool(SettingsKeys.THEME_COLOR, false)
     }
 
+    override fun themePartsNight(): Boolean =
+        bool(SettingsKeys.THEME_PARTS_NIGHT, SettingsDefaults.THEME_PARTS_NIGHT)
+
+    override fun setThemePartsNight(value: Boolean) =
+        putBool(SettingsKeys.THEME_PARTS_NIGHT, value)
+
+    override fun themeColorTabs(): Boolean =
+        bool(SettingsKeys.THEME_COLOR_TABS, SettingsDefaults.THEME_COLOR_TABS)
+
+    override fun setThemeColorTabs(value: Boolean) =
+        putBool(SettingsKeys.THEME_COLOR_TABS, value)
+
     override fun themeColorLongPress(): Boolean = bool(SettingsKeys.THEME_COLOR_LONG_PRESS, true)
 
     override fun setThemeColorLongPress(value: Boolean) =
