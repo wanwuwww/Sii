@@ -837,13 +837,19 @@ class HomePanel(
             modern -> GlassStyle.surface(
                 context, dark, dp(24).toFloat(), AppServices.settings.glassStrength(),
                 minAlpha = 155,
-                shade = if (dark) 0.03f else 0.035f,
                 strokeOverride = if (dark) 0x2AFFFFFF else 0x1A000000
             )
             else -> context.getDrawable(R.drawable.bg_home_card)
         }
+        // LayerDrawable 不自带 outline，不补轮廓时 elevation 投影不显示，卡片会“贴”在主页上。
+        val cardRadius = dp(24).toFloat()
+        card.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(v: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, v.width, v.height, cardRadius)
+            }
+        }
         card.elevation = if (!on || card.background == null) 0f
-        else if (dark) dp(4).toFloat() else dp(6).toFloat()
+        else if (dark) dp(6).toFloat() else dp(8).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -869,12 +875,12 @@ class HomePanel(
             else -> context.getColor(R.color.line)
         }
         // 悬浮玻璃风格下搜索框也走玻璃材质（含顶部高光）；经典与极简/杂志沿用纯色细边。
-        box.background = if (modern && AppServices.settings.homeStyle() == 0) {
+        val glass = modern && AppServices.settings.homeStyle() == 0
+        box.background = if (glass) {
             GlassStyle.surface(
                 context, dark, dp(radius).toFloat(),
                 AppServices.settings.glassStrength(), minAlpha = 150,
                 highlight = 0.07f,
-                shade = if (dark) 0.03f else 0.035f,
                 strokeOverride = if (focused) ThemeAccent.color(context)
                 else if (dark) 0x2AFFFFFF else 0x1A000000
             )
@@ -885,8 +891,16 @@ class HomePanel(
                 setStroke(dp(1), strokeColor)
             }
         }
+        // 玻璃背景是 LayerDrawable，不自带 outline；不补轮廓的话 elevation 阴影画不出来，
+        // 搜索框就会“贴在”主页上。显式给圆角轮廓。
+        val radiusPx = dp(radius).toFloat()
+        box.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(v: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, v.width, v.height, radiusPx)
+            }
+        }
         box.elevation = if (modern) {
-            dp(if (focused) 10 else 4).toFloat()
+            dp(if (focused) 12 else 6).toFloat()
         } else if (focused) {
             dp(8).toFloat()
         } else {
