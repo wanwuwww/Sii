@@ -18,6 +18,7 @@ object Presets {
         when (index) {
             CLASSIC -> {
                 settings.setUiStyle(0)
+                settings.setGlassStrength(30)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(2)
                 settings.setMenuScrollStyle(0)
@@ -37,6 +38,7 @@ object Presets {
             }
             GLASS -> {
                 settings.setUiStyle(1)
+                settings.setGlassStrength(40)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(3)
                 settings.setMenuScrollStyle(0)
@@ -78,6 +80,7 @@ object Presets {
             }
             else -> {
                 settings.setUiStyle(1)
+                settings.setGlassStrength(0)
                 settings.setTabCardGrid(false)
                 settings.setTabGridColumns(2)
                 settings.setMenuScrollStyle(1)
