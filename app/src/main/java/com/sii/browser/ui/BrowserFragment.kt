@@ -4564,7 +4564,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun applyTabsPanelAlpha() {
         val panel = view?.findViewById<View>(R.id.tabs_panel) ?: return
         val modern = AppServices.settings.uiStyle() == 1
-        val dark = modern && AppServices.settings.isNightMode()
+        val night = AppServices.settings.isNightMode()
+        val dark = modern && night
         val strength = AppServices.settings.glassStrength()
         val themeFill = if (!AppServices.settings.isNightMode() &&
             homeContainer?.visibility != View.VISIBLE &&
@@ -4576,17 +4577,11 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             requireContext(), ThemePart.TABS, onWeb = homeContainer?.visibility != View.VISIBLE
         )
         val radius = dp(28).toFloat()
-        if (modern) {
-            panel.background = GlassStyle.surface(
-                requireContext(), dark, radius, strength, minAlpha = 165, base = themeFill
-            )
-        } else {
-            panel.background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadii = floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
-                setColor(themeFill ?: requireContext().getColor(R.color.bg))
-            }
-        }
+        // 悬浮与经典都走玻璃；经典面板贴底，只圆上方两角。
+        panel.background = GlassStyle.surface(
+            requireContext(), night, radius, strength,
+            topOnly = !modern, minAlpha = 165, base = themeFill
+        )
         val actionText = if (dark) android.graphics.Color.WHITE
         else if (modern) 0xFF1A1A1A.toInt()
         else requireContext().getColor(R.color.text_primary)
@@ -5326,25 +5321,19 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val fixedColumns = fixedItems.size.coerceAtLeast(1)
         val menuBg = menuThemeColor
         val modern = AppServices.settings.uiStyle() == 1
-        val dark = modern && AppServices.settings.isNightMode()
-        // 菜单面板按「菜单页」开关上主色淡底（悬浮再叠一层玻璃），未开启用卡片色。
+        val night = AppServices.settings.isNightMode()
+        val dark = modern && night
+        // 菜单面板按「菜单页」开关上主色淡底；悬浮与经典都走玻璃（经典贴底只圆上方两角）。
         val menuFill = ThemePalette.fill(
             requireContext(), ThemePart.MENU, onWeb = homeContainer?.visibility != View.VISIBLE
         )
         view?.findViewById<View>(R.id.menu_panel)?.apply {
-            if (modern) {
-                background = GlassStyle.surface(
-                    requireContext(), dark, dp(28).toFloat(),
-                    AppServices.settings.glassStrength(), topOnly = true, minAlpha = 170,
-                    base = menuFill
-                )
-                backgroundTintList = null
-            } else {
-                setBackgroundResource(R.drawable.bg_modern_sheet)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    menuBg ?: menuFill ?: requireContext().getColor(R.color.card)
-                )
-            }
+            background = GlassStyle.surface(
+                requireContext(), night, dp(28).toFloat(),
+                AppServices.settings.glassStrength(), topOnly = !modern,
+                minAlpha = 170, base = menuBg ?: menuFill
+            )
+            backgroundTintList = null
         }
         view?.findViewById<TextView>(R.id.menu_title)?.setTextColor(
             if (dark) android.graphics.Color.WHITE

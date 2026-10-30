@@ -115,11 +115,6 @@ interface Settings :
 
     fun setGlassStrength(value: Int)
 
-    /** 实时模糊（Android 12+）。 */
-    fun glassBlur(): Boolean
-
-    fun setGlassBlur(value: Boolean)
-
     /** 主页风格：0 玻璃 / 1 极简 / 2 杂志。 */
     fun homeStyle(): Int
 

@@ -840,7 +840,7 @@ class HomePanel(
             else -> context.getDrawable(R.drawable.bg_home_card)
         }
         card.elevation = if (!on || card.background == null) 0f
-        else if (dark) dp(3).toFloat() else dp(4).toFloat()
+        else if (dark) dp(4).toFloat() else dp(6).toFloat()
     }
 
     /** 主页搜索框圆角：搜索框与建议弹层共用，保证两者一致。 */
@@ -870,7 +870,8 @@ class HomePanel(
             GlassStyle.surface(
                 context, dark, dp(radius).toFloat(),
                 AppServices.settings.glassStrength(), minAlpha = 150,
-                highlight = if (dark) 0.08f else 0.12f
+                highlight = 0.08f,
+                strokeOverride = if (focused) ThemeAccent.color(context) else null
             )
         } else {
             GradientDrawable().apply {

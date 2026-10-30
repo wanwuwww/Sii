@@ -1248,10 +1248,8 @@ class HomeCustomizeFragment : Fragment() {
         navRow(getString(R.string.settings_night_group), null) { openNightPage() },
         navRow(getString(R.string.settings_theme_color), null) { openThemeColorGroupPage() },
         sliderRow("玻璃强度", settings.glassStrength(), 0, 100) {
+            settings.setGlassStrength(it)
             view?.post { refreshPreview() }
-        },
-        switchRow("实时模糊背景", settings.glassBlur()) {
-            refreshPreview()
         },
         navRow("网页主题色识别", null) { openThemeColorPage() }
     )

@@ -258,12 +258,6 @@ class DataStoreSettings(private val context: Context) : Settings {
     override fun setGlassStrength(value: Int) =
         putInt(SettingsKeys.GLASS_STRENGTH, value.coerceIn(0, 100))
 
-    override fun glassBlur(): Boolean =
-        bool(SettingsKeys.GLASS_BLUR, SettingsDefaults.GLASS_BLUR)
-
-    override fun setGlassBlur(value: Boolean) =
-        putBool(SettingsKeys.GLASS_BLUR, value)
-
     override fun homeStyle(): Int =
         int(SettingsKeys.HOME_STYLE, SettingsDefaults.HOME_STYLE).coerceIn(0, 2)
 
