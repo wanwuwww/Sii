@@ -32,7 +32,7 @@ class DownloadJsBridge(
         if (url.isBlank() || url.length > 100_000) return
         val uri = runCatching { android.net.Uri.parse(url) }.getOrNull() ?: return
         if (uri.scheme != "http" && uri.scheme != "https") return
-        val name = url.substringAfterLast('/').ifEmpty { "download" }
+        val name = DownloadNaming.resolve(url, null, null)
         com.sii.browser.download.DownloadDispatcher.start(context, url, name, null)
     }
 

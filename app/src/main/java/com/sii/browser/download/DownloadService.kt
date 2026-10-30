@@ -131,7 +131,7 @@ class DownloadService : Service() {
     private fun handleDownload(intent: Intent) {
         val url = intent.getStringExtra(EXTRA_URL) ?: return
         if (blockedByNetwork()) return
-        val name = intent.getStringExtra(EXTRA_NAME) ?: url.substringAfterLast('/').ifEmpty { "download" }
+        val name = intent.getStringExtra(EXTRA_NAME) ?: DownloadNaming.resolve(url, null, null)
         scope.launch {
             try {
             val existing = AppServices.downloadRepository.taskByUrl(url)

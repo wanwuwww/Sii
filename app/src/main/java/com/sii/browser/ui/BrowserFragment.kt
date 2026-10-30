@@ -6308,30 +6308,6 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
     private fun dpToPx(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
-    /** 下载文件名：优先 Content-Disposition；APK MIME/地址强制 .apk，避免被猜成 .bin。 */
-    private fun guessDownloadName(
-        url: String,
-        contentDisposition: String?,
-        mimeType: String?
-    ): String {
-        var name = URLUtil.guessFileName(url, contentDisposition, mimeType)
-        val lowerUrl = url.substringBefore('?').lowercase()
-        val lowerDisposition = contentDisposition.orEmpty().lowercase()
-        val lowerMime = mimeType.orEmpty().lowercase()
-        val isApk = lowerMime.contains("android.package-archive") ||
-            lowerMime == "application/x-apk" ||
-            lowerUrl.endsWith(".apk") ||
-            lowerDisposition.contains(".apk")
-        if (isApk && !name.lowercase().endsWith(".apk")) {
-            name = if (name.contains('.')) {
-                name.substringBeforeLast('.') + ".apk"
-            } else {
-                "$name.apk"
-            }
-        }
-        return name
-    }
-
     /** 快捷引擎栏：一排可横向滚动的引擎按钮，点击用该引擎搜索当前输入。 */
     private fun setupSearchToolbar() {
         val scroll = view?.findViewById<HorizontalScrollView>(R.id.search_toolbar_scroll) ?: return
@@ -7285,13 +7261,14 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
             }
             setDownloadListener { url, _, contentDisposition, mimeType, _ ->
                 if (url.isNullOrBlank()) return@setDownloadListener
-                val name = guessDownloadName(url, contentDisposition, mimeType)
-                if (isUserScriptUrl(url) || name.lowercase().endsWith(".user.js")) {
+                val quickName = com.sii.browser.download.DownloadNaming
+                    .resolve(url, contentDisposition, mimeType)
+                if (isUserScriptUrl(url) || quickName.lowercase().endsWith(".user.js")) {
                     installUserScript(url)
                     return@setDownloadListener
                 }
                 if (url.startsWith("blob:")) {
-                    val quotedName = org.json.JSONObject.quote(name)
+                    val quotedName = org.json.JSONObject.quote(quickName)
                     val quotedUrl = org.json.JSONObject.quote(url)
                     val quotedSecret = org.json.JSONObject.quote(downloadSecret)
                     evaluateJavascript(
@@ -7303,11 +7280,21 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
                     )
                     return@setDownloadListener
                 }
-                if (appSettings.downloadConfirm()) {
-                    showDownloadConfirmDialog(url, name)
-                } else {
-                    startDownload(url, name)
-                    notifyDownloadBarReset()
+                // 先向服务器要一次真实头信息（Content-Disposition / 大小），拿到再弹框，避免哈希名。
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val probe = runCatching { AppServices.downloadEngine.probe(url) }.getOrNull()
+                    if (!isAdded || view == null) return@launch
+                    val name = com.sii.browser.download.DownloadNaming.resolve(
+                        url,
+                        probe?.disposition ?: contentDisposition,
+                        probe?.mime ?: mimeType
+                    )
+                    if (appSettings.downloadConfirm()) {
+                        showDownloadConfirmDialog(url, name)
+                    } else {
+                        startDownload(url, name)
+                        notifyDownloadBarReset()
+                    }
                 }
             }
             registerJsBridge("sii", DownloadJsBridge(requireContext().applicationContext, downloadSecret))

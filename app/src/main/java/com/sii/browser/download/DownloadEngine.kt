@@ -152,7 +152,12 @@ class DownloadEngine(
     }
 
     /** 探测结果：总大小与服务器是否真正支持 Range（一次请求拿到）。 */
-    data class Probe(val total: Long, val rangeSupported: Boolean)
+    data class Probe(
+        val total: Long,
+        val rangeSupported: Boolean,
+        val disposition: String? = null,
+        val mime: String? = null
+    )
 
     /**
      * 一次 `Range: bytes=0-0` 同时拿到「是否支持 Range」与总大小，
@@ -163,12 +168,19 @@ class DownloadEngine(
             val request = requestBuilder(url).header("Range", "bytes=0-0").build()
             clientFor(url).newCall(request).execute().use { resp ->
                 resp.header("ETag")?.takeIf { it.isNotBlank() }?.let { etags[url] = it }
+                val disposition = resp.header("Content-Disposition")
+                val mime = resp.header("Content-Type")?.substringBefore(';')?.trim()
                 if (resp.code == 206) {
                     val total = resp.header("Content-Range")
                         ?.let { it.substringAfter('/', "").toLongOrNull() } ?: 0L
-                    Probe(total, true)
+                    Probe(total, true, disposition, mime)
                 } else {
-                    Probe(resp.header("Content-Length")?.toLongOrNull() ?: 0L, false)
+                    Probe(
+                        resp.header("Content-Length")?.toLongOrNull() ?: 0L,
+                        false,
+                        disposition,
+                        mime
+                    )
                 }
             }
         }.getOrDefault(Probe(0L, false))
