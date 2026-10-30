@@ -4567,6 +4567,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val dark = modern && AppServices.settings.isNightMode()
         val strength = AppServices.settings.glassStrength()
         val themeFill = if (!AppServices.settings.isNightMode() &&
+            homeContainer?.visibility != View.VISIBLE &&
             AppServices.settings.themeColorEnabled() &&
             AppServices.settings.themeColorTabs() &&
             !AppServices.settings.themeOverDetect()

@@ -1248,11 +1248,9 @@ class HomeCustomizeFragment : Fragment() {
         navRow(getString(R.string.settings_night_group), null) { openNightPage() },
         navRow(getString(R.string.settings_theme_color), null) { openThemeColorGroupPage() },
         sliderRow("玻璃强度", settings.glassStrength(), 0, 100) {
-            settings.setGlassStrength(it)
             view?.post { refreshPreview() }
         },
         switchRow("实时模糊背景", settings.glassBlur()) {
-            settings.setGlassBlur(it)
             refreshPreview()
         },
         navRow("网页主题色识别", null) { openThemeColorPage() }
@@ -1272,8 +1270,6 @@ class HomeCustomizeFragment : Fragment() {
             0 -> {
                 settings.setUiStyle(0)
                 settings.setHomeStyle(0)
-                settings.setGlassStrength(30)
-                settings.setGlassBlur(false)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(2)
                 settings.setMenuScrollStyle(0)
@@ -1292,8 +1288,6 @@ class HomeCustomizeFragment : Fragment() {
             1 -> {
                 settings.setUiStyle(1)
                 settings.setHomeStyle(0)
-                settings.setGlassStrength(40)
-                settings.setGlassBlur(true)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(3)
                 settings.setMenuScrollStyle(0)
@@ -1311,8 +1305,6 @@ class HomeCustomizeFragment : Fragment() {
             2 -> {
                 settings.setUiStyle(0)
                 settings.setHomeStyle(1)
-                settings.setGlassStrength(0)
-                settings.setGlassBlur(false)
                 settings.setTabCardGrid(true)
                 settings.setTabGridColumns(3)
                 settings.setMenuScrollStyle(0)
@@ -1331,8 +1323,6 @@ class HomeCustomizeFragment : Fragment() {
             else -> {
                 settings.setUiStyle(1)
                 settings.setHomeStyle(0)
-                settings.setGlassStrength(0)
-                settings.setGlassBlur(true)
                 settings.setTabCardGrid(false)
                 settings.setMenuScrollStyle(1)
                 settings.setSettingsCardAlpha(0)
