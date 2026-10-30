@@ -10043,6 +10043,8 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         val scroll = view?.findViewById<View>(R.id.search_toolbar_scroll) ?: return
         if (scroll.visibility != View.VISIBLE && !quickEngineHidden) return
         val settings = AppServices.settings
+        // 悬浮底栏整条跟随「滚动自动隐藏」，快捷引擎不能脱离开关单独收起。
+        if (settings.uiStyle() == 1 && !settings.toolbarAutoHide()) return
         val onToolbar = settings.uiStyle() == 1 ||
             (settings.quickEnginePosition() == 1 && settings.toolbarPosition() != 2)
         if (!onToolbar) return
@@ -10544,7 +10546,7 @@ class BrowserFragment : Fragment(), ThemeAware, SoftInputAware, IntentAware, Foc
         const val ABOUT_CATALOG = "about:catalog"
         const val ABOUT_SAVE = "about:save"
         const val ABOUT_BLANK = "about:blank"
-        const val TRANSLATE_FAB_IDLE_MS = 15_000L
+        const val TRANSLATE_FAB_IDLE_MS = 30_000L
         /** 退出二次确认的有效窗口。 */
         const val EXIT_CONFIRM_MS = 2_000L
         const val THUMB_MAX_WIDTH = 360
