@@ -179,7 +179,8 @@ class DownloadFragment : Fragment() {
     /** 列表结构签名：分组与任务集合/顺序/状态变化时才重建行，进度只原地更新。 */
     private fun structureSignature(
         groups: List<Pair<Int, List<com.sii.browser.data.db.DownloadTask>>>
-    ): String = AppServices.settings.downloader().toString() + "|" + sortBy + "|" +
+    ): String = AppServices.settings.downloader().toString() + "|" + progressStyle() + "|" +
+        sortBy + "|" +
         groups.joinToString("|") { (group, list) ->
             "$group:" + list.joinToString(",") {
                 "${it.id}:${it.state}:${it.name}:${it.path.orEmpty()}"
@@ -288,12 +289,21 @@ class DownloadFragment : Fragment() {
     /** 结构不变时只刷新动态内容，按钮实例不动，点击/长按不被重建打断。 */
     private fun updateRow(task: com.sii.browser.data.db.DownloadTask) {
         val row = rowViews[task.id] ?: return
-        val bar = row.findViewById<WaveProgressView>(R.id.download_progress) ?: return
-        bar.setIndeterminate(task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L)
-        bar.setProgressPercent(
-            if (task.totalSize > 0) (task.downloadedSize * 100 / task.totalSize).toInt() else 0
-        )
-        bar.setRunning(task.state == DownloadState.DOWNLOADING)
+        val bar = row.findViewById<View>(R.id.download_progress) ?: return
+        val percent = if (task.totalSize > 0) {
+            (task.downloadedSize * 100 / task.totalSize).toInt()
+        } else 0
+        when (bar) {
+            is WaveProgressView -> {
+                bar.setIndeterminate(
+                    task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L
+                )
+                bar.setProgressPercent(percent)
+                bar.setRunning(task.state == DownloadState.DOWNLOADING)
+            }
+            is LineProgressView -> bar.setProgressPercent(percent)
+            is SegmentProgressView -> bar.setProgressPercent(percent)
+        }
         bar.visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
         boundTasks[task.id] = task
         row.findViewById<TextView>(R.id.download_state)?.let { tv ->
@@ -405,6 +415,37 @@ class DownloadFragment : Fragment() {
         requestPermissions(arrayOf(permission), 2001)
     }
 
+    private fun progressStyle(): Int =
+        AppServices.settings.downloadProgressStyle().coerceIn(0, 2)
+
+    /** 按设置创建进度条：0 波浪 / 1 细条 / 2 分段。 */
+    private fun buildProgressView(
+        context: android.content.Context,
+        progress: Int,
+        task: com.sii.browser.data.db.DownloadTask
+    ): View {
+        val running = task.state == DownloadState.DOWNLOADING
+        val bar: View = when (progressStyle()) {
+            1 -> LineProgressView(context).apply { setProgressPercent(progress) }
+            2 -> SegmentProgressView(context).apply { setProgressPercent(progress) }
+            else -> WaveProgressView(context).apply {
+                setProgressPercent(progress)
+                setIndeterminate(running && task.totalSize <= 0L)
+                setRunning(running)
+            }
+        }
+        bar.id = R.id.download_progress
+        bar.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dp(6)
+        ).apply {
+            topMargin = dp(8)
+            bottomMargin = dp(2)
+        }
+        bar.visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
+        return bar
+    }
+
     private fun buildRow(task: com.sii.browser.data.db.DownloadTask): View {
         val context = requireContext()
         val progress = if (task.totalSize > 0) {
@@ -431,20 +472,7 @@ class DownloadFragment : Fragment() {
             )
             setPadding(dp(6), 0, dp(6), 0)
         }
-        val bar = WaveProgressView(context).apply {
-            id = R.id.download_progress
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(6)
-            ).apply {
-                topMargin = dp(8)
-                bottomMargin = dp(2)
-            }
-            setProgressPercent(progress)
-            setIndeterminate(task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L)
-            setRunning(task.state == DownloadState.DOWNLOADING)
-            visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
-        }
+        val bar = buildProgressView(context, progress, task)
         val action = ImageButton(context).apply {
             background = null
             when {

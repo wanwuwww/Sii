@@ -769,6 +769,15 @@ class SettingsDetailFragment : Fragment() {
                 getString(R.string.settings_download_parallel_desc),
                 enabled = builtin
             ) { index -> settings.setDownloadParallel(index + 1) },
+            choiceRow(
+                getString(R.string.settings_download_progress_style),
+                arrayOf(
+                    getString(R.string.download_progress_wave),
+                    getString(R.string.download_progress_line),
+                    getString(R.string.download_progress_segment)
+                ),
+                settings.downloadProgressStyle().coerceIn(0, 2)
+            ) { settings.setDownloadProgressStyle(it) },
             switchRow(
                 getString(R.string.settings_download_saf_direct),
                 settings.downloadSafDirect(),

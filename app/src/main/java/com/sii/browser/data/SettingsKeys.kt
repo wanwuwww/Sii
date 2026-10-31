@@ -89,6 +89,7 @@ object SettingsKeys {
     const val DOWNLOAD_PROTOCOL = "download_protocol"
     const val DOWNLOAD_SAF_DIRECT = "download_saf_direct"
     const val DOWNLOAD_PARALLEL = "download_parallel"
+    const val DOWNLOAD_PROGRESS_STYLE = "download_progress_style"
     const val DOWNLOAD_AUTO_OPEN = "downloadautoopen"
     const val DOWNLOAD_RETRY = "downloadretry"
     const val DOWNLOAD_DIR = "downloaddir"

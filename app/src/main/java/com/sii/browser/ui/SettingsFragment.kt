@@ -45,6 +45,7 @@ class SettingsFragment : Fragment() {
         SearchEntry("下载", "通用", "download"),
         SearchEntry("下载连接模式", "通用", "下载 协议 HTTP2 HTTP1.1 protocol"),
         SearchEntry("同时下载数", "通用", "并发 下载 parallel 多任务"),
+        SearchEntry("进度条样式", "通用", "下载 进度条 progress bar 波浪 分段"),
         SearchEntry("直接写入下载目录", "通用", "下载目录 saf 写入"),
         SearchEntry("仅 Wi-Fi 图片", "通用", "图片"),
         SearchEntry("手势", "通用", "gesture"),

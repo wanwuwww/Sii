@@ -1235,6 +1235,11 @@ interface WebPageSettings {
 
     fun setDownloadParallel(value: Int)
 
+    /** 下载进度条样式：0 波浪 / 1 细条 / 2 分段。 */
+    fun downloadProgressStyle(): Int
+
+    fun setDownloadProgressStyle(value: Int)
+
     /** 下载完成后自动打开文件。 */
     fun downloadAutoOpen(): Boolean
 

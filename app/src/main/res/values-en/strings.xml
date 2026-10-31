@@ -831,6 +831,10 @@
     <string name="settings_download_protocol_desc">Auto: HTTP/1.1 first (faster for large files), switches to HTTP/2 on failure</string>
     <string name="settings_download_parallel">Simultaneous downloads</string>
     <string name="settings_download_parallel_desc">More tasks use fewer connections each; total stays within 8</string>
+    <string name="settings_download_progress_style">Progress bar style</string>
+    <string name="download_progress_wave">Wave</string>
+    <string name="download_progress_line">Line</string>
+    <string name="download_progress_segment">Segments</string>
     <string name="settings_download_saf_direct">Write directly to download folder</string>
     <string name="settings_download_saf_direct_desc">When off, files are written to app storage first and copied afterwards</string>
     <string name="settings_download">Downloads</string>
