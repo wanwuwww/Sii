@@ -32,7 +32,6 @@ class DownloadFragment : Fragment() {
     private val rowViews = mutableMapOf<Long, View>()
     private val boundTasks = mutableMapOf<Long, com.sii.browser.data.db.DownloadTask>()
     private var listSignature: String = ""
-    private val rowFills = mutableMapOf<Long, android.graphics.drawable.ClipDrawable>()
     private val fileExists = mutableMapOf<Long, Boolean>()
     private val lastProgress = mutableMapOf<Long, Pair<Long, Long>>()
     private val lastSpeed = mutableMapOf<Long, Long>()
@@ -43,7 +42,6 @@ class DownloadFragment : Fragment() {
         listSignature = ""
         rowViews.clear()
         boundTasks.clear()
-        rowFills.clear()
         super.onDestroyView()
     }
 
@@ -162,7 +160,6 @@ class DownloadFragment : Fragment() {
             }
             context?.let { com.sii.browser.download.DownloadService.onTasksChanged(it) }
             fileExists.clear()
-            rowFills.clear()
         }
     }
 
@@ -207,30 +204,38 @@ class DownloadFragment : Fragment() {
         }
     }
 
-    /** 「背景填充」样式：正在下载的那一行卡片按进度从左往右铺 10% 主色，行内条隐藏。 */
+    /**
+     * 「背景填充」样式：任务行按进度从左往右铺主色，行内条隐藏。
+     *
+     * 状态取自行视图自身（background 第一层）而不是外部缓存，避免列表重建后旧缓存把填充弄丢。
+     * 进度为 0 或已完成时不画：排队未开始、已完成都还原普通背景。
+     */
     private fun applyProgressFill(row: View, task: com.sii.browser.data.db.DownloadTask) {
-        if (progressStyle() != 6 || task.state != DownloadState.DOWNLOADING) {
-            rowFills.remove(task.id)
-            if (row.background is android.graphics.drawable.LayerDrawable) {
-                row.setBackgroundResource(R.drawable.bg_list_item)
-            }
-            return
-        }
         val percent = if (task.totalSize > 0) {
             (task.downloadedSize * 100 / task.totalSize).toInt()
         } else 0
-        val clip = rowFills[task.id] ?: android.graphics.drawable.ClipDrawable(
-            android.graphics.drawable.ColorDrawable(
-                androidx.core.graphics.ColorUtils.setAlphaComponent(ThemeAccent.color(row.context), 26)
-            ),
-            android.view.Gravity.START,
-            android.graphics.drawable.ClipDrawable.HORIZONTAL
-        ).also { created ->
-            rowFills[task.id] = created
-            row.background = android.graphics.drawable.LayerDrawable(
-                arrayOf(created, row.context.getDrawable(R.drawable.bg_list_item))
-            )
+        val show = progressStyle() == 6 && percent > 0 && task.state != DownloadState.COMPLETED
+        val layers = row.background as? android.graphics.drawable.LayerDrawable
+        if (!show) {
+            if (layers != null) row.setBackgroundResource(R.drawable.bg_list_item)
+            return
         }
+        // 下载中用更重的填充色，暂停/排队/失败用浅色，两者一眼可分。
+        val alpha = if (task.state == DownloadState.DOWNLOADING) 51 else 26
+        val color = androidx.core.graphics.ColorUtils.setAlphaComponent(
+            ThemeAccent.color(row.context), alpha
+        )
+        val clip = layers?.getDrawable(0) as? android.graphics.drawable.ClipDrawable
+            ?: android.graphics.drawable.ClipDrawable(
+                android.graphics.drawable.ColorDrawable(color),
+                android.view.Gravity.START,
+                android.graphics.drawable.ClipDrawable.HORIZONTAL
+            ).also { created ->
+                row.background = android.graphics.drawable.LayerDrawable(
+                    arrayOf(created, row.context.getDrawable(R.drawable.bg_list_item))
+                )
+            }
+        (clip.drawable as? android.graphics.drawable.ColorDrawable)?.color = color
         clip.level = percent * 100
     }
 
@@ -854,7 +859,6 @@ class DownloadFragment : Fragment() {
         }
         requireContext().startService(intent)
         fileExists.remove(task.id)
-        rowFills.remove(task.id)
     }
 
     private fun showTaskMenu(task: com.sii.browser.data.db.DownloadTask, anchor: View) {
@@ -950,7 +954,6 @@ class DownloadFragment : Fragment() {
             AppServices.downloadRepository.deleteTask(task.id)
             context?.let { com.sii.browser.download.DownloadService.onTasksChanged(it) }
             fileExists.remove(task.id)
-            rowFills.remove(task.id)
         }
     }
 
@@ -966,7 +969,6 @@ class DownloadFragment : Fragment() {
             AppServices.downloadRepository.deleteTask(task.id)
             context?.let { com.sii.browser.download.DownloadService.onTasksChanged(it) }
             fileExists.remove(task.id)
-            rowFills.remove(task.id)
         }
     }
 
