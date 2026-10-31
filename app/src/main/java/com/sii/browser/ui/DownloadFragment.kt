@@ -303,6 +303,12 @@ class DownloadFragment : Fragment() {
             }
             is LineProgressView -> bar.setProgressPercent(percent)
             is SegmentProgressView -> bar.setProgressPercent(percent)
+            is ShimmerProgressView -> {
+                bar.setProgressPercent(percent)
+                bar.setRunning(task.state == DownloadState.DOWNLOADING)
+            }
+            is PercentProgressView -> bar.setProgressPercent(percent)
+            is DotsProgressView -> bar.setProgressPercent(percent)
         }
         bar.visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
         boundTasks[task.id] = task
@@ -416,7 +422,7 @@ class DownloadFragment : Fragment() {
     }
 
     private fun progressStyle(): Int =
-        AppServices.settings.downloadProgressStyle().coerceIn(0, 2)
+        AppServices.settings.downloadProgressStyle().coerceIn(0, 5)
 
     /** 按设置创建进度条：0 波浪 / 1 细条 / 2 分段。 */
     private fun buildProgressView(
@@ -425,9 +431,16 @@ class DownloadFragment : Fragment() {
         task: com.sii.browser.data.db.DownloadTask
     ): View {
         val running = task.state == DownloadState.DOWNLOADING
-        val bar: View = when (progressStyle()) {
+        val style = progressStyle()
+        val bar: View = when (style) {
             1 -> LineProgressView(context).apply { setProgressPercent(progress) }
             2 -> SegmentProgressView(context).apply { setProgressPercent(progress) }
+            3 -> ShimmerProgressView(context).apply {
+                setProgressPercent(progress)
+                setRunning(running)
+            }
+            4 -> PercentProgressView(context).apply { setProgressPercent(progress) }
+            5 -> DotsProgressView(context).apply { setProgressPercent(progress) }
             else -> WaveProgressView(context).apply {
                 setProgressPercent(progress)
                 setIndeterminate(running && task.totalSize <= 0L)
@@ -437,7 +450,7 @@ class DownloadFragment : Fragment() {
         bar.id = R.id.download_progress
         bar.layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(6)
+            dp(when (style) { 4 -> 20; 5 -> 10; else -> 6 })
         ).apply {
             topMargin = dp(8)
             bottomMargin = dp(2)

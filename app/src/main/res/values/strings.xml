@@ -836,6 +836,9 @@
     <string name="download_progress_wave">波浪</string>
     <string name="download_progress_line">细条</string>
     <string name="download_progress_segment">分段</string>
+    <string name="download_progress_shimmer">流光</string>
+    <string name="download_progress_percent">百分比</string>
+    <string name="download_progress_dots">圆点</string>
     <string name="settings_download_saf_direct">直接写入下载目录</string>
     <string name="settings_download_saf_direct_desc">关闭后先写应用沙箱，完成后再复制到下载目录</string>
     <string name="settings_download">下载</string>

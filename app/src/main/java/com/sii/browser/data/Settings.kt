@@ -1235,7 +1235,7 @@ interface WebPageSettings {
 
     fun setDownloadParallel(value: Int)
 
-    /** 下载进度条样式：0 波浪 / 1 细条 / 2 分段。 */
+    /** 下载进度条样式：0 波浪 / 1 细条 / 2 分段 / 3 流光 / 4 百分比 / 5 圆点。 */
     fun downloadProgressStyle(): Int
 
     fun setDownloadProgressStyle(value: Int)

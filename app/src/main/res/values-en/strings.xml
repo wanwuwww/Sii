@@ -835,6 +835,9 @@
     <string name="download_progress_wave">Wave</string>
     <string name="download_progress_line">Line</string>
     <string name="download_progress_segment">Segments</string>
+    <string name="download_progress_shimmer">Shimmer</string>
+    <string name="download_progress_percent">Percent</string>
+    <string name="download_progress_dots">Dots</string>
     <string name="settings_download_saf_direct">Write directly to download folder</string>
     <string name="settings_download_saf_direct_desc">When off, files are written to app storage first and copied afterwards</string>
     <string name="settings_download">Downloads</string>

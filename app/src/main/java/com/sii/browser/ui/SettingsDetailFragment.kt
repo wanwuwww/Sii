@@ -774,9 +774,12 @@ class SettingsDetailFragment : Fragment() {
                 arrayOf(
                     getString(R.string.download_progress_wave),
                     getString(R.string.download_progress_line),
-                    getString(R.string.download_progress_segment)
+                    getString(R.string.download_progress_segment),
+                    getString(R.string.download_progress_shimmer),
+                    getString(R.string.download_progress_percent),
+                    getString(R.string.download_progress_dots)
                 ),
-                settings.downloadProgressStyle().coerceIn(0, 2)
+                settings.downloadProgressStyle().coerceIn(0, 5)
             ) { settings.setDownloadProgressStyle(it) },
             switchRow(
                 getString(R.string.settings_download_saf_direct),
