@@ -38,7 +38,15 @@ object ApkRename {
                 context.packageManager.getApplicationLabel(app).toString()
             }.getOrNull()?.trim().orEmpty()
             if (label.isBlank()) return@withContext null
-            val version = info.versionName?.trim().orEmpty()
+            val version = info.versionName?.trim().orEmpty().ifBlank {
+                val code = if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    info.longVersionCode
+                } else {
+                    @Suppress("DEPRECATION")
+                    info.versionCode.toLong()
+                }
+                if (code > 0) code.toString() else ""
+            }
             val base = (if (version.isBlank()) label else "${label}_$version")
                 .replace(Regex("""[\\/:*?"<>|]"""), "_")
                 .trim()
