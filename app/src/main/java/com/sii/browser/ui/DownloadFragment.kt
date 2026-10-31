@@ -176,12 +176,15 @@ class DownloadFragment : Fragment() {
             .commit()
     }
 
-    /** 列表结构签名：任务集合/顺序/状态变化时才重建行，进度只原地更新。 */
+    /** 列表结构签名：分组与任务集合/顺序/状态变化时才重建行，进度只原地更新。 */
     private fun structureSignature(
-        sorted: List<com.sii.browser.data.db.DownloadTask>
-    ): String = AppServices.settings.downloader().toString() + "|" + sorted.joinToString("|") {
-        "${it.id}:${it.state}:${it.name}:${it.path.orEmpty()}"
-    }
+        groups: List<Pair<Int, List<com.sii.browser.data.db.DownloadTask>>>
+    ): String = AppServices.settings.downloader().toString() + "|" + sortBy + "|" +
+        groups.joinToString("|") { (group, list) ->
+            "$group:" + list.joinToString(",") {
+                "${it.id}:${it.state}:${it.name}:${it.path.orEmpty()}"
+            }
+        }
 
     private fun render(tasks: List<com.sii.browser.data.db.DownloadTask>) {
         val filtered = tasks.filter { filterMatch(it) }
@@ -190,16 +193,55 @@ class DownloadFragment : Fragment() {
             SORT_SIZE -> filtered.sortedByDescending { it.totalSize }
             else -> filtered.sortedByDescending { it.createdAt }
         }
-        val signature = structureSignature(sorted)
+        // 时间分类只在「按时间」排序时生效，避免与名称/大小排序冲突。
+        val groups = if (sortBy == SORT_TIME) groupsByTime(sorted)
+        else listOf(NO_GROUP to sorted)
+        val signature = structureSignature(groups)
         if (signature != listSignature) {
             listSignature = signature
-            rebuildList(sorted)
+            rebuildList(groups)
         } else {
             sorted.forEach { updateRow(it) }
         }
     }
 
-    private fun rebuildList(sorted: List<com.sii.browser.data.db.DownloadTask>) {
+    /** 进行中置顶，已完成按今天/昨天/本周/本月/更早分组。 */
+    private fun groupsByTime(
+        sorted: List<com.sii.browser.data.db.DownloadTask>
+    ): List<Pair<Int, List<com.sii.browser.data.db.DownloadTask>>> {
+        val active = sorted.filter { it.state != DownloadState.COMPLETED }
+        val done = sorted.filter { it.state == DownloadState.COMPLETED }
+        val buckets = (0..4).map { index ->
+            index to done.filter { bucketOf(it.createdAt) == index }
+        }
+        return (listOf(GROUP_ACTIVE to active) + buckets).filter { it.second.isNotEmpty() }
+    }
+
+    private fun bucketOf(createdAt: Long): Int {
+        val zone = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.now(zone)
+        val date = java.time.Instant.ofEpochMilli(createdAt).atZone(zone).toLocalDate()
+        return when {
+            date == today -> 0
+            date == today.minusDays(1) -> 1
+            date >= today.with(java.time.DayOfWeek.MONDAY) -> 2
+            date >= today.withDayOfMonth(1) -> 3
+            else -> 4
+        }
+    }
+
+    private fun groupTitle(group: Int): String = when (group) {
+        GROUP_ACTIVE -> getString(R.string.download_group_active)
+        0 -> getString(R.string.download_group_today)
+        1 -> getString(R.string.download_group_yesterday)
+        2 -> getString(R.string.download_group_week)
+        3 -> getString(R.string.download_group_month)
+        else -> getString(R.string.download_group_earlier)
+    }
+
+    private fun rebuildList(
+        groups: List<Pair<Int, List<com.sii.browser.data.db.DownloadTask>>>
+    ) {
         container.removeAllViews()
         rowViews.clear()
         boundTasks.clear()
@@ -211,22 +253,36 @@ class DownloadFragment : Fragment() {
                 setPadding(dp(14), dp(8), dp(14), dp(8))
             })
         }
-        if (sorted.isEmpty()) {
+        if (groups.all { it.second.isEmpty() }) {
             container.addView(TextView(requireContext()).apply {
                 text = getString(R.string.download_empty)
                 setPadding(dp(8), dp(24), dp(8), dp(8))
             })
             return
         }
-        val card = CardList.card(requireContext())
-        sorted.forEachIndexed { index, task ->
-            val row = buildRow(task)
-            rowViews[task.id] = row
-            boundTasks[task.id] = task
-            if (index > 0) card.addView(CardList.divider(card.context))
-            card.addView(row)
+        groups.forEach { (group, list) ->
+            if (list.isEmpty()) return@forEach
+            if (group != NO_GROUP) {
+                container.addView(
+                    CardList.sectionTitle(
+                        requireContext(),
+                        getString(
+                            R.string.download_group_with_count,
+                            groupTitle(group), list.size
+                        )
+                    )
+                )
+            }
+            val card = CardList.card(requireContext())
+            list.forEachIndexed { index, task ->
+                if (index > 0) card.addView(CardList.divider(card.context))
+                val row = buildRow(task)
+                rowViews[task.id] = row
+                boundTasks[task.id] = task
+                card.addView(row)
+            }
+            container.addView(card)
         }
-        container.addView(card)
     }
 
     /** 结构不变时只刷新动态内容，按钮实例不动，点击/长按不被重建打断。 */
@@ -862,6 +918,9 @@ class DownloadFragment : Fragment() {
         private const val SORT_TIME = 0
         private const val SORT_NAME = 1
         private const val SORT_SIZE = 2
+        /** 时间分组：-1 进行中，0—4 今天/昨天/本周/本月/更早，-2 不分组。 */
+        private const val GROUP_ACTIVE = -1
+        private const val NO_GROUP = -2
         private const val FILTER_ALL = 0
         private const val FILTER_APK = 1
         private const val FILTER_VIDEO = 2

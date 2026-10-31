@@ -68,8 +68,10 @@ class DownloadEngine(
         client.newBuilder().protocols(listOf(okhttp3.Protocol.HTTP_1_1)).build()
     }
 
-    /** 自动模式下已降级的域名：HTTP/2 失败过一次就改走 HTTP/1.1。 */
+    /** 显式「优先 HTTP/2」失败过的域名：回落 HTTP/1.1（每域名一次）。 */
     private val degradedHosts = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /** 自动模式下 HTTP/1.1 失败过的域名：改走「优先 HTTP/2」（每域名一次，失败不再切回）。 */
+    private val preferHttp2Hosts = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     private fun hostOf(url: String): String =
         runCatching { android.net.Uri.parse(url).host?.lowercase() }.getOrNull().orEmpty()
@@ -79,9 +81,10 @@ class DownloadEngine(
             com.sii.browser.di.AppServices.settings.downloadProtocol()
         }.getOrDefault(0)
         return when (mode) {
-            1 -> http2Client
+            1 -> if (hostOf(url) in degradedHosts) http11Client else http2Client
             2 -> http11Client
-            else -> if (hostOf(url) in degradedHosts) http11Client else http2Client
+            // 自动：默认 HTTP/1.1（多连接，大文件更快），失败过的域名改用优先 HTTP/2。
+            else -> if (hostOf(url) in preferHttp2Hosts) http2Client else http11Client
         }
     }
 
@@ -336,12 +339,24 @@ class DownloadEngine(
             if (!currentCoroutineContext().isActive) return
             if (currentCoroutineContext()[Job]?.isCancelled == true) return
             if (repository.taskById(taskId)?.state == DownloadState.PAUSED) return
-            // 自动模式：该域名 HTTP/2 失败过一次就改走 HTTP/1.1 重来（每域名只降一次）。
+            // 自动模式默认 HTTP/1.1：任务失败一次就改走「优先 HTTP/2」重来（每域名一次，
+            // HTTP/2 也失败时不再切回，避免来回折腾）。
             val mode = runCatching {
                 com.sii.browser.di.AppServices.settings.downloadProtocol()
             }.getOrDefault(0)
-            if (mode == 0 && degradedHosts.add(hostOf(task.url))) {
+            val host = hostOf(task.url)
+            if (mode == 0 && preferHttp2Hosts.add(host)) {
                 // 延迟重排：等当前协程退出（finally 释放并发额度）后再重新开始。
+                if (desiredRunning[taskId] == true) {
+                    scope.launch {
+                        kotlinx.coroutines.delay(300)
+                        if (desiredRunning[taskId] == true) start(taskId)
+                    }
+                }
+                return
+            }
+            // 显式「优先 HTTP/2」失败一次 → 回落 HTTP/1.1，同样只切一次。
+            if (mode == 1 && degradedHosts.add(host)) {
                 if (desiredRunning[taskId] == true) {
                     scope.launch {
                         kotlinx.coroutines.delay(300)

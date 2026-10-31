@@ -829,6 +829,7 @@
     <string name="settings_gesture_double_tap">双击网页</string>
     <string name="settings_downloader">下载器</string>
     <string name="settings_download_protocol">连接模式</string>
+    <string name="settings_download_protocol_desc">自动：默认 HTTP/1.1（大文件更快），失败时改用 HTTP/2</string>
     <string name="settings_download_parallel">同时下载数</string>
     <string name="settings_download_parallel_desc">多任务时自动减少每个任务的连接数，总连接不超过 8</string>
     <string name="settings_download_saf_direct">直接写入下载目录</string>
@@ -974,6 +975,13 @@
     <string name="settings_tab_undo_visible">显示撤销关闭按钮</string>
     <string name="download_size_speed">已下载 %1$s / %2$s · 速度 %3$s/s</string>
     <string name="download_size_speed_eta">已下载 %1$s / %2$s · %3$s/s · %4$s</string>
+    <string name="download_group_active">进行中</string>
+    <string name="download_group_today">今天</string>
+    <string name="download_group_yesterday">昨天</string>
+    <string name="download_group_week">本周</string>
+    <string name="download_group_month">本月</string>
+    <string name="download_group_earlier">更早</string>
+    <string name="download_group_with_count">%1$s · %2$d</string>
     <string name="download_size_speed_unknown_total">已下载 %1$s · 速度 %2$s/s</string>
     <string name="download_eta_seconds">剩余 %1$d 秒</string>
     <string name="download_eta_minutes">剩余 %1$d 分 %2$d 秒</string>

@@ -759,6 +759,7 @@ class SettingsDetailFragment : Fragment() {
                 getString(R.string.settings_download_protocol),
                 DOWNLOAD_PROTOCOL_NAMES,
                 settings.downloadProtocol().coerceIn(0, 2),
+                getString(R.string.settings_download_protocol_desc),
                 enabled = builtin
             ) { settings.setDownloadProtocol(it) },
             choiceRow(
@@ -2911,7 +2912,7 @@ class SettingsDetailFragment : Fragment() {
 
         private val THEME_COLOR_NAMES = arrayOf("蓝", "绿", "橙", "紫")
         private val DOWNLOADER_NAMES = arrayOf("Sii 内建下载器", "系统下载管理器")
-        private val DOWNLOAD_PROTOCOL_NAMES = arrayOf("自动", "HTTP/2", "HTTP/1.1")
+        private val DOWNLOAD_PROTOCOL_NAMES = arrayOf("自动", "优先 HTTP/2", "HTTP/1.1")
         private val DOWNLOAD_PARALLEL_NAMES = arrayOf("1", "2", "3", "4")
         private val THEME_COLOR_IDS = arrayOf("blue", "green", "orange", "purple")
 
