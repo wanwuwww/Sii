@@ -839,6 +839,9 @@
     <string name="download_progress_shimmer">流光</string>
     <string name="download_progress_percent">百分比</string>
     <string name="download_progress_dots">圆点</string>
+    <string name="download_progress_fill">背景填充</string>
+    <string name="settings_apk_rename">用应用名重命名 APK</string>
+    <string name="settings_apk_rename_desc">完成后改名为「应用名_版本号.apk」，仅本地文件</string>
     <string name="settings_download_saf_direct">直接写入下载目录</string>
     <string name="settings_download_saf_direct_desc">关闭后先写应用沙箱，完成后再复制到下载目录</string>
     <string name="settings_download">下载</string>

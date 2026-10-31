@@ -777,10 +777,17 @@ class SettingsDetailFragment : Fragment() {
                     getString(R.string.download_progress_segment),
                     getString(R.string.download_progress_shimmer),
                     getString(R.string.download_progress_percent),
-                    getString(R.string.download_progress_dots)
+                    getString(R.string.download_progress_dots),
+                    getString(R.string.download_progress_fill)
                 ),
-                settings.downloadProgressStyle().coerceIn(0, 5)
+                settings.downloadProgressStyle().coerceIn(0, 6)
             ) { settings.setDownloadProgressStyle(it) },
+            switchRow(
+                getString(R.string.settings_apk_rename),
+                settings.apkRenameToLabel(),
+                getString(R.string.settings_apk_rename_desc),
+                enabled = builtin
+            ) { settings.setApkRenameToLabel(it) },
             switchRow(
                 getString(R.string.settings_download_saf_direct),
                 settings.downloadSafDirect(),

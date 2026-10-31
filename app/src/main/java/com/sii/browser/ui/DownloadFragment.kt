@@ -33,6 +33,7 @@ class DownloadFragment : Fragment() {
     private val rowViews = mutableMapOf<Long, View>()
     private val boundTasks = mutableMapOf<Long, com.sii.browser.data.db.DownloadTask>()
     private var listSignature: String = ""
+    private var bgFillClip: android.graphics.drawable.ClipDrawable? = null
     private val fileExists = mutableMapOf<Long, Boolean>()
     private val lastProgress = mutableMapOf<Long, Pair<Long, Long>>()
     private val lastSpeed = mutableMapOf<Long, Long>()
@@ -204,6 +205,43 @@ class DownloadFragment : Fragment() {
         } else {
             sorted.forEach { updateRow(it) }
         }
+        applyBackgroundFill()
+    }
+
+    /** 「背景填充」样式：根背景按当前下载进度从左往右铺一层 10% 主色，行内条隐藏。 */
+    private fun applyBackgroundFill() {
+        val root = view ?: return
+        if (progressStyle() != 6) {
+            if (bgFillClip != null) {
+                bgFillClip = null
+                root.setBackgroundColor(requireContext().getColor(R.color.bg_page))
+            }
+            return
+        }
+        val active = currentTasks.firstOrNull { it.state == DownloadState.DOWNLOADING }
+            ?: currentTasks.firstOrNull { it.state == DownloadState.PENDING }
+        val percent = active?.let {
+            if (it.totalSize > 0) (it.downloadedSize * 100 / it.totalSize).toInt() else 0
+        } ?: 0
+        val context = requireContext()
+        val clip = android.graphics.drawable.ClipDrawable(
+            android.graphics.drawable.ColorDrawable(
+                androidx.core.graphics.ColorUtils.setAlphaComponent(
+                    ThemeAccent.color(context), 26
+                )
+            ),
+            android.view.Gravity.START,
+            android.graphics.drawable.ClipDrawable.HORIZONTAL
+        ).apply {
+            level = percent * 100
+        }
+        bgFillClip = clip
+        root.background = android.graphics.drawable.LayerDrawable(
+            arrayOf(
+                android.graphics.drawable.ColorDrawable(context.getColor(R.color.bg_page)),
+                clip
+            )
+        )
     }
 
     /** 进行中置顶，已完成按今天/昨天/本周/本月/更早分组。 */
@@ -289,28 +327,30 @@ class DownloadFragment : Fragment() {
     /** 结构不变时只刷新动态内容，按钮实例不动，点击/长按不被重建打断。 */
     private fun updateRow(task: com.sii.browser.data.db.DownloadTask) {
         val row = rowViews[task.id] ?: return
-        val bar = row.findViewById<View>(R.id.download_progress) ?: return
+        val bar = row.findViewById<View>(R.id.download_progress)
         val percent = if (task.totalSize > 0) {
             (task.downloadedSize * 100 / task.totalSize).toInt()
         } else 0
-        when (bar) {
-            is WaveProgressView -> {
-                bar.setIndeterminate(
-                    task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L
-                )
-                bar.setProgressPercent(percent)
-                bar.setRunning(task.state == DownloadState.DOWNLOADING)
+        if (bar != null) {
+            when (bar) {
+                is WaveProgressView -> {
+                    bar.setIndeterminate(
+                        task.state == DownloadState.DOWNLOADING && task.totalSize <= 0L
+                    )
+                    bar.setProgressPercent(percent)
+                    bar.setRunning(task.state == DownloadState.DOWNLOADING)
+                }
+                is LineProgressView -> bar.setProgressPercent(percent)
+                is SegmentProgressView -> bar.setProgressPercent(percent)
+                is ShimmerProgressView -> {
+                    bar.setProgressPercent(percent)
+                    bar.setRunning(task.state == DownloadState.DOWNLOADING)
+                }
+                is PercentProgressView -> bar.setProgressPercent(percent)
+                is DotsProgressView -> bar.setProgressPercent(percent)
             }
-            is LineProgressView -> bar.setProgressPercent(percent)
-            is SegmentProgressView -> bar.setProgressPercent(percent)
-            is ShimmerProgressView -> {
-                bar.setProgressPercent(percent)
-                bar.setRunning(task.state == DownloadState.DOWNLOADING)
-            }
-            is PercentProgressView -> bar.setProgressPercent(percent)
-            is DotsProgressView -> bar.setProgressPercent(percent)
+            bar.visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
         }
-        bar.visibility = if (task.state == DownloadState.COMPLETED) View.GONE else View.VISIBLE
         boundTasks[task.id] = task
         row.findViewById<TextView>(R.id.download_state)?.let { tv ->
             val exists = taskFileExists(task)
@@ -422,9 +462,9 @@ class DownloadFragment : Fragment() {
     }
 
     private fun progressStyle(): Int =
-        AppServices.settings.downloadProgressStyle().coerceIn(0, 5)
+        AppServices.settings.downloadProgressStyle().coerceIn(0, 6)
 
-    /** 按设置创建进度条：0 波浪 / 1 细条 / 2 分段。 */
+    /** 按设置创建进度条：0 波浪 / 1 细条 / 2 分段 / 3 流光 / 4 百分比 / 5 圆点 / 6 背景填充。 */
     private fun buildProgressView(
         context: android.content.Context,
         progress: Int,
@@ -441,6 +481,7 @@ class DownloadFragment : Fragment() {
             }
             4 -> PercentProgressView(context).apply { setProgressPercent(progress) }
             5 -> DotsProgressView(context).apply { setProgressPercent(progress) }
+            6 -> View(context)
             else -> WaveProgressView(context).apply {
                 setProgressPercent(progress)
                 setIndeterminate(running && task.totalSize <= 0L)
@@ -553,7 +594,7 @@ class DownloadFragment : Fragment() {
         }
         return CardList.column(context).apply {
             addView(header)
-            addView(bar)
+            if (progressStyle() != 6) addView(bar)
             addView(sizeText)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setOnClickListener { openTask(task) }

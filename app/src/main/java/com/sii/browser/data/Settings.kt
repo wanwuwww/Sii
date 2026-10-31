@@ -1235,10 +1235,15 @@ interface WebPageSettings {
 
     fun setDownloadParallel(value: Int)
 
-    /** 下载进度条样式：0 波浪 / 1 细条 / 2 分段 / 3 流光 / 4 百分比 / 5 圆点。 */
+    /** 下载进度条样式：0 波浪 / 1 细条 / 2 分段 / 3 流光 / 4 百分比 / 5 圆点 / 6 背景填充。 */
     fun downloadProgressStyle(): Int
 
     fun setDownloadProgressStyle(value: Int)
+
+    /** 下载完成后把 APK 重命名为「应用名_版本号.apk」。 */
+    fun apkRenameToLabel(): Boolean
+
+    fun setApkRenameToLabel(value: Boolean)
 
     /** 下载完成后自动打开文件。 */
     fun downloadAutoOpen(): Boolean

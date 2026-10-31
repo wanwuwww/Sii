@@ -150,8 +150,15 @@ class HomePanel(
             editButton.visibility = View.GONE
         }
         view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) = startClock()
-            override fun onViewDetachedFromWindow(v: View) = stopClock()
+            override fun onViewAttachedToWindow(v: View) {
+                startClock()
+                scheduleDownloadFill()
+            }
+
+            override fun onViewDetachedFromWindow(v: View) {
+                stopClock()
+                view.removeCallbacks(downloadFillTick)
+            }
         })
         searchInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
@@ -980,7 +987,44 @@ class HomePanel(
 
     /** 无背景图时的背景色；0 = 跟随主题。 */
     private fun applyBgColor() {
+        // 「背景填充」样式：主页背景按当前下载进度铺一层 10% 主色。
+        val active = com.sii.browser.download.DownloadService.activeProgress
+        if (AppServices.settings.downloadProgressStyle() == 6 && active >= 0) {
+            val clip = android.graphics.drawable.ClipDrawable(
+                android.graphics.drawable.ColorDrawable(
+                    androidx.core.graphics.ColorUtils.setAlphaComponent(
+                        ThemeAccent.color(context), 26
+                    )
+                ),
+                android.view.Gravity.START,
+                android.graphics.drawable.ClipDrawable.HORIZONTAL
+            ).apply { level = active * 100 }
+            view.background = android.graphics.drawable.LayerDrawable(
+                arrayOf(
+                    android.graphics.drawable.ColorDrawable(backgroundColor()),
+                    clip
+                )
+            )
+            return
+        }
         view.setBackgroundColor(backgroundColor())
+    }
+
+    private val downloadFillTick = object : Runnable {
+        override fun run() {
+            if (!view.isAttachedToWindow) return
+            if (AppServices.settings.downloadProgressStyle() == 6) {
+                applyBgColor()
+                view.postDelayed(this, 1000L)
+            }
+        }
+    }
+
+    private fun scheduleDownloadFill() {
+        view.removeCallbacks(downloadFillTick)
+        if (AppServices.settings.downloadProgressStyle() == 6) {
+            view.postDelayed(downloadFillTick, 1000L)
+        }
     }
 
     /** 背景图模糊：缩小再放大，档位越高越糊。 */

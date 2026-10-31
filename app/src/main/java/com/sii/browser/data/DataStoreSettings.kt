@@ -1534,10 +1534,15 @@ class DataStoreSettings(private val context: Context) : Settings {
         putInt(SettingsKeys.DOWNLOAD_PARALLEL, value.coerceIn(1, 4))
 
     override fun downloadProgressStyle(): Int =
-        int(SettingsKeys.DOWNLOAD_PROGRESS_STYLE, 0).coerceIn(0, 5)
+        int(SettingsKeys.DOWNLOAD_PROGRESS_STYLE, 0).coerceIn(0, 6)
 
     override fun setDownloadProgressStyle(value: Int) =
-        putInt(SettingsKeys.DOWNLOAD_PROGRESS_STYLE, value.coerceIn(0, 5))
+        putInt(SettingsKeys.DOWNLOAD_PROGRESS_STYLE, value.coerceIn(0, 6))
+
+    override fun apkRenameToLabel(): Boolean = bool(SettingsKeys.APK_RENAME_TO_LABEL, true)
+
+    override fun setApkRenameToLabel(value: Boolean) =
+        putBool(SettingsKeys.APK_RENAME_TO_LABEL, value)
 
     override fun downloadAutoOpen(): Boolean = bool(SettingsKeys.DOWNLOAD_AUTO_OPEN, false)
 
