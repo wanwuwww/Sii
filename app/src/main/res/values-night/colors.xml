@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 设计系统（index.html .dark 变量） -->
+    <color name="bg">#FF121417</color>
+    <color name="bg_page">#FF000000</color>
+    <color name="card">#FF1D2024</color>
+    <color name="card_page">#FF1D2024</color>
+    <color name="text_primary">#FFE8EAED</color>
+    <color name="text_secondary">#FF9AA0A8</color>
+    <color name="menu_icon">#FFC7CBD1</color>
+    <color name="icon_primary">#FFF2F3F5</color>
+    <color name="line">#FF2A2E34</color>
+    <color name="toolbar_bg">#FF000000</color>
+    <color name="accent">#FF5B93F7</color>
+    <color name="accent_soft">#FF22304A</color>
+    <color name="accent_soft_green">#FF1B352C</color>
+    <color name="accent_soft_orange">#FF3A2A1A</color>
+    <color name="accent_soft_purple">#FF2A2340</color>
+    <color name="mask">#6B000000</color>
+    <color name="color_primary">@color/accent</color>
+    <color name="divider">@color/line</color>
+    <color name="address_bar_bg">@color/bg</color>
+    <color name="tab_normal">@color/card</color>
+    <color name="tab_selected">@color/accent_soft</color>
+    <color name="dialog_bg">#CC1A1A1E</color>
+    <color name="home_glass">#F21D2024</color>
+    <color name="home_glass_line">#24FFFFFF</color>
+    <color name="on_dark_primary">#FFF2F3F5</color>
+    <color name="on_dark_secondary">#FF9AA0A8</color>
+    <color name="dialog_surface_dark">#FF1B1E23</color>
+</resources>

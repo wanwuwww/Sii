@@ -1,0 +1,390 @@
+// SPDX-License-Identifier: LicenseRef-Sii-NC
+// Copyright (c) 2026 wanwuwww
+package com.sii.browser.di
+
+import android.app.Application
+import com.sii.browser.core.adblock.AdBlockEngine
+import com.sii.browser.core.privacy.PrivacyPacks
+import com.sii.browser.core.privacy.PrivacyManager
+import com.sii.browser.data.BookmarkRepository
+import com.sii.browser.data.DataStoreSettings
+import com.sii.browser.data.FavoriteRepository
+import com.sii.browser.data.HistoryRepository
+import com.sii.browser.data.PasswordRepository
+import com.sii.browser.data.ReadLaterRepository
+import com.sii.browser.data.RuleRepository
+import com.sii.browser.data.ScriptRepository
+import com.sii.browser.data.Settings
+import com.sii.browser.data.TabRepository
+import com.sii.browser.data.db.RuleType
+import com.sii.browser.data.SiteConfigRepository
+import com.sii.browser.data.db.SiiDatabase
+import com.sii.browser.download.DownloadEngine
+import com.sii.browser.download.DownloadRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+
+/**
+ * 全局服务门面。
+ * 依赖注入入口统一在此，后续模块的单例按需扩展。
+ */
+object AppServices {
+    lateinit var settings: Settings
+        private set
+
+    lateinit var adBlock: AdBlockEngine
+        private set
+
+    lateinit var privacyManager: PrivacyManager
+        private set
+
+    lateinit var bookmarkRepository: BookmarkRepository
+        private set
+
+    lateinit var historyRepository: HistoryRepository
+        private set
+
+    lateinit var favoriteRepository: FavoriteRepository
+        private set
+
+    lateinit var ruleRepository: RuleRepository
+        private set
+
+    lateinit var scriptRepository: ScriptRepository
+        private set
+
+    lateinit var siteConfigRepository: SiteConfigRepository
+        private set
+
+    lateinit var tabRepository: TabRepository
+        private set
+
+    lateinit var downloadRepository: DownloadRepository
+        private set
+
+    lateinit var downloadEngine: DownloadEngine
+        private set
+
+    lateinit var passwordRepository: PasswordRepository
+        private set
+
+    lateinit var readLaterRepository: ReadLaterRepository
+        private set
+
+    /** 本地 MCP 服务端；浏览器侧能力由 BrowserFragment 注册。 */
+    lateinit var mcpServer: com.sii.browser.core.mcp.McpServer
+        private set
+
+    var mcpHost: com.sii.browser.core.mcp.McpHost? = null
+
+    /** 跨 Fragment 打开 URL 回调（书签/历史列表点击 → 浏览器加载）。 */
+    var openUrl: ((String) -> Unit)? = null
+
+    /** 日夜切换前捕获当前网页滚动位置，重建后恢复。 */
+    var captureScrollForRecreate: (() -> Unit)? = null
+
+    @Volatile
+    var pendingScrollY: Int = -1
+
+    /** 当前是否停留在主页；Fragment 重建（设置返回、日夜切换）后用它恢复显示状态。 */
+    @Volatile
+    var lastHomeVisible: Boolean = false
+
+    /** 列表页点击后待浏览器消费的 URL；不依赖某个 Fragment 实例。 */
+    var pendingOpenUrl: String? = null
+
+    /** 最近一次标签快照：设置页 recreate 前可同步落库，避免按旧快照恢复。 */
+    var lastTabsSnapshot: List<Pair<String, String>>? = null
+
+    /** 最近一次已应用的隐私设置快照，跨 Fragment 重建保留。 */
+    var lastPrivacySignature: String? = null
+
+    /** 设置页离开时通知浏览器重新应用隐私设置（内部比较签名，变化才刷新）。 */
+    var reapplyPrivacyIfChanged: (() -> Unit)? = null
+
+    /** 单站设置保存后通知浏览器重新应用并刷新。 */
+    var reapplySiteSettings: (() -> Unit)? = null
+
+    /** 隐私设置已变化，等待浏览器回到前台后刷新当前页。 */
+    var privacyRefreshPending: Boolean = false
+
+    /** 最近一次创建的无痕 WebView 的隐私设置实际值（供「隐私自检」展示）。 */
+    var lastWebViewSnapshot: String? = null
+
+    /** 主页 WebView → 原生动作接口。 */
+    var uiActions: UiActions? = null
+
+    /** 设置页调整字号/界面缩放后，通知浏览器实时应用（不重建 Activity）。 */
+    var applyPageZoom: (() -> Unit)? = null
+
+    /** 重新应用网页文字主色（链接/强调文字）。 */
+    var applyWebTextAccent: (() -> Unit)? = null
+
+    /** 切换原生 WebView 暗色后重新应用并刷新。 */
+    var applyWebViewDark: (() -> Unit)? = null
+
+    /** 设置页调整工具栏/标签栏位置后，通知浏览器实时重排（不重建 Activity）。 */
+    var applyLayout: (() -> Unit)? = null
+
+    /** 内存紧张时释放浏览器标签缩略图。 */
+    var trimThumbnails: (() -> Unit)? = null
+
+    /** 主页搜索聚焦时不让根窗口为键盘预留高度，让键盘直接盖住悬浮工具栏。 */
+    var homeSearchImeSuspend: Boolean = false
+
+    /** 地址栏编辑时也不缩页面，只把悬浮底栏抬到键盘上方。 */
+    var addressEditImeSuspend: Boolean = false
+
+    /** 密码库列表点击 → 填充到当前页面（由 BrowserFragment 注册）。 */
+    var fillPassword: ((String, String) -> Unit)? = null
+
+    /** 当前标签页域名（密码库判断能否填充到本页）。 */
+    var currentPageHost: (() -> String?)? = null
+
+    /** 书签页上次停留的文件夹；进程内记忆，重新打开书签时直接进入。 */
+    var bookmarkFolderId: String? = null
+
+    /** 密码库本次停留期间的验证时间（0 = 未验证）。 */
+    var passwordUnlockedAt: Long = 0L
+
+    /** 当前激活的 WebView（资源嗅探列表据此读取对应标签的资源）。 */
+    var sniffTarget: com.sii.browser.core.webview.SiiWebView? = null
+
+    /** 原生动作集（BrowserFragment 实现注册）。 */
+    interface UiActions {
+        fun loadInBrowser(url: String)
+    }
+
+    fun init(application: Application) {
+        if (::settings.isInitialized) return
+        settings = DataStoreSettings(application)
+        adBlock = AdBlockEngine().apply { enabled = settings.adBlockEnabled() }
+        syncPrivacyAllowlist()
+        privacyManager = PrivacyManager(application)
+        privacyManager.isIncognito = settings.incognitoActive()
+        privacyManager.incognitoSessionStartedAt = settings.incognitoSessionStartedAt()
+        val db = SiiDatabase.create(application)
+        bookmarkRepository = BookmarkRepository(db.bookmarkDao())
+        historyRepository = HistoryRepository(db.historyDao())
+        favoriteRepository = FavoriteRepository(db.favoriteDao())
+        ruleRepository = RuleRepository(db.ruleDao())
+        scriptRepository = ScriptRepository(db.scriptDao())
+        siteConfigRepository = SiteConfigRepository(db.siteConfigDao())
+        tabRepository = TabRepository(db.tabDao())
+        downloadRepository = DownloadRepository(db.downloadDao())
+        downloadEngine = DownloadEngine(application, downloadRepository)
+        if (settings.privacyLevel() > 0) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val categories = buildSet {
+                    if (settings.privacyTracking()) add(PrivacyPacks.TRACKING)
+                    if (settings.privacySocial()) add(PrivacyPacks.SOCIAL)
+                    if (settings.privacyMiners()) add(PrivacyPacks.MINERS)
+                    if (settings.privacyFingerprint()) add(PrivacyPacks.FINGERPRINT)
+                    if (settings.privacyContent()) add(PrivacyPacks.CONTENT)
+                }
+                if (categories.isNotEmpty()) {
+                    ruleRepository.ensurePrivacyPacks(categories)
+                    ruleRepository.loadIntoEngine(adBlock)
+                }
+            }
+        }
+        if (privacyManager.isIncognito &&
+            (settings.incognitoCleanDownloads() || settings.incognitoCleanTranslation())
+        ) {
+            val previousStart = privacyManager.incognitoSessionStartedAt
+            val cleanDownloads = settings.incognitoCleanDownloads()
+            val cleanTranslation = settings.incognitoCleanTranslation()
+            CoroutineScope(Dispatchers.IO).launch {
+                if (cleanDownloads) {
+                    com.sii.browser.download.IncognitoCleanup.cleanDownloads(
+                        application, previousStart
+                    )
+                    val now = System.currentTimeMillis()
+                    privacyManager.incognitoSessionStartedAt = now
+                    settings.setIncognitoSessionStartedAt(now)
+                }
+                if (cleanTranslation) {
+                    com.sii.browser.download.IncognitoCleanup.cleanTranslation(application)
+                }
+            }
+        }
+        passwordRepository = PasswordRepository(db.passwordDao())
+        readLaterRepository = ReadLaterRepository(db.readLaterDao())
+        // 诊断接口在正式包与测试包一致开放（默认权限开关仍为关）。
+        com.sii.browser.core.mcp.DiagLog.enabled = true
+        mcpServer = com.sii.browser.core.mcp.McpServer(
+            { settings },
+            { mcpHost }
+        )
+        CoroutineScope(Dispatchers.IO).launch {
+            kotlinx.coroutines.delay(3000)
+            val now = System.currentTimeMillis()
+            downloadRepository.allTasks().first()
+                .filter {
+                    (it.state == com.sii.browser.data.db.DownloadState.DOWNLOADING ||
+                        it.state == com.sii.browser.data.db.DownloadState.PENDING) &&
+                        it.createdAt < now - 10_000
+                }
+                .forEach {
+                    downloadRepository.setState(
+                        it.id, com.sii.browser.data.db.DownloadState.PAUSED
+                    )
+                }
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            ruleRepository.loadIntoEngine(adBlock)
+            siteConfigRepository.refresh()
+            refreshAdBlockWhitelist()
+            seedDefaultFavorites()
+            if (settings.subscriptionAutoUpdate()) autoUpdateSubscriptions()
+        }
+        // 订阅定时检查：应用存活期间每 6 小时检查一次（超过 24 小时未更新的订阅会被刷新）
+        CoroutineScope(Dispatchers.IO).launch {
+            while (true) {
+                kotlinx.coroutines.delay(6 * 60 * 60 * 1000L)
+                if (settings.subscriptionAutoUpdate()) {
+                    runCatching { autoUpdateSubscriptions() }
+                }
+            }
+        }
+        // 启动时自动检查更新（仅当配置地址且开关开启）
+        CoroutineScope(Dispatchers.IO).launch { runCatching { autoCheckUpdate(application) } }
+    }
+
+    /** 待展示的更新提示（name|url|notes），界面消费后置空。 */
+    @Volatile
+    var pendingUpdatePrompt: String? = null
+
+    /** 界面就绪时回调，用于立即展示待处理的更新提示。 */
+    @Volatile
+    var onUpdatePromptReady: (() -> Unit)? = null
+
+    /** 检查间隔：12 小时；失败后 5 分钟重试。 */
+    private val updateIntervalMs = 12L * 60 * 60 * 1000
+    private val updateRetryMs = 5L * 60 * 1000
+
+    /** 回到前台时调用：距上次成功检查超过 12 小时才发请求。 */
+    fun checkUpdatesOnForeground(app: Application) {
+        CoroutineScope(Dispatchers.IO).launch { runCatching { autoCheckUpdate(app) } }
+    }
+
+    /** 自动检查更新：12 小时一次，成功才落时间；发现新版本按版本去重弹窗。 */
+    private suspend fun autoCheckUpdate(app: Application) {
+        if (settings.updatePrompt() <= 0) return
+        val debuggable = app.applicationInfo.flags and
+            android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val now = System.currentTimeMillis()
+        // 测试包跳过 12 小时间隔，方便直接验证弹窗。
+        if (!debuggable && now - settings.updateLastCheck() < updateIntervalMs) return
+        val info = com.sii.browser.data.UpdateChecker.check()
+        if (info == null) {
+            // 失败不占用完整间隔：5 分钟后可重试。
+            settings.setUpdateLastCheck(now - updateIntervalMs + updateRetryMs)
+            return
+        }
+        settings.setUpdateLastCheck(now)
+        var local = runCatching {
+            val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
+            val code = if (android.os.Build.VERSION.SDK_INT >= 28) packageInfo.longVersionCode
+            else @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
+            packageInfo.versionName.orEmpty() to code
+        }.getOrNull() ?: return
+        // 测试包：假装本地是 1.4.0，便于验证更新弹窗与下载流程。
+        if (debuggable) {
+            local = "1.4.0" to 10L
+        }
+        if (!com.sii.browser.data.UpdateChecker.isUpdate(info, local.first, local.second)) {
+            settings.setUpdateLatest(null)
+            return
+        }
+        val name = info.versionName.ifBlank { info.versionCode.toString() }
+        settings.setUpdateLatest(listOf(name, info.url).joinToString("|"))
+        if (name == settings.updateIgnoredVersion()) return
+        val sameVersion = settings.updateNotifiedVersion() == name
+        if (sameVersion && now - settings.updateLastNotified() < updateIntervalMs) return
+        settings.setUpdateLastNotified(now)
+        settings.setUpdateNotifiedVersion(name)
+        pendingUpdatePrompt = org.json.JSONObject()
+            .put("name", name)
+            .put("url", info.url)
+            .put("notes", info.notes.orEmpty())
+            .put("size", info.size)
+            .toString()
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            onUpdatePromptReady?.invoke()
+        }
+    }
+
+    /** 启动时更新超过 24 小时的规则订阅。 */
+    private suspend fun autoUpdateSubscriptions() {
+        val dayMs = 24 * 60 * 60 * 1000L
+        val intervalMs = settings.subscriptionIntervalDays().coerceAtLeast(1) * dayMs
+        val now = System.currentTimeMillis()
+        val stale = ruleRepository.all().first()
+            .filter {
+                (it.type == RuleType.SUBSCRIPTION || it.type == RuleType.PRIVACY) &&
+                    it.enabled && now - it.updatedAt > intervalMs
+            }
+        if (stale.isEmpty()) return
+        var changed = false
+        stale.forEach { rule ->
+            val updated = if (rule.type == RuleType.PRIVACY) {
+                ruleRepository.updatePrivacyPack(rule.id, rule.title)
+            } else {
+                ruleRepository.updateSubscription(rule.id, rule.title)
+            }
+            if (updated) changed = true
+        }
+        if (changed) ruleRepository.loadIntoEngine(adBlock)
+    }
+
+    /** 首次运行填充主页常用网站默认值（对齐设计稿 DEFAULT_SITES）。 */
+    private suspend fun seedDefaultFavorites() {
+        if (favoriteRepository.all().first().isNotEmpty()) return
+        DEFAULT_FAVORITES.forEach { (name, url) -> favoriteRepository.add(url, name) }
+    }
+
+    private val DEFAULT_FAVORITES = listOf(
+        "百度" to "https://www.baidu.com",
+        "微博" to "https://weibo.com",
+        "知乎" to "https://www.zhihu.com",
+        "哔哩哔哩" to "https://www.bilibili.com",
+        "GitHub" to "https://github.com",
+        "少数派" to "https://sspai.com",
+        "虎扑" to "https://www.hupu.com",
+        "豆瓣" to "https://www.douban.com"
+    )
+
+    /** 依据站点规则里的「广告拦截」开关刷新单站覆盖（读内存缓存，主线程可调）。 */
+    /** 重新计算隐私放行名单：用户名单 + 标准档兼容模式的功能性域名。 */
+    fun syncPrivacyAllowlist() {
+        val extra = if (settings.privacyLevel() == 1 && settings.privacyCompat()) {
+            com.sii.browser.core.privacy.PrivacyCompat.HOSTS
+        } else {
+            emptySet()
+        }
+        adBlock.setPrivacyAllowedHosts(settings.privacyAllowedHosts() + extra)
+    }
+
+    fun refreshAdBlockWhitelist() {
+        val enabledHosts = mutableSetOf<String>()
+        val disabledHosts = mutableSetOf<String>()
+        val privacyPausedHosts = mutableSetOf<String>()
+        siteConfigRepository.cachedAll().forEach { (host, config) ->
+            val json = com.sii.browser.data.SiteConfig.parse(config)
+            if (!com.sii.browser.data.SiteConfig.enabled(json)) return@forEach
+            when (com.sii.browser.data.SiteConfig.tri(json, "ab")) {
+                1 -> enabledHosts.add(host)
+                2 -> disabledHosts.add(host)
+            }
+            if (com.sii.browser.data.SiteConfig.tri(json, "pv") == 2) {
+                privacyPausedHosts.add(host)
+            }
+        }
+        adBlock.setSiteOverrides(enabledHosts, disabledHosts)
+        adBlock.setPrivacySiteOverrides(privacyPausedHosts)
+    }
+}

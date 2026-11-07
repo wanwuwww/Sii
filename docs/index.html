@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sii Browser — 用 Kotlin 写的 Android 浏览器</title>
+<meta name="description" content="Sii Browser 是一款用 Kotlin 与原生 XML 实现的 Android 浏览器：多标签、广告拦截、隐私保护、网页翻译、下载管理、用户脚本、MCP 与开发者工具。">
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a20;
+    --line: #23262d;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --accent: #f2984a;
+    --accent-soft: rgba(242, 152, 74, .14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 22px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; }
+  .brand .dot {
+    width: 26px; height: 26px; border-radius: 9px;
+    background: radial-gradient(circle at 30% 30%, #ffc07a, var(--accent));
+    box-shadow: 0 0 24px rgba(242, 152, 74, .35);
+  }
+  .brand span.small { color: var(--muted); font-weight: 500; font-size: 13px; }
+  nav a { color: var(--muted); margin-left: 18px; font-size: 14px; }
+  nav a:hover { color: var(--text); text-decoration: none; }
+
+  .hero { padding: 72px 0 40px; }
+  .hero h1 {
+    font-size: clamp(34px, 6vw, 56px);
+    line-height: 1.08; letter-spacing: -1.2px; margin: 0 0 14px;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p.lead { color: var(--muted); font-size: clamp(16px, 2.2vw, 19px); max-width: 640px; margin: 0 0 28px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 15px;
+    background: var(--accent); color: #1a1206; border: 1px solid transparent;
+  }
+  .btn:hover { filter: brightness(1.05); text-decoration: none; }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn.ghost:hover { border-color: #3a3f48; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+  .hero-shot {
+    margin-top: 44px; border: 1px solid var(--line); border-radius: 22px;
+    overflow: hidden; background: var(--card);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .45);
+  }
+  .hero-shot img { display: block; width: 100%; height: auto; }
+
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 24px; margin: 0 0 8px; letter-spacing: -.3px; }
+  .sub { color: var(--muted); margin: 0 0 26px; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 16px 18px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+  .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .shot { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { padding: 10px 12px; color: var(--muted); font-size: 12.5px; }
+  figure { margin: 0; }
+
+  .note {
+    background: var(--accent-soft); border: 1px solid rgba(242, 152, 74, .3);
+    border-radius: 14px; padding: 16px 18px; color: var(--text); font-size: 14px;
+  }
+  .note strong { color: var(--accent); }
+
+  footer { padding: 34px 0 48px; color: var(--muted); font-size: 13px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .shots { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding-top: 52px; }
+  }
+  @media (max-width: 560px) {
+    .grid, .shots { grid-template-columns: 1fr; }
+    nav a { margin-left: 12px; }
+    .brand span.small { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand"><div class="dot" aria-hidden="true"></div>Sii Browser <span class="small">Android</span></div>
+    <nav>
+      <a href="https://github.com/wanwuwww/Sii-Browser">GitHub</a>
+      <a href="https://github.com/wanwuwww/Sii-Browser/releases">更新日志</a>
+      <a href="https://github.com/wanwuwww/Sii-Browser/issues">反馈</a>
+    </nav>
+  </header>
+
+  <section class="hero" style="border-top:none;">
+    <h1>把浏览这件事<br>做<em>完整</em>的 Android 浏览器</h1>
+    <p class="lead">
+      Sii 用 Kotlin 与原生 XML 从零实现，不依赖 Compose。多标签、广告拦截与隐私保护、网页翻译、下载管理，
+      还有用户脚本、MCP 与开发者工具。不含统计与崩溃上报 SDK。
+    </p>
+    <div class="actions">
+      <a class="btn" href="https://github.com/wanwuwww/Sii-Browser/releases/latest">下载最新版 APK</a>
+      <a class="btn ghost" href="https://github.com/wanwuwww/Sii-Browser">查看源码</a>
+    </div>
+    <p class="meta">当前版本 1.5.4 · Android 8.0+（arm64-v8a）· 个人独立开发 · 源码许可禁止商用</p>
+
+    <div class="hero-shot">
+      <img src="screenshots/home-night.jpg" alt="Sii Browser 主页（夜间）">
+    </div>
+  </section>
+
+  <section>
+    <h2>功能</h2>
+    <p class="sub">浏览器该有的都有，再补上一些顺手的能力。</p>
+    <div class="grid">
+      <div class="card"><h3>多标签与标签面板</h3><p>标签卡缩略图、关闭与恢复、最近关闭列表，支持无痕会话。</p></div>
+      <div class="card"><h3>广告拦截与隐私保护</h3><p>规则订阅与自定义规则，选取广告元素生成隐藏规则；隐私等级、兼容模式与站点放行。</p></div>
+      <div class="card"><h3>网页翻译</h3><p>整页翻译与恢复原文，支持在线接口与离线翻译包，译文状态在页面间保持。</p></div>
+      <div class="card"><h3>下载管理</h3><p>内建多连接下载、HLS 支持、并发与重命名，下载进度直接铺在底栏。</p></div>
+      <div class="card"><h3>资源嗅探与播放</h3><p>按站点开启媒体嗅探，内建播放器支持横竖屏、倍速与音轨选择。</p></div>
+      <div class="card"><h3>用户脚本</h3><p>兼容常用 GM 接口与 @resource，页面内点击 .user.js 直接安装，按站点开关。</p></div>
+      <div class="card"><h3>MCP 与开发者工具</h3><p>本地 MCP 服务供外部工具调用；应用内半屏开发者工具可查看控制台、元素与网络。</p></div>
+      <div class="card"><h3>界面 DIY</h3><p>悬浮与经典两套工具栏，透明度、玻璃强度、主题色与菜单顺序都能调，预览实时生效。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>截图</h2>
+    <p class="sub">主页、标签、菜单与 DIY 预览。</p>
+    <div class="shots">
+      <figure class="shot"><img src="screenshots/home-day.jpg" alt="主页（白天）"><figcaption>主页 · 白天</figcaption></figure>
+      <figure class="shot"><img src="screenshots/home-night.jpg" alt="主页（夜间）"><figcaption>主页 · 夜间</figcaption></figure>
+      <figure class="shot"><img src="screenshots/tabs.jpg" alt="标签面板"><figcaption>标签面板</figcaption></figure>
+      <figure class="shot"><img src="screenshots/menu.jpg" alt="菜单"><figcaption>菜单</figcaption></figure>
+      <figure class="shot"><img src="screenshots/diy.jpg" alt="界面 DIY"><figcaption>界面 DIY</figcaption></figure>
+      <figure class="shot"><img src="screenshots/mcp.jpg" alt="MCP 设置"><figcaption>MCP 服务</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>安装</h2>
+    <div class="note">
+      <strong>只发布 arm64-v8a 的 APK</strong>，适用于 Android 8.0（API 26）及以上设备。
+      从 <a href="https://github.com/wanwuwww/Sii-Browser/releases/latest">Releases</a> 下载 `Sii-x.y.z.apk` 安装；
+      已有版本会通过应用内更新提示新版本。源码采用「Sii 源码许可 1.0」：禁止商用、禁止应用商店分发、需署名。
+    </div>
+  </section>
+
+  <footer>
+    <div class="row">
+      <div>Sii Browser · 个人独立开发</div>
+      <div>
+        <a href="https://github.com/wanwuwww/Sii-Browser">仓库</a> ·
+        <a href="https://github.com/wanwuwww/Sii-Browser/releases">Releases</a> ·
+        <a href="https://github.com/wanwuwww/Sii-Browser/issues">Issues</a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

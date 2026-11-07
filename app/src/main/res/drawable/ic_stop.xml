@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 停止：放大版圆头叉号，与站点图标同一线宽。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M5.5,5.5 L18.5,18.5 M18.5,5.5 L5.5,18.5"
+        android:strokeColor="@color/icon_primary" android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+</vector>

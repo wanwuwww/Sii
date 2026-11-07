@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+
+    <!-- 主页 Logo：与启动图标同图形，视口收紧到内容区，fitCenter 时字形占满控件。 -->
+    <path
+        android:pathData="M13.08,41.68 C13.08,24.08 24.52,11.76 38.60,11.76 C50.04,11.76 59.72,17.92 64.12,27.60"
+        android:strokeColor="#2F7CF6"
+        android:strokeWidth="8.8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M62.36,32.88 C62.36,49.60 50.04,61.04 35.96,61.04 C24.52,61.04 13.96,54.88 8.68,46.08"
+        android:strokeColor="#34C28F"
+        android:strokeWidth="8.8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M21.00,53.12 L47.40,16.16"
+        android:strokeColor="#F2984A"
+        android:strokeWidth="8.8"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#8A6FF0"
+        android:pathData="M57.08,48.72 m-5.28,0 a5.28,5.28 0 1 1 10.56,0 a5.28,5.28 0 1 1 -10.56,0" />
+</vector>

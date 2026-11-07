@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wanwuwww.github.io/Sii-Browser/sitemap.xml

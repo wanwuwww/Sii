@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.sii.browser.ui.PlayerGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:resize_mode="fit"
+        app:show_buffering="always" />
+
+    <View
+        android:id="@+id/player_dim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:background="#FF000000" />
+
+    <LinearLayout
+        android:id="@+id/player_top"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#66000000"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="4dp">
+
+        <ImageButton
+            android:id="@+id/player_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/sniff_prompt_close"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_back"
+            android:tint="#FFFFFFFF" />
+
+        <TextView
+            android:id="@+id/player_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp" />
+
+        <ImageButton
+            android:id="@+id/player_prev"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/player_prev"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_back"
+            android:tint="#FFFFFFFF" />
+
+        <TextView
+            android:id="@+id/player_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:textColor="#B3FFFFFF"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/player_next"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/player_next"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:scaleX="-1"
+            android:src="@drawable/ic_back"
+            android:tint="#FFFFFFFF" />
+
+        <ImageButton
+            android:id="@+id/player_rotate"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/player_rotate"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_player_rotate"
+            android:tint="#FFFFFFFF" />
+
+        <ImageButton
+            android:id="@+id/player_download"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/sniff_download"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_m_download"
+            android:tint="#FFFFFFFF" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/player_osd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/player_osd_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp" />
+
+        <ProgressBar
+            android:id="@+id/player_osd_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="200dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="6dp"
+            android:max="1000"
+            android:progressBackgroundTint="#4DFFFFFF"
+            android:progressTint="#FFFFFFFF"
+            android:visibility="gone" />
+    </LinearLayout>
+</com.sii.browser.ui.PlayerGestureLayout>

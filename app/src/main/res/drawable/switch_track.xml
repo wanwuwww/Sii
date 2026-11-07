@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 开关轨道：对齐 index.html 的 .switch（关=line 色，开=accent，圆角 13dp / 高 26dp）。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?android:attr/colorAccent" />
+            <corners android:radius="13dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/line" />
+            <corners android:radius="13dp" />
+        </shape>
+    </item>
+</selector>
